@@ -9,6 +9,7 @@
         <groupId>com.skt.combustible</groupId>
         <artifactId>sistema-combustible-parent</artifactId>
         <version>1.0.0</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>auth-service</artifactId>
@@ -64,7 +65,7 @@
 
         <!-- gRPC -->
         <dependency>
-            <groupId>io.grpc</groupId>
+            <groupId>net.devh</groupId>
             <artifactId>grpc-spring-boot-starter</artifactId>
         </dependency>
 
