@@ -1,0 +1,60 @@
+server:
+  port: 8085
+  
+spring:
+  application:
+    name: auth-service
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/auth_db
+    username: ${DB_USERNAME:auth_user}
+    password: ${DB_PASSWORD:auth_pass}
+    driver-class-name: org.postgresql.Driver
+    
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        
+  profiles:
+    active: dev
+
+# Security JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKey1234567890123456789012345}
+  expiration: 86400000 # 24 hours in milliseconds
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging configurations  
+logging:
+  level:
+    com.skt.combustible.auth: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# gRPC Configuration
+grpc:
+  server:
+    port: 9095
+    
+# Service Discovery (para comunicación entre microservicios)
+service:
+  urls:
+    drivers-service: http://localhost:8081
+    vehicles-service: http://localhost:8082
+    routes-service: http://localhost:8083
+    fuel-service: http://localhost:8084
