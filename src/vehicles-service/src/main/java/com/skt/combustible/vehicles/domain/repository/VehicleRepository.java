@@ -99,19 +99,19 @@ public interface VehicleRepository extends MongoRepository<Vehicle, String> {
     /**
      * Busca vehículos por rango de años
      */
-    @Query("SELECT v FROM Vehicle v WHERE v.activo = true AND v.anio BETWEEN :anioInicio AND :anioFin")
-    List<Vehicle> findVehiclesByAnioRange(@Param("anioInicio") Integer anioInicio, @Param("anioFin") Integer anioFin);
-    
+    @Query("{ 'activo': true, 'anio': { $gte: ?0, $lte: ?1 } }")
+    List<Vehicle> findVehiclesByAnioRange(Integer anioInicio, Integer anioFin);
+
     /**
      * Verifica si existe un vehículo con la placa especificada
      */
     boolean existsByPlaca(String placa);
-    
+
     /**
      * Busca vehículos con consumo promedio mayor al especificado
      */
-    @Query("SELECT v FROM Vehicle v WHERE v.activo = true AND v.consumoPromedio > :consumo")
-    List<Vehicle> findVehiclesWithConsumoMayorA(@Param("consumo") Double consumo);
+    @Query("{ 'activo': true, 'consumoPromedio': { $gt: ?0 } }")
+    List<Vehicle> findVehiclesWithConsumoMayorA(Double consumo);
     
     /**
      * Cuenta vehículos activos
