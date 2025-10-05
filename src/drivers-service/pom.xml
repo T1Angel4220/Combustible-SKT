@@ -24,10 +24,6 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
         <dependency>
@@ -35,10 +31,11 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Database -->
+        <!-- MongoDB -->
         <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+            <version>${spring-boot.version}</version>
         </dependency>
 
         <!-- gRPC -->
@@ -51,6 +48,13 @@
         <dependency>
             <groupId>com.skt.combustible</groupId>
             <artifactId>shared-lib</artifactId>
+        </dependency>
+
+        <!-- Protos Library -->
+        <dependency>
+            <groupId>com.skt.combustible</groupId>
+            <artifactId>protos</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- MapStruct -->

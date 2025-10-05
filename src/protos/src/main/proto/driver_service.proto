@@ -1,0 +1,234 @@
+syntax = "proto3";
+
+package com.skt.combustible.drivers;
+
+option java_multiple_files = true;
+option java_package = "com.skt.combustible.drivers.grpc";
+option java_outer_classname = "DriverServiceProto";
+
+// Servicio gRPC para gestión de choferes
+service DriverService {
+  // Crear un nuevo chofer
+  rpc CreateDriver(CreateDriverRequest) returns (DriverResponse);
+  
+  // Obtener chofer por ID
+  rpc GetDriverById(GetDriverByIdRequest) returns (DriverResponse);
+  
+  // Obtener chofer por DNI
+  rpc GetDriverByDni(GetDriverByDniRequest) returns (DriverResponse);
+  
+  // Obtener chofer por licencia
+  rpc GetDriverByLicense(GetDriverByLicenseRequest) returns (DriverResponse);
+  
+  // Obtener todos los choferes
+  rpc GetAllDrivers(GetAllDriversRequest) returns (GetAllDriversResponse);
+  
+  // Obtener choferes activos
+  rpc GetActiveDrivers(GetActiveDriversRequest) returns (GetActiveDriversResponse);
+  
+  // Obtener choferes disponibles
+  rpc GetAvailableDrivers(GetAvailableDriversRequest) returns (GetAvailableDriversResponse);
+  
+  // Obtener choferes disponibles por tipo de maquinaria
+  rpc GetAvailableDriversByMachineryType(GetAvailableDriversByMachineryTypeRequest) returns (GetAvailableDriversByMachineryTypeResponse);
+  
+  // Buscar choferes por nombre
+  rpc SearchDriversByName(SearchDriversByNameRequest) returns (SearchDriversByNameResponse);
+  
+  // Actualizar chofer
+  rpc UpdateDriver(UpdateDriverRequest) returns (DriverResponse);
+  
+  // Cambiar estado del chofer
+  rpc ChangeDriverStatus(ChangeDriverStatusRequest) returns (DriverResponse);
+  
+  // Asignar tipo de maquinaria
+  rpc AssignMachineryType(AssignMachineryTypeRequest) returns (DriverResponse);
+  
+  // Desactivar chofer
+  rpc DeactivateDriver(DeactivateDriverRequest) returns (Empty);
+  
+  // Eliminar chofer permanentemente
+  rpc DeleteDriver(DeleteDriverRequest) returns (Empty);
+  
+  // Contar choferes disponibles
+  rpc CountAvailableDrivers(CountAvailableDriversRequest) returns (CountAvailableDriversResponse);
+  
+  // Contar choferes disponibles por tipo de maquinaria
+  rpc CountAvailableDriversByMachineryType(CountAvailableDriversByMachineryTypeRequest) returns (CountAvailableDriversByMachineryTypeResponse);
+  
+  // Verificar disponibilidad de chofer
+  rpc IsDriverAvailable(IsDriverAvailableRequest) returns (IsDriverAvailableResponse);
+}
+
+// Enums
+enum EstadoOperativo {
+  ACTIVO = 0;
+  MANTENIMIENTO = 1;
+  FUERA_SERVICIO = 2;
+  DISPONIBLE = 3;
+  EN_USO = 4;
+  RESERVADO = 5;
+}
+
+enum TipoMaquinaria {
+  CAMION = 0;
+  VOLQUETE = 1;
+  EXCAVADORA = 2;
+  CARGADOR = 3;
+  GRUA = 4;
+  MOTONIVELADORA = 5;
+}
+
+// Mensajes de request
+message CreateDriverRequest {
+  string nombre = 1;
+  string apellido = 2;
+  string dni = 3;
+  string licencia = 4;
+  optional string telefono = 5;
+  optional string email = 6;
+  optional string fecha_contratacion = 7; // formato ISO date
+  optional TipoMaquinaria tipo_maquinaria_asignada = 8;
+}
+
+message GetDriverByIdRequest {
+  int64 id = 1;
+}
+
+message GetDriverByDniRequest {
+  string dni = 1;
+}
+
+message GetDriverByLicenseRequest {
+  string licencia = 1;
+}
+
+message GetAllDriversRequest {
+  int32 page = 1;
+  int32 size = 2;
+  string sort_by = 3;
+  string sort_dir = 4;
+}
+
+message GetActiveDriversRequest {
+  // Sin parámetros adicionales
+}
+
+message GetAvailableDriversRequest {
+  // Sin parámetros adicionales
+}
+
+message GetAvailableDriversByMachineryTypeRequest {
+  TipoMaquinaria tipo_maquinaria = 1;
+}
+
+message SearchDriversByNameRequest {
+  string name = 1;
+}
+
+message UpdateDriverRequest {
+  int64 id = 1;
+  optional string nombre = 2;
+  optional string apellido = 3;
+  optional string telefono = 4;
+  optional string email = 5;
+  optional string fecha_contratacion = 6;
+  optional EstadoOperativo estado = 7;
+  optional TipoMaquinaria tipo_maquinaria_asignada = 8;
+  optional bool activo = 9;
+}
+
+message ChangeDriverStatusRequest {
+  int64 id = 1;
+  EstadoOperativo nuevo_estado = 2;
+}
+
+message AssignMachineryTypeRequest {
+  int64 id = 1;
+  TipoMaquinaria tipo_maquinaria = 2;
+}
+
+message DeactivateDriverRequest {
+  int64 id = 1;
+}
+
+message DeleteDriverRequest {
+  int64 id = 1;
+}
+
+message CountAvailableDriversRequest {
+  // Sin parámetros adicionales
+}
+
+message CountAvailableDriversByMachineryTypeRequest {
+  TipoMaquinaria tipo_maquinaria = 1;
+}
+
+message IsDriverAvailableRequest {
+  int64 id = 1;
+}
+
+// Mensajes de response
+message DriverResponse {
+  int64 id = 1;
+  string nombre = 2;
+  string apellido = 3;
+  string dni = 4;
+  string licencia = 5;
+  optional string telefono = 6;
+  optional string email = 7;
+  optional string fecha_contratacion = 8;
+  EstadoOperativo estado = 9;
+  optional TipoMaquinaria tipo_maquinaria_asignada = 10;
+  bool activo = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+message GetAllDriversResponse {
+  repeated DriverResponse drivers = 1;
+  int32 total_pages = 2;
+  int64 total_elements = 3;
+  int32 current_page = 4;
+  int32 page_size = 5;
+}
+
+message GetActiveDriversResponse {
+  repeated DriverResponse drivers = 1;
+  int32 count = 2;
+}
+
+message GetAvailableDriversResponse {
+  repeated DriverResponse drivers = 1;
+  int32 count = 2;
+}
+
+message GetAvailableDriversByMachineryTypeResponse {
+  repeated DriverResponse drivers = 1;
+  int32 count = 2;
+  TipoMaquinaria tipo_maquinaria_filtrada = 3;
+}
+
+message SearchDriversByNameResponse {
+  repeated DriverResponse drivers = 1;
+  int32 count = 2;
+  string search_term = 3;
+}
+
+message CountAvailableDriversResponse {
+  int64 count = 1;
+}
+
+message CountAvailableDriversByMachineryTypeResponse {
+  int64 count = 1;
+  TipoMaquinaria tipo_maquinaria = 2;
+}
+
+message IsDriverAvailableResponse {
+  bool available = 1;
+  int64 driver_id = 2;
+}
+
+message Empty {
+  // Mensaje vacío para operaciones que no retornan datos
+}

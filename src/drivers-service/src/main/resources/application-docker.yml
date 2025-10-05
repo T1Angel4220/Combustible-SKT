@@ -7,11 +7,11 @@ spring:
   
   data:
     mongodb:
-      uri: mongodb://admin:admin123@localhost:27017/drivers_db?authSource=admin
+      uri: ${MONGODB_URI:mongodb://admin:admin123@mongodb:27017/drivers_db?authSource=admin}
       database: drivers_db
         
   profiles:
-    active: dev
+    active: docker
 
 # Management endpoints
 management:
@@ -26,9 +26,9 @@ management:
 # Logging configurations  
 logging:
   level:
-    com.skt.combustible.drivers: DEBUG
-    org.springframework.web: DEBUG
-    org.springframework.data.mongodb.core.MongoTemplate: DEBUG
+    com.skt.combustible.drivers: INFO
+    org.springframework.web: INFO
+    org.springframework.data.mongodb.core.MongoTemplate: INFO
 
 # gRPC Configuration
 grpc:
@@ -38,7 +38,7 @@ grpc:
 # Service Discovery (para comunicación entre microservicios)
 service:
   urls:
-    vehicles-service: http://localhost:8082
-    routes-service: http://localhost:8083
-    fuel-service: http://localhost:8084
-    auth-service: http://localhost:8085
+    vehicles-service: http://vehicles-service:8082
+    routes-service: http://routes-service:8083
+    fuel-service: http://fuel-service:8084
+    auth-service: http://auth-service:8085

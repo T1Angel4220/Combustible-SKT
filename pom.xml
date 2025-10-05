@@ -20,7 +20,7 @@
         <spring-boot.version>3.2.0</spring-boot.version>
         <grpc.version>1.58.0</grpc.version>
         <protobuf.version>3.24.0</protobuf.version>
-        <postgresql.version>42.7.1</postgresql.version>
+        <mongodb.version>4.11.1</mongodb.version>
         <jwt.version>0.12.3</jwt.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
     </properties>
@@ -69,11 +69,15 @@
                 <version>2.14.0.RELEASE</version>
             </dependency>
 
-            <!-- PostgreSQL -->
+            <!-- MongoDB -->
             <dependency>
-                <groupId>org.postgresql</groupId>
-                <artifactId>postgresql</artifactId>
-                <version>${postgresql.version}</version>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-mongodb</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>mongodb-driver-sync</artifactId>
+                <version>${mongodb.version}</version>
             </dependency>
 
             <!-- JWT -->
@@ -81,6 +85,13 @@
                 <groupId>io.jsonwebtoken</groupId>
                 <artifactId>jjwt-api</artifactId>
                 <version>${jwt.version}</version>
+            </dependency>
+
+            <!-- Protocol Buffers -->
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>${protobuf.version}</version>
             </dependency>
 
             <!-- MapStruct -->
