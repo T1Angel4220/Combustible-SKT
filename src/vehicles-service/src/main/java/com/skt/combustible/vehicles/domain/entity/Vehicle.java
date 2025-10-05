@@ -5,76 +5,66 @@ import java.time.LocalDateTime;
 import com.skt.combustible.shared.domain.enums.EstadoOperativo;
 import com.skt.combustible.shared.domain.enums.TipoMaquinaria;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 /**
- * Entidad Vehicle que representa un vehículo en el sistema SKT
+ * Documento Vehicle que representa un vehículo en el sistema SKT
  * 
  * @author Sistema SKT
  * @version 1.0
  */
-@Entity
-@Table(name = "vehicles")
+@Document(collection = "vehicles")
 public class Vehicle {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
     
     @NotBlank(message = "La placa es obligatoria")
-    @Column(name = "placa", unique = true, nullable = false, length = 10)
+    @Field("placa")
     private String placa;
     
     @NotBlank(message = "La marca es obligatoria")
-    @Column(name = "marca", nullable = false, length = 50)
+    @Field("marca")
     private String marca;
     
     @NotBlank(message = "El modelo es obligatorio")
-    @Column(name = "modelo", nullable = false, length = 50)
+    @Field("modelo")
     private String modelo;
     
     @NotNull(message = "El año es obligatorio")
     @Positive(message = "El año debe ser positivo")
-    @Column(name = "anio", nullable = false)
+    @Field("anio")
     private Integer anio;
     
     @NotNull(message = "El tipo de maquinaria es obligatorio")
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_maquinaria", nullable = false)
+    @Field("tipo_maquinaria")
     private TipoMaquinaria tipoMaquinaria;
     
     @NotNull(message = "El estado operativo es obligatorio")
-    @Enumerated(EnumType.STRING)
-    @Column(name = "estado_operativo", nullable = false)
+    @Field("estado_operativo")
     private EstadoOperativo estadoOperativo;
     
-    @Column(name = "capacidad_tanque")
+    @Field("capacidad_tanque")
     private Double capacidadTanque;
     
-    @Column(name = "consumo_promedio")
+    @Field("consumo_promedio")
     private Double consumoPromedio;
     
-    @Column(name = "kilometraje_actual")
+    @Field("kilometraje_actual")
     private Double kilometrajeActual;
     
-    @Column(name = "fecha_creacion", nullable = false)
+    @Field("fecha_creacion")
     private LocalDateTime fechaCreacion;
     
-    @Column(name = "fecha_actualizacion")
+    @Field("fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
     
-    @Column(name = "activo", nullable = false)
+    @Field("activo")
     private Boolean activo = true;
     
     // Constructores
@@ -125,11 +115,11 @@ public class Vehicle {
     }
     
     // Getters y Setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
     
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
     
@@ -229,7 +219,6 @@ public class Vehicle {
         this.activo = activo;
     }
     
-    @PreUpdate
     public void preUpdate() {
         this.fechaActualizacion = LocalDateTime.now();
     }

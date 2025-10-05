@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configuración personalizada de gRPC para el Gateway
+ * Configuración de gRPC para el Gateway
  * 
  * @author Sistema SKT
  * @version 1.0
@@ -64,3 +64,4 @@ public class GrpcConfig {
                 .build();
     }
 }
+

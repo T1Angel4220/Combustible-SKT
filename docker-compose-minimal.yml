@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database para Vehicles
+  vehicles-db:
+    image: postgres:15-alpine
+    container_name: vehicles-db
+    environment:
+      POSTGRES_DB: vehicles_db
+      POSTGRES_USER: vehicles_user
+      POSTGRES_PASSWORD: vehicles_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - vehicles_data:/var/lib/postgresql/data
+    networks:
+      - combustible-network
+
+  # Vehicles Service
+  vehicles-service:
+    build:
+      context: .
+      dockerfile: src/vehicles-service/Dockerfile
+    container_name: vehicles-service
+    ports:
+      - "8082:8082"
+      - "9092:9092"
+    environment:
+      DB_USERNAME: vehicles_user
+      DB_PASSWORD: vehicles_pass
+    depends_on:
+      - vehicles-db
+    networks:
+      - combustible-network
+
+  # Gateway Service
+  gateway-service:
+    build:
+      context: .
+      dockerfile: src/gateway-service/Dockerfile
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - vehicles-service
+    networks:
+      - combustible-network
+
+volumes:
+  vehicles_data:
+
+networks:
+  combustible-network:
+    driver: bridge

@@ -3,9 +3,8 @@ package com.skt.combustible.vehicles.domain.repository;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.skt.combustible.shared.domain.enums.EstadoOperativo;
@@ -19,7 +18,7 @@ import com.skt.combustible.vehicles.domain.entity.Vehicle;
  * @version 1.0
  */
 @Repository
-public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
+public interface VehicleRepository extends MongoRepository<Vehicle, String> {
     
     /**
      * Busca un vehículo por placa
@@ -54,38 +53,38 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     /**
      * Busca vehículos disponibles (activos y en estado DISPONIBLE)
      */
-    @Query("SELECT v FROM Vehicle v WHERE v.activo = true AND v.estadoOperativo = 'DISPONIBLE'")
+    @Query("{ 'activo': true, 'estadoOperativo': 'DISPONIBLE' }")
     List<Vehicle> findVehiclesDisponibles();
-    
+
     /**
      * Busca vehículos disponibles por tipo de maquinaria
      */
-    @Query("SELECT v FROM Vehicle v WHERE v.activo = true AND v.estadoOperativo = 'DISPONIBLE' AND v.tipoMaquinaria = :tipo")
-    List<Vehicle> findVehiclesDisponiblesByTipo(@Param("tipo") TipoMaquinaria tipoMaquinaria);
-    
+    @Query("{ 'activo': true, 'estadoOperativo': 'DISPONIBLE', 'tipoMaquinaria': ?0 }")
+    List<Vehicle> findVehiclesDisponiblesByTipo(TipoMaquinaria tipoMaquinaria);
+
     /**
      * Busca vehículos en uso
      */
-    @Query("SELECT v FROM Vehicle v WHERE v.activo = true AND v.estadoOperativo = 'EN_USO'")
+    @Query("{ 'activo': true, 'estadoOperativo': 'EN_USO' }")
     List<Vehicle> findVehiclesEnUso();
-    
+
     /**
      * Busca vehículos en mantenimiento
      */
-    @Query("SELECT v FROM Vehicle v WHERE v.activo = true AND v.estadoOperativo = 'MANTENIMIENTO'")
+    @Query("{ 'activo': true, 'estadoOperativo': 'MANTENIMIENTO' }")
     List<Vehicle> findVehiclesEnMantenimiento();
-    
+
     /**
      * Cuenta vehículos por tipo de maquinaria
      */
-    @Query("SELECT COUNT(v) FROM Vehicle v WHERE v.activo = true AND v.tipoMaquinaria = :tipo")
-    Long countByTipoMaquinaria(@Param("tipo") TipoMaquinaria tipoMaquinaria);
-    
+    @Query(value = "{ 'activo': true, 'tipoMaquinaria': ?0 }", count = true)
+    Long countByTipoMaquinaria(TipoMaquinaria tipoMaquinaria);
+
     /**
      * Cuenta vehículos por estado operativo
      */
-    @Query("SELECT COUNT(v) FROM Vehicle v WHERE v.activo = true AND v.estadoOperativo = :estado")
-    Long countByEstadoOperativo(@Param("estado") EstadoOperativo estadoOperativo);
+    @Query(value = "{ 'activo': true, 'estadoOperativo': ?0 }", count = true)
+    Long countByEstadoOperativo(EstadoOperativo estadoOperativo);
     
     /**
      * Busca vehículos por marca
@@ -113,4 +112,19 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
      */
     @Query("SELECT v FROM Vehicle v WHERE v.activo = true AND v.consumoPromedio > :consumo")
     List<Vehicle> findVehiclesWithConsumoMayorA(@Param("consumo") Double consumo);
+    
+    /**
+     * Cuenta vehículos activos
+     */
+    Long countByActivoTrue();
+    
+    /**
+     * Cuenta vehículos por estado operativo y activos
+     */
+    Long countByEstadoOperativoAndActivoTrue(EstadoOperativo estadoOperativo);
+    
+    /**
+     * Cuenta vehículos por tipo de maquinaria y activos
+     */
+    Long countByTipoMaquinariaAndActivoTrue(TipoMaquinaria tipoMaquinaria);
 }

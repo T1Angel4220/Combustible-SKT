@@ -1,0 +1,143 @@
+package com.skt.combustible.vehicles.domain.dto;
+
+import java.time.LocalDateTime;
+
+/**
+ * DTO para la respuesta de asignaciones de vehículos
+ * 
+ * @author Sistema SKT
+ * @version 1.0
+ */
+public class AsignacionResponse {
+    
+    private Long id;
+    private Long vehicleId;
+    private String placaVehiculo;
+    private String marcaVehiculo;
+    private String modeloVehiculo;
+    private Long choferId;
+    private LocalDateTime fechaAsignacion;
+    private LocalDateTime fechaDesasignacion;
+    private String estado;
+    private String observaciones;
+    private LocalDateTime fechaCreacion;
+    private LocalDateTime fechaActualizacion;
+    private Boolean activo;
+    
+    // Constructores
+    public AsignacionResponse() {}
+    
+    public AsignacionResponse(Long id, Long vehicleId, Long choferId, 
+                            LocalDateTime fechaAsignacion, String estado) {
+        this.id = id;
+        this.vehicleId = vehicleId;
+        this.choferId = choferId;
+        this.fechaAsignacion = fechaAsignacion;
+        this.estado = estado;
+    }
+    
+    // Getters y Setters
+    public Long getId() {
+        return id;
+    }
+    
+    public void setId(Long id) {
+        this.id = id;
+    }
+    
+    public Long getVehicleId() {
+        return vehicleId;
+    }
+    
+    public void setVehicleId(Long vehicleId) {
+        this.vehicleId = vehicleId;
+    }
+    
+    public String getPlacaVehiculo() {
+        return placaVehiculo;
+    }
+    
+    public void setPlacaVehiculo(String placaVehiculo) {
+        this.placaVehiculo = placaVehiculo;
+    }
+    
+    public String getMarcaVehiculo() {
+        return marcaVehiculo;
+    }
+    
+    public void setMarcaVehiculo(String marcaVehiculo) {
+        this.marcaVehiculo = marcaVehiculo;
+    }
+    
+    public String getModeloVehiculo() {
+        return modeloVehiculo;
+    }
+    
+    public void setModeloVehiculo(String modeloVehiculo) {
+        this.modeloVehiculo = modeloVehiculo;
+    }
+    
+    public Long getChoferId() {
+        return choferId;
+    }
+    
+    public void setChoferId(Long choferId) {
+        this.choferId = choferId;
+    }
+    
+    public LocalDateTime getFechaAsignacion() {
+        return fechaAsignacion;
+    }
+    
+    public void setFechaAsignacion(LocalDateTime fechaAsignacion) {
+        this.fechaAsignacion = fechaAsignacion;
+    }
+    
+    public LocalDateTime getFechaDesasignacion() {
+        return fechaDesasignacion;
+    }
+    
+    public void setFechaDesasignacion(LocalDateTime fechaDesasignacion) {
+        this.fechaDesasignacion = fechaDesasignacion;
+    }
+    
+    public String getEstado() {
+        return estado;
+    }
+    
+    public void setEstado(String estado) {
+        this.estado = estado;
+    }
+    
+    public String getObservaciones() {
+        return observaciones;
+    }
+    
+    public void setObservaciones(String observaciones) {
+        this.observaciones = observaciones;
+    }
+    
+    public LocalDateTime getFechaCreacion() {
+        return fechaCreacion;
+    }
+    
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
+    }
+    
+    public LocalDateTime getFechaActualizacion() {
+        return fechaActualizacion;
+    }
+    
+    public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
+        this.fechaActualizacion = fechaActualizacion;
+    }
+    
+    public Boolean getActivo() {
+        return activo;
+    }
+    
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+    }
+}

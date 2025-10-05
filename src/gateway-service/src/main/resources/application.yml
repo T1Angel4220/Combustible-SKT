@@ -7,7 +7,7 @@ spring:
     
   cloud:
     gateway:
-      # Deshabilitar auto-configuración de gRPC que causa conflictos
+      # Deshabilitar funcionalidades problemáticas de gRPC
       grpc:
         enabled: false
       routes:
@@ -60,6 +60,30 @@ management:
   endpoint:
     health:
       show-details: always
+
+# gRPC Configuration
+grpc:
+  client:
+    drivers-service:
+      address: 'static://localhost:9091'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+    vehicles-service:
+      address: 'static://localhost:9092'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+    routes-service:
+      address: 'static://localhost:9093'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+    fuel-service:
+      address: 'static://localhost:9094'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+    auth-service:
+      address: 'static://localhost:9095'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
 
 # Logging configurations  
 logging:

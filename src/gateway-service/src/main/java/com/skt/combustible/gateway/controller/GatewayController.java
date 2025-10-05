@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Controlador REST del Gateway para demostrar funcionalidad gRPC
+ * Controlador REST del Gateway con soporte gRPC
  * 
  * @author Sistema SKT
  * @version 1.0
@@ -51,8 +51,30 @@ public class GatewayController {
         info.put("description", "API Gateway con soporte HTTP y gRPC");
         info.put("grpcEnabled", true);
         info.put("httpEnabled", true);
+        info.put("routes", new String[]{
+            "/api/v1/drivers/** -> http://localhost:8081 (gRPC: 9091)",
+            "/api/v1/vehicles/** -> http://localhost:8082 (gRPC: 9092)", 
+            "/api/v1/routes/** -> http://localhost:8083 (gRPC: 9093)",
+            "/api/v1/fuel/** -> http://localhost:8084 (gRPC: 9094)",
+            "/api/v1/auth/** -> http://localhost:8085 (gRPC: 9095)"
+        });
         
         return info;
+    }
+
+    /**
+     * Endpoint para verificar el estado del gateway
+     */
+    @GetMapping("/health")
+    public Map<String, Object> getHealth() {
+        Map<String, Object> health = new HashMap<>();
+        health.put("status", "UP");
+        health.put("gateway", "ACTIVE");
+        health.put("grpc", "CONFIGURED");
+        health.put("http", "ENABLED");
+        health.put("timestamp", System.currentTimeMillis());
+        
+        return health;
     }
 
     /**

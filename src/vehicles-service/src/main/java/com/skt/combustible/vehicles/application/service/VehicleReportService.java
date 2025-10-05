@@ -1,20 +1,26 @@
 package com.skt.combustible.vehicles.application.service;
 
-import com.skt.combustible.shared.domain.enums.EstadoOperativo;
-import com.skt.combustible.shared.domain.enums.TipoMaquinaria;
-import com.skt.combustible.vehicles.domain.entity.Vehicle;
-import com.skt.combustible.vehicles.domain.repository.VehicleRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.skt.combustible.shared.domain.enums.EstadoOperativo;
+import com.skt.combustible.shared.domain.enums.TipoMaquinaria;
+import com.skt.combustible.vehicles.domain.entity.AsignacionVehiculo;
+import com.skt.combustible.vehicles.domain.entity.Mantenimiento;
+import com.skt.combustible.vehicles.domain.entity.Vehicle;
+import com.skt.combustible.vehicles.domain.repository.AsignacionRepository;
+import com.skt.combustible.vehicles.domain.repository.MantenimientoRepository;
+import com.skt.combustible.vehicles.domain.repository.VehicleRepository;
+
 /**
- * Servicio de reportes y consultas para vehículos
+ * Servicio de aplicación para la generación de reportes
  * 
  * @author Sistema SKT
  * @version 1.0
@@ -26,210 +32,214 @@ public class VehicleReportService {
     @Autowired
     private VehicleRepository vehicleRepository;
     
+    @Autowired
+    private MantenimientoRepository mantenimientoRepository;
+    
+    @Autowired
+    private AsignacionRepository asignacionRepository;
+    
     /**
-     * Genera reporte de vehículos por tipo de maquinaria
+     * Genera reporte de vehículos por estado
      */
-    public Map<TipoMaquinaria, Long> reporteVehiculosPorTipo() {
-        return vehicleRepository.findByActivoTrue()
-                .stream()
-                .collect(Collectors.groupingBy(
-                    Vehicle::getTipoMaquinaria,
-                    Collectors.counting()
-                ));
+    public Map<String, Object> generarReporteVehiculosPorEstado() {
+        Map<String, Object> reporte = new HashMap<>();
+        
+        // Contar vehículos por estado
+        Map<EstadoOperativo, Long> vehiculosPorEstado = new HashMap<>();
+        for (EstadoOperativo estado : EstadoOperativo.values()) {
+            Long count = vehicleRepository.countByEstadoOperativoAndActivoTrue(estado);
+            vehiculosPorEstado.put(estado, count);
+        }
+        
+        // Contar vehículos por tipo de maquinaria
+        Map<TipoMaquinaria, Long> vehiculosPorTipo = new HashMap<>();
+        for (TipoMaquinaria tipo : TipoMaquinaria.values()) {
+            Long count = vehicleRepository.countByTipoMaquinariaAndActivoTrue(tipo);
+            vehiculosPorTipo.put(tipo, count);
+        }
+        
+        // Estadísticas generales
+        Long totalVehiculos = vehicleRepository.countByActivoTrue();
+        Long vehiculosActivos = vehicleRepository.countByActivoTrue();
+        
+        reporte.put("fechaGeneracion", LocalDateTime.now());
+        reporte.put("totalVehiculos", totalVehiculos);
+        reporte.put("vehiculosActivos", vehiculosActivos);
+        reporte.put("vehiculosPorEstado", vehiculosPorEstado);
+        reporte.put("vehiculosPorTipo", vehiculosPorTipo);
+        
+        return reporte;
     }
     
     /**
-     * Genera reporte de vehículos por estado operativo
+     * Genera reporte de consumo por vehículo
      */
-    public Map<EstadoOperativo, Long> reporteVehiculosPorEstado() {
-        return vehicleRepository.findByActivoTrue()
-                .stream()
-                .collect(Collectors.groupingBy(
-                    Vehicle::getEstadoOperativo,
-                    Collectors.counting()
-                ));
+    public Map<String, Object> generarReporteConsumoPorVehiculo() {
+        Map<String, Object> reporte = new HashMap<>();
+        
+        List<Vehicle> vehiculos = vehicleRepository.findByActivoTrue();
+        List<Map<String, Object>> consumoPorVehiculo = vehiculos.stream()
+            .map(vehiculo -> {
+                Map<String, Object> consumo = new HashMap<>();
+                consumo.put("vehicleId", vehiculo.getId());
+                consumo.put("placa", vehiculo.getPlaca());
+                consumo.put("marca", vehiculo.getMarca());
+                consumo.put("modelo", vehiculo.getModelo());
+                consumo.put("tipoMaquinaria", vehiculo.getTipoMaquinaria().toString());
+                consumo.put("consumoPromedio", vehiculo.getConsumoPromedio());
+                consumo.put("kilometrajeActual", vehiculo.getKilometrajeActual());
+                consumo.put("capacidadTanque", vehiculo.getCapacidadTanque());
+                
+                // Calcular eficiencia si hay datos suficientes
+                if (vehiculo.getConsumoPromedio() != null && vehiculo.getKilometrajeActual() != null) {
+                    Double eficiencia = vehiculo.getKilometrajeActual() / vehiculo.getConsumoPromedio();
+                    consumo.put("eficiencia", eficiencia);
+                }
+                
+                return consumo;
+            })
+            .collect(Collectors.toList());
+        
+        reporte.put("fechaGeneracion", LocalDateTime.now());
+        reporte.put("totalVehiculos", vehiculos.size());
+        reporte.put("consumoPorVehiculo", consumoPorVehiculo);
+        
+        return reporte;
     }
     
     /**
-     * Genera reporte de vehículos por marca
+     * Genera reporte de historial de mantenimientos
      */
-    public Map<String, Long> reporteVehiculosPorMarca() {
-        return vehicleRepository.findByActivoTrue()
-                .stream()
-                .collect(Collectors.groupingBy(
-                    Vehicle::getMarca,
-                    Collectors.counting()
-                ));
+    public Map<String, Object> generarReporteHistorialMantenimientos() {
+        Map<String, Object> reporte = new HashMap<>();
+        
+        List<Mantenimiento> mantenimientos = mantenimientoRepository.findAll()
+            .stream()
+            .filter(Mantenimiento::getActivo)
+            .collect(Collectors.toList());
+        
+        // Agrupar por tipo de mantenimiento
+        Map<String, Long> mantenimientosPorTipo = mantenimientos.stream()
+            .collect(Collectors.groupingBy(
+                Mantenimiento::getTipoMantenimiento,
+                Collectors.counting()
+            ));
+        
+        // Agrupar por estado
+        Map<String, Long> mantenimientosPorEstado = mantenimientos.stream()
+            .collect(Collectors.groupingBy(
+                m -> m.getEstado().toString(),
+                Collectors.counting()
+            ));
+        
+        // Calcular costo total
+        Double costoTotal = mantenimientos.stream()
+            .filter(m -> m.getCosto() != null)
+            .mapToDouble(Mantenimiento::getCosto)
+            .sum();
+        
+        // Mantenimientos próximos a vencer (30 días)
+        List<Mantenimiento> proximosAVencer = mantenimientoRepository
+            .findMantenimientosProximosAVencer(LocalDateTime.now().plusDays(30));
+        
+        reporte.put("fechaGeneracion", LocalDateTime.now());
+        reporte.put("totalMantenimientos", mantenimientos.size());
+        reporte.put("mantenimientosPorTipo", mantenimientosPorTipo);
+        reporte.put("mantenimientosPorEstado", mantenimientosPorEstado);
+        reporte.put("costoTotal", costoTotal);
+        reporte.put("proximosAVencer", proximosAVencer.size());
+        reporte.put("mantenimientosProximosAVencer", proximosAVencer.stream()
+            .map(this::mapMantenimientoToMap)
+            .collect(Collectors.toList()));
+        
+        return reporte;
     }
     
     /**
-     * Genera reporte de vehículos por año
+     * Genera reporte de asignaciones
      */
-    public Map<Integer, Long> reporteVehiculosPorAnio() {
-        return vehicleRepository.findByActivoTrue()
-                .stream()
-                .collect(Collectors.groupingBy(
-                    Vehicle::getAnio,
-                    Collectors.counting()
-                ));
+    public Map<String, Object> generarReporteAsignaciones() {
+        Map<String, Object> reporte = new HashMap<>();
+        
+        List<AsignacionVehiculo> asignaciones = asignacionRepository.findAll()
+            .stream()
+            .filter(AsignacionVehiculo::getActivo)
+            .collect(Collectors.toList());
+        
+        // Agrupar por estado
+        Map<String, Long> asignacionesPorEstado = asignaciones.stream()
+            .collect(Collectors.groupingBy(
+                a -> a.getEstado().toString(),
+                Collectors.counting()
+            ));
+        
+        // Asignaciones activas por chofer
+        Map<Long, Long> asignacionesPorChofer = asignaciones.stream()
+            .filter(a -> a.getEstado() == AsignacionVehiculo.EstadoAsignacion.ACTIVA)
+            .collect(Collectors.groupingBy(
+                AsignacionVehiculo::getChoferId,
+                Collectors.counting()
+            ));
+        
+        // Vehículos disponibles
+        List<Vehicle> vehiculosDisponibles = asignacionRepository.findVehiculosDisponiblesParaAsignacion();
+        
+        reporte.put("fechaGeneracion", LocalDateTime.now());
+        reporte.put("totalAsignaciones", asignaciones.size());
+        reporte.put("asignacionesPorEstado", asignacionesPorEstado);
+        reporte.put("asignacionesActivasPorChofer", asignacionesPorChofer);
+        reporte.put("vehiculosDisponibles", vehiculosDisponibles.size());
+        reporte.put("vehiculosDisponiblesDetalle", vehiculosDisponibles.stream()
+            .map(this::mapVehicleToMap)
+            .collect(Collectors.toList()));
+        
+        return reporte;
     }
     
     /**
-     * Genera reporte de consumo promedio por tipo de maquinaria
+     * Genera reporte consolidado del sistema
      */
-    public Map<TipoMaquinaria, Double> reporteConsumoPromedioPorTipo() {
-        return vehicleRepository.findByActivoTrue()
-                .stream()
-                .filter(v -> v.getConsumoPromedio() != null)
-                .collect(Collectors.groupingBy(
-                    Vehicle::getTipoMaquinaria,
-                    Collectors.averagingDouble(Vehicle::getConsumoPromedio)
-                ));
+    public Map<String, Object> generarReporteConsolidado() {
+        Map<String, Object> reporte = new HashMap<>();
+        
+        reporte.put("fechaGeneracion", LocalDateTime.now());
+        reporte.put("vehiculosPorEstado", generarReporteVehiculosPorEstado());
+        reporte.put("consumoPorVehiculo", generarReporteConsumoPorVehiculo());
+        reporte.put("historialMantenimientos", generarReporteHistorialMantenimientos());
+        reporte.put("asignaciones", generarReporteAsignaciones());
+        
+        return reporte;
     }
     
     /**
-     * Genera reporte de vehículos con mayor consumo
+     * Mapea mantenimiento a Map para reportes
      */
-    public List<Vehicle> reporteVehiculosConMayorConsumo(int limite) {
-        return vehicleRepository.findByActivoTrue()
-                .stream()
-                .filter(v -> v.getConsumoPromedio() != null)
-                .sorted((v1, v2) -> Double.compare(v2.getConsumoPromedio(), v1.getConsumoPromedio()))
-                .limit(limite)
-                .collect(Collectors.toList());
+    private Map<String, Object> mapMantenimientoToMap(Mantenimiento mantenimiento) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", mantenimiento.getId());
+        map.put("vehicleId", mantenimiento.getVehicle().getId());
+        map.put("placaVehiculo", mantenimiento.getVehicle().getPlaca());
+        map.put("tipoMantenimiento", mantenimiento.getTipoMantenimiento());
+        map.put("fechaMantenimiento", mantenimiento.getFechaMantenimiento());
+        map.put("fechaProximoMantenimiento", mantenimiento.getFechaProximoMantenimiento());
+        map.put("costo", mantenimiento.getCosto());
+        map.put("proveedor", mantenimiento.getProveedor());
+        map.put("estado", mantenimiento.getEstado().toString());
+        return map;
     }
     
     /**
-     * Genera reporte de vehículos con menor consumo
+     * Mapea vehículo a Map para reportes
      */
-    public List<Vehicle> reporteVehiculosConMenorConsumo(int limite) {
-        return vehicleRepository.findByActivoTrue()
-                .stream()
-                .filter(v -> v.getConsumoPromedio() != null)
-                .sorted((v1, v2) -> Double.compare(v1.getConsumoPromedio(), v2.getConsumoPromedio()))
-                .limit(limite)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * Genera reporte de vehículos por rango de años
-     */
-    public List<Vehicle> reporteVehiculosPorRangoAnios(Integer anioInicio, Integer anioFin) {
-        return vehicleRepository.findVehiclesByAnioRange(anioInicio, anioFin);
-    }
-    
-    /**
-     * Genera reporte de vehículos por marca (búsqueda)
-     */
-    public List<Vehicle> reporteVehiculosPorMarca(String marca) {
-        return vehicleRepository.findByMarcaContainingIgnoreCase(marca);
-    }
-    
-    /**
-     * Genera reporte de vehículos por modelo (búsqueda)
-     */
-    public List<Vehicle> reporteVehiculosPorModelo(String modelo) {
-        return vehicleRepository.findByModeloContainingIgnoreCase(modelo);
-    }
-    
-    /**
-     * Genera reporte de vehículos con consumo mayor a un valor
-     */
-    public List<Vehicle> reporteVehiculosConConsumoMayorA(Double consumo) {
-        return vehicleRepository.findVehiclesWithConsumoMayorA(consumo);
-    }
-    
-    /**
-     * Genera reporte de vehículos en mantenimiento
-     */
-    public List<Vehicle> reporteVehiculosEnMantenimiento() {
-        return vehicleRepository.findVehiclesEnMantenimiento();
-    }
-    
-    /**
-     * Genera reporte de vehículos en uso
-     */
-    public List<Vehicle> reporteVehiculosEnUso() {
-        return vehicleRepository.findVehiclesEnUso();
-    }
-    
-    /**
-     * Genera reporte de vehículos disponibles
-     */
-    public List<Vehicle> reporteVehiculosDisponibles() {
-        return vehicleRepository.findVehiclesDisponibles();
-    }
-    
-    /**
-     * Genera reporte de vehículos disponibles por tipo
-     */
-    public List<Vehicle> reporteVehiculosDisponiblesPorTipo(TipoMaquinaria tipoMaquinaria) {
-        return vehicleRepository.findVehiclesDisponiblesByTipo(tipoMaquinaria);
-    }
-    
-    /**
-     * Genera reporte de vehículos por tipo y estado
-     */
-    public List<Vehicle> reporteVehiculosPorTipoYEstado(TipoMaquinaria tipoMaquinaria, EstadoOperativo estadoOperativo) {
-        return vehicleRepository.findByTipoMaquinariaAndEstadoOperativo(tipoMaquinaria, estadoOperativo);
-    }
-    
-    /**
-     * Genera reporte de vehículos creados en un rango de fechas
-     */
-    public List<Vehicle> reporteVehiculosCreadosEnRango(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
-        return vehicleRepository.findByActivoTrue()
-                .stream()
-                .filter(v -> v.getFechaCreacion().isAfter(fechaInicio) && v.getFechaCreacion().isBefore(fechaFin))
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * Genera reporte de vehículos actualizados en un rango de fechas
-     */
-    public List<Vehicle> reporteVehiculosActualizadosEnRango(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
-        return vehicleRepository.findByActivoTrue()
-                .stream()
-                .filter(v -> v.getFechaActualizacion() != null)
-                .filter(v -> v.getFechaActualizacion().isAfter(fechaInicio) && v.getFechaActualizacion().isBefore(fechaFin))
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * Genera reporte de vehículos por capacidad de tanque
-     */
-    public Map<String, Long> reporteVehiculosPorCapacidadTanque() {
-        return vehicleRepository.findByActivoTrue()
-                .stream()
-                .filter(v -> v.getCapacidadTanque() != null)
-                .collect(Collectors.groupingBy(
-                    v -> {
-                        Double capacidad = v.getCapacidadTanque();
-                        if (capacidad <= 50) return "0-50L";
-                        else if (capacidad <= 100) return "51-100L";
-                        else if (capacidad <= 200) return "101-200L";
-                        else return "200L+";
-                    },
-                    Collectors.counting()
-                ));
-    }
-    
-    /**
-     * Genera reporte de vehículos por kilometraje
-     */
-    public Map<String, Long> reporteVehiculosPorKilometraje() {
-        return vehicleRepository.findByActivoTrue()
-                .stream()
-                .filter(v -> v.getKilometrajeActual() != null)
-                .collect(Collectors.groupingBy(
-                    v -> {
-                        Double kilometraje = v.getKilometrajeActual();
-                        if (kilometraje <= 10000) return "0-10K km";
-                        else if (kilometraje <= 50000) return "10K-50K km";
-                        else if (kilometraje <= 100000) return "50K-100K km";
-                        else return "100K+ km";
-                    },
-                    Collectors.counting()
-                ));
+    private Map<String, Object> mapVehicleToMap(Vehicle vehicle) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", vehicle.getId());
+        map.put("placa", vehicle.getPlaca());
+        map.put("marca", vehicle.getMarca());
+        map.put("modelo", vehicle.getModelo());
+        map.put("tipoMaquinaria", vehicle.getTipoMaquinaria().toString());
+        map.put("estadoOperativo", vehicle.getEstadoOperativo().toString());
+        map.put("kilometrajeActual", vehicle.getKilometrajeActual());
+        return map;
     }
 }
