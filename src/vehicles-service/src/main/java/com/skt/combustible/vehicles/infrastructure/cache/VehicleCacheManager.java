@@ -39,9 +39,9 @@ public class VehicleCacheManager {
             }
         }
         
-        Optional<Vehicle> vehicle = vehicleRepository.findById(id);
+        Optional<Vehicle> vehicle = vehicleRepository.findById(id.toString());
         if (vehicle.isPresent() && cache != null) {
-            cache.put(id, vehicle.get());
+            cache.put(id.toString(), vehicle.get());
         }
         
         return vehicle;

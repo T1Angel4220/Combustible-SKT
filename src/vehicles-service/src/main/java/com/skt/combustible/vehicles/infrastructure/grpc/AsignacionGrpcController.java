@@ -62,7 +62,7 @@ public class AsignacionGrpcController {
      */
     public void obtenerAsignacionPorId(Long id, StreamObserver<AsignacionResponse> responseObserver) {
         try {
-            var response = asignacionService.obtenerAsignacionPorId(id);
+            var response = asignacionService.obtenerAsignacionPorId(id.toString());
             if (response.isPresent()) {
                 responseObserver.onNext(response.get());
             } else {

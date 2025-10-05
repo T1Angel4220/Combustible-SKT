@@ -65,7 +65,7 @@ public class VehicleService {
      * Obtiene un vehículo por ID
      */
     @Transactional(readOnly = true)
-    public Optional<VehicleResponse> obtenerVehiculoPorId(Long id) {
+    public Optional<VehicleResponse> obtenerVehiculoPorId(String id) {
         return vehicleRepository.findById(id)
                 .map(this::mapToResponse);
     }
@@ -137,7 +137,7 @@ public class VehicleService {
     /**
      * Actualiza un vehículo
      */
-    public VehicleResponse actualizarVehiculo(Long id, VehicleUpdateRequest request) {
+    public VehicleResponse actualizarVehiculo(String id, VehicleUpdateRequest request) {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado con ID: " + id));
         
@@ -181,7 +181,7 @@ public class VehicleService {
     /**
      * Cambia el estado operativo de un vehículo
      */
-    public VehicleResponse cambiarEstadoVehiculo(Long id, EstadoOperativo nuevoEstado) {
+    public VehicleResponse cambiarEstadoVehiculo(String id, EstadoOperativo nuevoEstado) {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado con ID: " + id));
         
@@ -193,7 +193,7 @@ public class VehicleService {
     /**
      * Actualiza el kilometraje de un vehículo
      */
-    public VehicleResponse actualizarKilometraje(Long id, Double nuevoKilometraje) {
+    public VehicleResponse actualizarKilometraje(String id, Double nuevoKilometraje) {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado con ID: " + id));
         
@@ -205,7 +205,7 @@ public class VehicleService {
     /**
      * Desactiva un vehículo (eliminación lógica)
      */
-    public void desactivarVehiculo(Long id) {
+    public void desactivarVehiculo(String id) {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado con ID: " + id));
         
@@ -216,7 +216,7 @@ public class VehicleService {
     /**
      * Elimina un vehículo físicamente
      */
-    public void eliminarVehiculo(Long id) {
+    public void eliminarVehiculo(String id) {
         if (!vehicleRepository.existsById(id)) {
             throw new IllegalArgumentException("Vehículo no encontrado con ID: " + id);
         }
@@ -247,7 +247,7 @@ public class VehicleService {
      */
     private VehicleResponse mapToResponse(Vehicle vehicle) {
         VehicleResponse response = new VehicleResponse();
-        response.setId(vehicle.getId());
+        response.setId(Long.parseLong(vehicle.getId()));
         response.setPlaca(vehicle.getPlaca());
         response.setMarca(vehicle.getMarca());
         response.setModelo(vehicle.getModelo());

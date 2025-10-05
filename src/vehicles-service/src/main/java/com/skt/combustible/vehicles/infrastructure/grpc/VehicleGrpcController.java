@@ -49,7 +49,7 @@ public class VehicleGrpcController {
      */
     public void obtenerVehiculoPorId(Long id, StreamObserver<VehicleResponse> responseObserver) {
         try {
-            Optional<VehicleResponse> response = vehicleService.obtenerVehiculoPorId(id);
+            Optional<VehicleResponse> response = vehicleService.obtenerVehiculoPorId(id.toString());
             if (response.isPresent()) {
                 responseObserver.onNext(response.get());
             } else {
@@ -176,7 +176,7 @@ public class VehicleGrpcController {
      */
     public void actualizarVehiculo(Long id, VehicleUpdateRequest request, StreamObserver<VehicleResponse> responseObserver) {
         try {
-            VehicleResponse response = vehicleService.actualizarVehiculo(id, request);
+            VehicleResponse response = vehicleService.actualizarVehiculo(id.toString(), request);
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -191,7 +191,7 @@ public class VehicleGrpcController {
      */
     public void cambiarEstadoVehiculo(Long id, EstadoOperativo nuevoEstado, StreamObserver<VehicleResponse> responseObserver) {
         try {
-            VehicleResponse response = vehicleService.cambiarEstadoVehiculo(id, nuevoEstado);
+            VehicleResponse response = vehicleService.cambiarEstadoVehiculo(id.toString(), nuevoEstado);
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -206,7 +206,7 @@ public class VehicleGrpcController {
      */
     public void actualizarKilometraje(Long id, Double nuevoKilometraje, StreamObserver<VehicleResponse> responseObserver) {
         try {
-            VehicleResponse response = vehicleService.actualizarKilometraje(id, nuevoKilometraje);
+            VehicleResponse response = vehicleService.actualizarKilometraje(id.toString(), nuevoKilometraje);
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -221,7 +221,7 @@ public class VehicleGrpcController {
      */
     public void desactivarVehiculo(Long id, StreamObserver<com.google.protobuf.Empty> responseObserver) {
         try {
-            vehicleService.desactivarVehiculo(id);
+            vehicleService.desactivarVehiculo(id.toString());
             responseObserver.onNext(com.google.protobuf.Empty.getDefaultInstance());
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -236,7 +236,7 @@ public class VehicleGrpcController {
      */
     public void eliminarVehiculo(Long id, StreamObserver<com.google.protobuf.Empty> responseObserver) {
         try {
-            vehicleService.eliminarVehiculo(id);
+            vehicleService.eliminarVehiculo(id.toString());
             responseObserver.onNext(com.google.protobuf.Empty.getDefaultInstance());
             responseObserver.onCompleted();
         } catch (Exception e) {

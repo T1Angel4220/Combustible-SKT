@@ -48,7 +48,7 @@ public class VehicleRestController {
      * Obtiene un vehículo por ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<VehicleResponse> obtenerVehiculoPorId(@PathVariable Long id) {
+    public ResponseEntity<VehicleResponse> obtenerVehiculoPorId(@PathVariable String id) {
         Optional<VehicleResponse> response = vehicleService.obtenerVehiculoPorId(id);
         return response.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -113,7 +113,7 @@ public class VehicleRestController {
      * Actualiza un vehículo
      */
     @PutMapping("/{id}")
-    public ResponseEntity<VehicleResponse> actualizarVehiculo(@PathVariable Long id, 
+    public ResponseEntity<VehicleResponse> actualizarVehiculo(@PathVariable String id, 
                                                                @Valid @RequestBody VehicleUpdateRequest request) {
         try {
             VehicleResponse response = vehicleService.actualizarVehiculo(id, request);
@@ -129,7 +129,7 @@ public class VehicleRestController {
      * Cambia el estado de un vehículo
      */
     @PatchMapping("/{id}/estado")
-    public ResponseEntity<VehicleResponse> cambiarEstadoVehiculo(@PathVariable Long id, 
+    public ResponseEntity<VehicleResponse> cambiarEstadoVehiculo(@PathVariable String id, 
                                                                @RequestParam EstadoOperativo estado) {
         try {
             VehicleResponse response = vehicleService.cambiarEstadoVehiculo(id, estado);
@@ -145,7 +145,7 @@ public class VehicleRestController {
      * Actualiza el kilometraje de un vehículo
      */
     @PatchMapping("/{id}/kilometraje")
-    public ResponseEntity<VehicleResponse> actualizarKilometraje(@PathVariable Long id, 
+    public ResponseEntity<VehicleResponse> actualizarKilometraje(@PathVariable String id, 
                                                                 @RequestParam Double kilometraje) {
         try {
             VehicleResponse response = vehicleService.actualizarKilometraje(id, kilometraje);
@@ -161,7 +161,7 @@ public class VehicleRestController {
      * Desactiva un vehículo
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> desactivarVehiculo(@PathVariable Long id) {
+    public ResponseEntity<Void> desactivarVehiculo(@PathVariable String id) {
         try {
             vehicleService.desactivarVehiculo(id);
             return ResponseEntity.noContent().build();

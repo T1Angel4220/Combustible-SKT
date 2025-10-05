@@ -2,64 +2,52 @@ package com.skt.combustible.vehicles.domain.entity;
 
 import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import jakarta.validation.constraints.NotNull;
 
 /**
- * Entidad AsignacionVehiculo que representa la asignación de vehículos a choferes
+ * Documento AsignacionVehiculo que representa la asignación de vehículos a choferes
  * 
  * @author Sistema SKT
  * @version 1.0
  */
-@Entity
-@Table(name = "asignaciones_vehiculos")
+@Document(collection = "asignaciones_vehiculos")
 public class AsignacionVehiculo {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
     
-    @ManyToOne
-    @JoinColumn(name = "vehicle_id", nullable = false)
+    @DBRef
     @NotNull(message = "El vehículo es obligatorio")
     private Vehicle vehicle;
     
     @NotNull(message = "El ID del chofer es obligatorio")
-    @Column(name = "chofer_id", nullable = false)
+    @Field("chofer_id")
     private Long choferId;
     
     @NotNull(message = "La fecha de asignación es obligatoria")
-    @Column(name = "fecha_asignacion", nullable = false)
+    @Field("fecha_asignacion")
     private LocalDateTime fechaAsignacion;
     
-    @Column(name = "fecha_desasignacion")
+    @Field("fecha_desasignacion")
     private LocalDateTime fechaDesasignacion;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "estado", nullable = false)
+    @Field("estado")
     private EstadoAsignacion estado = EstadoAsignacion.ACTIVA;
     
-    @Column(name = "observaciones", length = 500)
+    @Field("observaciones")
     private String observaciones;
     
-    @Column(name = "fecha_creacion", nullable = false)
+    @Field("fecha_creacion")
     private LocalDateTime fechaCreacion;
     
-    @Column(name = "fecha_actualizacion")
+    @Field("fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
     
-    @Column(name = "activo", nullable = false)
+    @Field("activo")
     private Boolean activo = true;
     
     // Enum para estados de asignación
@@ -82,23 +70,21 @@ public class AsignacionVehiculo {
         this.fechaAsignacion = fechaAsignacion;
     }
     
-    @PrePersist
-    protected void onCreate() {
+    public void onCreate() {
         fechaCreacion = LocalDateTime.now();
         fechaActualizacion = LocalDateTime.now();
     }
     
-    @PreUpdate
-    protected void onUpdate() {
+    public void onUpdate() {
         fechaActualizacion = LocalDateTime.now();
     }
     
     // Getters y Setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
     
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
     

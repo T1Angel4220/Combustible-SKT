@@ -2,81 +2,69 @@ package com.skt.combustible.vehicles.domain.entity;
 
 import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 /**
- * Entidad Mantenimiento que representa el historial de mantenimientos de vehículos
+ * Documento Mantenimiento que representa el historial de mantenimientos de vehículos
  * 
  * @author Sistema SKT
  * @version 1.0
  */
-@Entity
-@Table(name = "mantenimientos")
+@Document(collection = "mantenimientos")
 public class Mantenimiento {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
     
-    @ManyToOne
-    @JoinColumn(name = "vehicle_id", nullable = false)
+    @DBRef
     @NotNull(message = "El vehículo es obligatorio")
     private Vehicle vehicle;
     
     @NotBlank(message = "El tipo de mantenimiento es obligatorio")
-    @Column(name = "tipo_mantenimiento", nullable = false, length = 50)
+    @Field("tipo_mantenimiento")
     private String tipoMantenimiento;
     
     @NotBlank(message = "La descripción es obligatoria")
-    @Column(name = "descripcion", nullable = false, length = 500)
+    @Field("descripcion")
     private String descripcion;
     
     @NotNull(message = "La fecha de mantenimiento es obligatoria")
-    @Column(name = "fecha_mantenimiento", nullable = false)
+    @Field("fecha_mantenimiento")
     private LocalDateTime fechaMantenimiento;
     
-    @Column(name = "fecha_proximo_mantenimiento")
+    @Field("fecha_proximo_mantenimiento")
     private LocalDateTime fechaProximoMantenimiento;
     
     @Positive(message = "El costo debe ser positivo")
-    @Column(name = "costo")
+    @Field("costo")
     private Double costo;
     
-    @Column(name = "kilometraje_mantenimiento")
+    @Field("kilometraje_mantenimiento")
     private Double kilometrajeMantenimiento;
     
     @NotBlank(message = "El proveedor es obligatorio")
-    @Column(name = "proveedor", nullable = false, length = 100)
+    @Field("proveedor")
     private String proveedor;
     
-    @Column(name = "observaciones", length = 1000)
+    @Field("observaciones")
     private String observaciones;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "estado", nullable = false)
+    @Field("estado")
     private EstadoMantenimiento estado = EstadoMantenimiento.PROGRAMADO;
     
-    @Column(name = "fecha_creacion", nullable = false)
+    @Field("fecha_creacion")
     private LocalDateTime fechaCreacion;
     
-    @Column(name = "fecha_actualizacion")
+    @Field("fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
     
-    @Column(name = "activo", nullable = false)
+    @Field("activo")
     private Boolean activo = true;
     
     // Enum para estados de mantenimiento
@@ -103,23 +91,21 @@ public class Mantenimiento {
         this.proveedor = proveedor;
     }
     
-    @PrePersist
-    protected void onCreate() {
+    public void onCreate() {
         fechaCreacion = LocalDateTime.now();
         fechaActualizacion = LocalDateTime.now();
     }
     
-    @PreUpdate
-    protected void onUpdate() {
+    public void onUpdate() {
         fechaActualizacion = LocalDateTime.now();
     }
     
     // Getters y Setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
     
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
     

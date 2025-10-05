@@ -46,7 +46,7 @@ public class MantenimientoGrpcController {
      */
     public void obtenerMantenimientoPorId(Long id, StreamObserver<MantenimientoResponse> responseObserver) {
         try {
-            var response = mantenimientoService.obtenerMantenimientoPorId(id);
+            var response = mantenimientoService.obtenerMantenimientoPorId(id.toString());
             if (response.isPresent()) {
                 responseObserver.onNext(response.get());
             } else {
@@ -67,7 +67,7 @@ public class MantenimientoGrpcController {
      */
     public void obtenerMantenimientosPorVehiculo(Long vehicleId, StreamObserver<MantenimientoResponse> responseObserver) {
         try {
-            List<MantenimientoResponse> responses = mantenimientoService.obtenerMantenimientosPorVehiculo(vehicleId);
+            List<MantenimientoResponse> responses = mantenimientoService.obtenerMantenimientosPorVehiculo(vehicleId.toString());
             for (MantenimientoResponse response : responses) {
                 responseObserver.onNext(response);
             }
@@ -152,7 +152,7 @@ public class MantenimientoGrpcController {
      */
     public void actualizarEstadoMantenimiento(Long id, Mantenimiento.EstadoMantenimiento nuevoEstado, StreamObserver<MantenimientoResponse> responseObserver) {
         try {
-            MantenimientoResponse response = mantenimientoService.actualizarEstadoMantenimiento(id, nuevoEstado);
+            MantenimientoResponse response = mantenimientoService.actualizarEstadoMantenimiento(id.toString(), nuevoEstado);
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -167,7 +167,7 @@ public class MantenimientoGrpcController {
      */
     public void eliminarMantenimiento(Long id, StreamObserver<com.google.protobuf.Empty> responseObserver) {
         try {
-            mantenimientoService.eliminarMantenimiento(id);
+            mantenimientoService.eliminarMantenimiento(id.toString());
             responseObserver.onNext(com.google.protobuf.Empty.getDefaultInstance());
             responseObserver.onCompleted();
         } catch (Exception e) {

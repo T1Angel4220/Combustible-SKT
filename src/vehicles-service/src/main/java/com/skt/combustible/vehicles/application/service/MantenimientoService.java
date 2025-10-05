@@ -37,7 +37,7 @@ public class MantenimientoService {
      */
     public MantenimientoResponse crearMantenimiento(MantenimientoCreateRequest request) {
         // Validar que el vehículo existe
-        Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
+        Vehicle vehicle = vehicleRepository.findById(request.getVehicleId().toString())
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado con ID: " + request.getVehicleId()));
         
         // Validar que el vehículo esté activo
@@ -75,7 +75,7 @@ public class MantenimientoService {
      * Obtiene un mantenimiento por ID
      */
     @Transactional(readOnly = true)
-    public Optional<MantenimientoResponse> obtenerMantenimientoPorId(Long id) {
+    public Optional<MantenimientoResponse> obtenerMantenimientoPorId(String id) {
         return mantenimientoRepository.findById(id)
                 .filter(Mantenimiento::getActivo)
                 .map(this::mapToResponse);
@@ -85,8 +85,8 @@ public class MantenimientoService {
      * Obtiene todos los mantenimientos de un vehículo
      */
     @Transactional(readOnly = true)
-    public List<MantenimientoResponse> obtenerMantenimientosPorVehiculo(Long vehicleId) {
-        return mantenimientoRepository.findByVehicleIdAndActivoTrue(vehicleId)
+    public List<MantenimientoResponse> obtenerMantenimientosPorVehiculo(String vehicleId) {
+        return mantenimientoRepository.findByVehicleIdAndActivoTrue(Long.parseLong(vehicleId))
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -141,7 +141,7 @@ public class MantenimientoService {
     /**
      * Actualiza el estado de un mantenimiento
      */
-    public MantenimientoResponse actualizarEstadoMantenimiento(Long id, Mantenimiento.EstadoMantenimiento nuevoEstado) {
+    public MantenimientoResponse actualizarEstadoMantenimiento(String id, Mantenimiento.EstadoMantenimiento nuevoEstado) {
         Mantenimiento mantenimiento = mantenimientoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Mantenimiento no encontrado con ID: " + id));
         
@@ -157,7 +157,7 @@ public class MantenimientoService {
     /**
      * Elimina un mantenimiento (soft delete)
      */
-    public void eliminarMantenimiento(Long id) {
+    public void eliminarMantenimiento(String id) {
         Mantenimiento mantenimiento = mantenimientoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Mantenimiento no encontrado con ID: " + id));
         
@@ -170,7 +170,7 @@ public class MantenimientoService {
      */
     @Transactional(readOnly = true)
     public MantenimientoStatsDTO obtenerEstadisticasMantenimiento(Long vehicleId) {
-        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+        Vehicle vehicle = vehicleRepository.findById(vehicleId.toString())
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado con ID: " + vehicleId));
         
         Long totalMantenimientos = mantenimientoRepository.countMantenimientosPorVehiculo(vehicle);
@@ -184,8 +184,8 @@ public class MantenimientoService {
      */
     private MantenimientoResponse mapToResponse(Mantenimiento mantenimiento) {
         MantenimientoResponse response = new MantenimientoResponse();
-        response.setId(mantenimiento.getId());
-        response.setVehicleId(mantenimiento.getVehicle().getId());
+        response.setId(Long.parseLong(mantenimiento.getId()));
+        response.setVehicleId(Long.parseLong(mantenimiento.getVehicle().getId()));
         response.setPlacaVehiculo(mantenimiento.getVehicle().getPlaca());
         response.setMarcaVehiculo(mantenimiento.getVehicle().getMarca());
         response.setModeloVehiculo(mantenimiento.getVehicle().getModelo());

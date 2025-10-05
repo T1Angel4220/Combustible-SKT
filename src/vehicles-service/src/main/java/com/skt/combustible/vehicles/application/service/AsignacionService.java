@@ -38,7 +38,7 @@ public class AsignacionService {
      */
     public AsignacionResponse asignarVehiculoAChofer(AsignacionCreateRequest request) {
         // Validar que el vehículo existe
-        Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
+        Vehicle vehicle = vehicleRepository.findById(request.getVehicleId().toString())
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado con ID: " + request.getVehicleId()));
         
         // Validar que el vehículo esté activo
@@ -86,7 +86,7 @@ public class AsignacionService {
      * Desasigna un vehículo de un chofer
      */
     public AsignacionResponse desasignarVehiculo(Long vehicleId) {
-        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+        Vehicle vehicle = vehicleRepository.findById(vehicleId.toString())
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado con ID: " + vehicleId));
         
         AsignacionVehiculo asignacionActiva = asignacionRepository.findAsignacionActivaPorVehiculo(vehicle)
@@ -108,7 +108,7 @@ public class AsignacionService {
      * Obtiene una asignación por ID
      */
     @Transactional(readOnly = true)
-    public Optional<AsignacionResponse> obtenerAsignacionPorId(Long id) {
+    public Optional<AsignacionResponse> obtenerAsignacionPorId(String id) {
         return asignacionRepository.findById(id)
                 .filter(AsignacionVehiculo::getActivo)
                 .map(this::mapToResponse);
@@ -193,8 +193,8 @@ public class AsignacionService {
      */
     private AsignacionResponse mapToResponse(AsignacionVehiculo asignacion) {
         AsignacionResponse response = new AsignacionResponse();
-        response.setId(asignacion.getId());
-        response.setVehicleId(asignacion.getVehicle().getId());
+        response.setId(Long.parseLong(asignacion.getId()));
+        response.setVehicleId(Long.parseLong(asignacion.getVehicle().getId()));
         response.setPlacaVehiculo(asignacion.getVehicle().getPlaca());
         response.setMarcaVehiculo(asignacion.getVehicle().getMarca());
         response.setModeloVehiculo(asignacion.getVehicle().getModelo());

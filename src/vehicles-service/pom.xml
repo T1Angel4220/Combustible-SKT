@@ -56,6 +56,12 @@
             <artifactId>mapstruct</artifactId>
         </dependency>
 
+        <!-- AspectJ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
 
         <!-- Development Tools -->
         <dependency>

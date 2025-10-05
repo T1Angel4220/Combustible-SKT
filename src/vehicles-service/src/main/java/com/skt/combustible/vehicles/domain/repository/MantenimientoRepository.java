@@ -4,22 +4,21 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.skt.combustible.vehicles.domain.entity.Mantenimiento;
 import com.skt.combustible.vehicles.domain.entity.Vehicle;
 
 /**
- * Repositorio para la entidad Mantenimiento
+ * Repositorio para el documento Mantenimiento
  * 
  * @author Sistema SKT
  * @version 1.0
  */
 @Repository
-public interface MantenimientoRepository extends JpaRepository<Mantenimiento, Long> {
+public interface MantenimientoRepository extends MongoRepository<Mantenimiento, String> {
     
     /**
      * Busca mantenimientos por vehículo
@@ -49,43 +48,52 @@ public interface MantenimientoRepository extends JpaRepository<Mantenimiento, Lo
     /**
      * Busca mantenimientos programados
      */
-    @Query("SELECT m FROM Mantenimiento m WHERE m.estado = 'PROGRAMADO' AND m.activo = true")
+    @Query("{ 'estado': 'PROGRAMADO', 'activo': true }")
     List<Mantenimiento> findMantenimientosProgramados();
     
     /**
      * Busca mantenimientos próximos a vencer
      */
-    @Query("SELECT m FROM Mantenimiento m WHERE m.fechaProximoMantenimiento <= :fechaLimite AND m.activo = true")
-    List<Mantenimiento> findMantenimientosProximosAVencer(@Param("fechaLimite") LocalDateTime fechaLimite);
+    @Query("{ 'fechaProximoMantenimiento': { $lte: ?0 }, 'activo': true }")
+    List<Mantenimiento> findMantenimientosProximosAVencer(LocalDateTime fechaLimite);
     
     /**
      * Busca mantenimientos por rango de fechas
      */
-    @Query("SELECT m FROM Mantenimiento m WHERE m.fechaMantenimiento BETWEEN :fechaInicio AND :fechaFin AND m.activo = true")
-    List<Mantenimiento> findMantenimientosPorRangoFechas(@Param("fechaInicio") LocalDateTime fechaInicio, 
-                                                         @Param("fechaFin") LocalDateTime fechaFin);
+    @Query("{ 'fechaMantenimiento': { $gte: ?0, $lte: ?1 }, 'activo': true }")
+    List<Mantenimiento> findMantenimientosPorRangoFechas(LocalDateTime fechaInicio, LocalDateTime fechaFin);
     
     /**
      * Busca el último mantenimiento de un vehículo
      */
-    @Query("SELECT m FROM Mantenimiento m WHERE m.vehicle = :vehicle AND m.activo = true ORDER BY m.fechaMantenimiento DESC")
-    Optional<Mantenimiento> findUltimoMantenimientoPorVehiculo(@Param("vehicle") Vehicle vehicle);
+    @Query(value = "{ 'vehicle': ?0, 'activo': true }", sort = "{ 'fechaMantenimiento': -1 }")
+    Optional<Mantenimiento> findUltimoMantenimientoPorVehiculo(Vehicle vehicle);
     
     /**
      * Cuenta mantenimientos por vehículo
      */
-    @Query("SELECT COUNT(m) FROM Mantenimiento m WHERE m.vehicle = :vehicle AND m.activo = true")
-    Long countMantenimientosPorVehiculo(@Param("vehicle") Vehicle vehicle);
+    @Query(value = "{ 'vehicle': ?0, 'activo': true }", count = true)
+    Long countMantenimientosPorVehiculo(Vehicle vehicle);
     
     /**
      * Calcula el costo total de mantenimientos por vehículo
      */
-    @Query("SELECT COALESCE(SUM(m.costo), 0) FROM Mantenimiento m WHERE m.vehicle = :vehicle AND m.activo = true")
-    Double calcularCostoTotalMantenimientosPorVehiculo(@Param("vehicle") Vehicle vehicle);
+    @Query(value = "{ 'vehicle': ?0, 'activo': true }", fields = "{ 'costo': 1 }")
+    List<Mantenimiento> findCostosPorVehiculo(Vehicle vehicle);
+    
+    /**
+     * Calcula el costo total de mantenimientos por vehículo (método original)
+     */
+    default Double calcularCostoTotalMantenimientosPorVehiculo(Vehicle vehicle) {
+        List<Mantenimiento> mantenimientos = findCostosPorVehiculo(vehicle);
+        return mantenimientos.stream()
+                .mapToDouble(m -> m.getCosto() != null ? m.getCosto() : 0.0)
+                .sum();
+    }
     
     /**
      * Busca mantenimientos por tipo de maquinaria
      */
-    @Query("SELECT m FROM Mantenimiento m JOIN m.vehicle v WHERE v.tipoMaquinaria = :tipoMaquinaria AND m.activo = true")
-    List<Mantenimiento> findMantenimientosPorTipoMaquinaria(@Param("tipoMaquinaria") String tipoMaquinaria);
+    @Query("{ 'vehicle.tipoMaquinaria': ?0, 'activo': true }")
+    List<Mantenimiento> findMantenimientosPorTipoMaquinaria(String tipoMaquinaria);
 }

@@ -4,22 +4,21 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.skt.combustible.vehicles.domain.entity.AsignacionVehiculo;
 import com.skt.combustible.vehicles.domain.entity.Vehicle;
 
 /**
- * Repositorio para la entidad AsignacionVehiculo
+ * Repositorio para el documento AsignacionVehiculo
  * 
  * @author Sistema SKT
  * @version 1.0
  */
 @Repository
-public interface AsignacionRepository extends JpaRepository<AsignacionVehiculo, Long> {
+public interface AsignacionRepository extends MongoRepository<AsignacionVehiculo, String> {
     
     /**
      * Busca asignaciones por vehículo
@@ -39,20 +38,20 @@ public interface AsignacionRepository extends JpaRepository<AsignacionVehiculo, 
     /**
      * Busca asignaciones activas por chofer
      */
-    @Query("SELECT a FROM AsignacionVehiculo a WHERE a.choferId = :choferId AND a.estado = 'ACTIVA' AND a.activo = true")
-    List<AsignacionVehiculo> findAsignacionesActivasPorChofer(@Param("choferId") Long choferId);
+    @Query("{ 'choferId': ?0, 'estado': 'ACTIVA', 'activo': true }")
+    List<AsignacionVehiculo> findAsignacionesActivasPorChofer(Long choferId);
     
     /**
      * Busca la asignación activa de un vehículo
      */
-    @Query("SELECT a FROM AsignacionVehiculo a WHERE a.vehicle = :vehicle AND a.estado = 'ACTIVA' AND a.activo = true")
-    Optional<AsignacionVehiculo> findAsignacionActivaPorVehiculo(@Param("vehicle") Vehicle vehicle);
+    @Query("{ 'vehicle': ?0, 'estado': 'ACTIVA', 'activo': true }")
+    Optional<AsignacionVehiculo> findAsignacionActivaPorVehiculo(Vehicle vehicle);
     
     /**
      * Cuenta asignaciones activas por chofer
      */
-    @Query("SELECT COUNT(a) FROM AsignacionVehiculo a WHERE a.choferId = :choferId AND a.estado = 'ACTIVA' AND a.activo = true")
-    Long countAsignacionesActivasPorChofer(@Param("choferId") Long choferId);
+    @Query(value = "{ 'choferId': ?0, 'estado': 'ACTIVA', 'activo': true }", count = true)
+    Long countAsignacionesActivasPorChofer(Long choferId);
     
     /**
      * Busca asignaciones por estado
@@ -62,32 +61,38 @@ public interface AsignacionRepository extends JpaRepository<AsignacionVehiculo, 
     /**
      * Busca asignaciones por rango de fechas
      */
-    @Query("SELECT a FROM AsignacionVehiculo a WHERE a.fechaAsignacion BETWEEN :fechaInicio AND :fechaFin AND a.activo = true")
-    List<AsignacionVehiculo> findAsignacionesPorRangoFechas(@Param("fechaInicio") LocalDateTime fechaInicio, 
-                                                            @Param("fechaFin") LocalDateTime fechaFin);
+    @Query("{ 'fechaAsignacion': { $gte: ?0, $lte: ?1 }, 'activo': true }")
+    List<AsignacionVehiculo> findAsignacionesPorRangoFechas(LocalDateTime fechaInicio, LocalDateTime fechaFin);
     
     /**
      * Busca la última asignación de un vehículo
      */
-    @Query("SELECT a FROM AsignacionVehiculo a WHERE a.vehicle = :vehicle AND a.activo = true ORDER BY a.fechaAsignacion DESC")
-    Optional<AsignacionVehiculo> findUltimaAsignacionPorVehiculo(@Param("vehicle") Vehicle vehicle);
+    @Query(value = "{ 'vehicle': ?0, 'activo': true }", sort = "{ 'fechaAsignacion': -1 }")
+    Optional<AsignacionVehiculo> findUltimaAsignacionPorVehiculo(Vehicle vehicle);
     
     /**
      * Busca asignaciones por tipo de maquinaria
      */
-    @Query("SELECT a FROM AsignacionVehiculo a JOIN a.vehicle v WHERE v.tipoMaquinaria = :tipoMaquinaria AND a.activo = true")
-    List<AsignacionVehiculo> findAsignacionesPorTipoMaquinaria(@Param("tipoMaquinaria") String tipoMaquinaria);
+    @Query("{ 'vehicle.tipoMaquinaria': ?0, 'activo': true }")
+    List<AsignacionVehiculo> findAsignacionesPorTipoMaquinaria(String tipoMaquinaria);
     
     /**
      * Verifica si un vehículo está asignado actualmente
      */
-    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM AsignacionVehiculo a WHERE a.vehicle = :vehicle AND a.estado = 'ACTIVA' AND a.activo = true")
-    Boolean isVehiculoAsignado(@Param("vehicle") Vehicle vehicle);
+    @Query(value = "{ 'vehicle': ?0, 'estado': 'ACTIVA', 'activo': true }", count = true)
+    Long countVehiculoAsignado(Vehicle vehicle);
+    
+    /**
+     * Verifica si un vehículo está asignado (retorna boolean)
+     */
+    default Boolean isVehiculoAsignado(Vehicle vehicle) {
+        return countVehiculoAsignado(vehicle) > 0;
+    }
     
     /**
      * Busca vehículos disponibles (sin asignación activa)
      */
-    @Query("SELECT v FROM Vehicle v WHERE v.activo = true AND v.estadoOperativo = 'DISPONIBLE' AND NOT EXISTS (SELECT a FROM AsignacionVehiculo a WHERE a.vehicle = v AND a.estado = 'ACTIVA' AND a.activo = true)")
+    @Query("{ 'activo': true, 'estadoOperativo': 'DISPONIBLE' }")
     List<Vehicle> findVehiculosDisponiblesParaAsignacion();
     
     /**
