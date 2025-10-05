@@ -5,18 +5,18 @@ spring:
   application:
     name: auth-service
   
-  # Configuración MongoDB
   data:
     mongodb:
-      uri: mongodb://localhost:27017/authdb
-      database: authdb
+      # MongoDB Atlas (gratuito) - Reemplaza con tu URL
+      uri: mongodb+srv://usuario:password@cluster0.mongodb.net/auth_db?retryWrites=true&w=majority
+      database: auth_db
       
   profiles:
-    active: mongodb
+    active: dev
 
 # Security JWT Configuration
 jwt:
-  secret: ${JWT_SECRET:mySecretKey1234567890123456789012345}
+  secret: mySecretKey1234567890123456789012345
   expiration: 86400000 # 24 hours in milliseconds
 
 # Management endpoints
@@ -24,7 +24,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,h2-console
+        include: health,info,metrics
   endpoint:
     health:
       show-details: always
@@ -34,15 +34,14 @@ logging:
   level:
     com.skt.combustible.auth: DEBUG
     org.springframework.web: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.data.mongodb: DEBUG
 
 # gRPC Configuration
 grpc:
   server:
     port: 9095
     
-# Service Discovery (para comunicación entre microservicios)
+# Service Discovery
 service:
   urls:
     drivers-service: http://localhost:8081

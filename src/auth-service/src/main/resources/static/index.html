@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Autenticación SKT</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <i class="fas fa-shield-alt"></i>
+        <h1>Sistema SKT</h1>
+      </div>
+      <nav class="nav" id="nav">
+        <a href="#" id="loginLink" class="nav-link active">Iniciar Sesión</a>
+        <a href="#" id="registerLink" class="nav-link">Registrarse</a>
+        <a href="#" id="dashboardLink" class="nav-link" style="display: none;">Dashboard</a>
+        <a href="#" id="logoutLink" class="nav-link" style="display: none;">Cerrar Sesión</a>
+      </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Login Form -->
+      <div id="loginSection" class="form-section active">
+        <div class="form-container">
+          <h2><i class="fas fa-sign-in-alt"></i> Iniciar Sesión</h2>
+
+          <!-- Welcome Message -->
+          <div
+            style="text-align: center; margin-bottom: 30px; padding: 25px; background: rgba(255, 255, 255, 0.2); border-radius: 20px; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);">
+            <h3
+              style="color: white; margin-bottom: 15px; font-size: 1.4rem; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);">
+              <i class="fas fa-shield-alt" style="color: #4ecdc4; margin-right: 12px;"></i>
+              Bienvenido al Sistema SKT
+            </h3>
+            <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1rem; font-weight: 500;">
+              Accede de forma segura a tu cuenta con autenticación JWT
+            </p>
+          </div>
+
+          <form id="loginForm" class="auth-form">
+            <div class="form-group">
+              <label for="loginUsername">
+                <i class="fas fa-user"></i> Usuario o Email
+              </label>
+              <input type="text" id="loginUsername" name="usernameOrEmail" required
+                placeholder="Ingresa tu usuario o email">
+            </div>
+            <div class="form-group">
+              <label for="loginPassword">
+                <i class="fas fa-lock"></i> Contraseña
+              </label>
+              <input type="password" id="loginPassword" name="password" required placeholder="Ingresa tu contraseña">
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+            </button>
+          </form>
+
+          <!-- Security Features -->
+          <div
+            style="margin-top: 30px; padding: 25px; background: rgba(255, 255, 255, 0.2); border-radius: 20px; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);">
+            <h4
+              style="color: white; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; font-size: 1.2rem; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);">
+              <i class="fas fa-lock" style="color: #ff6b6b;"></i>
+              Características de Seguridad
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+              <div
+                style="display: flex; align-items: center; gap: 12px; color: rgba(255, 255, 255, 0.9); font-weight: 500;">
+                <i class="fas fa-check-circle" style="color: #4ecdc4; font-size: 1.1rem;"></i>
+                <span>Autenticación JWT</span>
+              </div>
+              <div
+                style="display: flex; align-items: center; gap: 12px; color: rgba(255, 255, 255, 0.9); font-weight: 500;">
+                <i class="fas fa-check-circle" style="color: #4ecdc4; font-size: 1.1rem;"></i>
+                <span>Encriptación BCrypt</span>
+              </div>
+              <div
+                style="display: flex; align-items: center; gap: 12px; color: rgba(255, 255, 255, 0.9); font-weight: 500;">
+                <i class="fas fa-check-circle" style="color: #4ecdc4; font-size: 1.1rem;"></i>
+                <span>Sesión Segura</span>
+              </div>
+              <div
+                style="display: flex; align-items: center; gap: 12px; color: rgba(255, 255, 255, 0.9); font-weight: 500;">
+                <i class="fas fa-check-circle" style="color: #4ecdc4; font-size: 1.1rem;"></i>
+                <span>Validación de Token</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div style="margin-top: 20px; text-align: center;">
+            <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 15px;">¿No tienes cuenta?</p>
+            <button type="button" class="btn btn-outline" onclick="showRegister()">
+              <i class="fas fa-user-plus"></i> Crear Cuenta
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Register Form -->
+      <div id="registerSection" class="form-section">
+        <div class="form-container">
+          <h2><i class="fas fa-user-plus"></i> Registrarse</h2>
+          <form id="registerForm" class="auth-form">
+            <div class="form-group">
+              <label for="registerUsername">
+                <i class="fas fa-user"></i> Usuario
+              </label>
+              <input type="text" id="registerUsername" name="username" required>
+            </div>
+            <div class="form-group">
+              <label for="registerEmail">
+                <i class="fas fa-envelope"></i> Email
+              </label>
+              <input type="email" id="registerEmail" name="email" required>
+            </div>
+            <div class="form-group">
+              <label for="registerPassword">
+                <i class="fas fa-lock"></i> Contraseña
+              </label>
+              <input type="password" id="registerPassword" name="password" required>
+            </div>
+            <div class="form-group">
+              <label for="registerConfirmPassword">
+                <i class="fas fa-lock"></i> Confirmar Contraseña
+              </label>
+              <input type="password" id="registerConfirmPassword" name="confirmPassword" required>
+            </div>
+            <div class="form-group">
+              <label for="registerNombre">
+                <i class="fas fa-id-card"></i> Nombre
+              </label>
+              <input type="text" id="registerNombre" name="nombre" required>
+            </div>
+            <div class="form-group">
+              <label for="registerApellido">
+                <i class="fas fa-id-card"></i> Apellido
+              </label>
+              <input type="text" id="registerApellido" name="apellido" required>
+            </div>
+            <div class="form-group">
+              <label for="registerRol">
+                <i class="fas fa-user-tag"></i> Rol
+              </label>
+              <select id="registerRol" name="rol" required>
+                <option value="OPERADOR">Operador</option>
+                <option value="SUPERVISOR">Supervisor</option>
+                <option value="ADMIN">Administrador</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-user-plus"></i> Registrarse
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="fillRegisterForm()" style="margin-top: 10px;">
+              <i class="fas fa-magic"></i> Llenar Datos de Prueba
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="dashboardSection" class="form-section">
+        <div class="dashboard-container">
+          <div class="dashboard-header">
+            <h2><i class="fas fa-tachometer-alt"></i> Dashboard</h2>
+            <div class="welcome-banner">
+              <div class="user-avatar">
+                <i class="fas fa-user-circle"></i>
+              </div>
+              <div class="welcome-text">
+                <h3 id="welcomeMessage">¡Bienvenido!</h3>
+                <p id="userDetails">Cargando información del usuario...</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fas fa-shield-alt"></i>
+              </div>
+              <div class="stat-content">
+                <h4>Seguridad</h4>
+                <p>Sesión activa</p>
+                <span class="stat-status active">Activo</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+              </div>
+              <div class="stat-content">
+                <h4>Sesión</h4>
+                <p id="sessionTime">24 horas</p>
+                <span class="stat-status valid">Válido</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fas fa-key"></i>
+              </div>
+              <div class="stat-content">
+                <h4>Token</h4>
+                <p>JWT Activo</p>
+                <span class="stat-status valid">Válido</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fas fa-user-tag"></i>
+              </div>
+              <div class="stat-content">
+                <h4>Rol</h4>
+                <p id="userRole">Cargando...</p>
+                <span class="stat-status info">Asignado</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-grid">
+            <div class="action-card">
+              <div class="card-header">
+                <i class="fas fa-user-check"></i>
+                <h3>Validar Token</h3>
+              </div>
+              <p>Verifica la validez de tu token de autenticación actual</p>
+              <button id="validateTokenBtn" class="btn btn-info">
+                <i class="fas fa-check-circle"></i> Validar Token
+              </button>
+            </div>
+
+            <div class="action-card">
+              <div class="card-header">
+                <i class="fas fa-sync"></i>
+                <h3>Refrescar Token</h3>
+              </div>
+              <p>Genera un nuevo token de autenticación</p>
+              <button id="refreshTokenBtn" class="btn btn-secondary">
+                <i class="fas fa-sync"></i> Refrescar Token
+              </button>
+            </div>
+
+            <div class="action-card">
+              <div class="card-header">
+                <i class="fas fa-info-circle"></i>
+                <h3>Información del Usuario</h3>
+              </div>
+              <p>Consulta los detalles completos de tu perfil</p>
+              <button class="btn btn-secondary" onclick="getCurrentUser()">
+                <i class="fas fa-user"></i> Ver Perfil
+              </button>
+            </div>
+
+            <div class="action-card">
+              <div class="card-header">
+                <i class="fas fa-cog"></i>
+                <h3>Configuración</h3>
+              </div>
+              <p>Gestiona la configuración de tu cuenta</p>
+              <button class="btn btn-secondary" onclick="showMessage('Función en desarrollo', 'info')">
+                <i class="fas fa-tools"></i> Configurar
+              </button>
+            </div>
+          </div>
+
+          <div class="recent-activity">
+            <h3><i class="fas fa-history"></i> Actividad Reciente</h3>
+            <div class="activity-list">
+              <div class="activity-item">
+                <div class="activity-icon">
+                  <i class="fas fa-sign-in-alt"></i>
+                </div>
+                <div class="activity-content">
+                  <p><strong>Inicio de sesión exitoso</strong></p>
+                  <span class="activity-time">Hace unos momentos</span>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon">
+                  <i class="fas fa-key"></i>
+                </div>
+                <div class="activity-content">
+                  <p><strong>Token JWT generado</strong></p>
+                  <span class="activity-time">Hace unos momentos</span>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon">
+                  <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="activity-content">
+                  <p><strong>Sesión autenticada</strong></p>
+                  <span class="activity-time">Hace unos momentos</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-footer">
+            <button class="btn btn-primary" onclick="logout()">
+              <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Messages -->
+    <div id="messageContainer" class="message-container"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
