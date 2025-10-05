@@ -7,6 +7,9 @@ spring:
     
   cloud:
     gateway:
+      # Deshabilitar auto-configuración de gRPC que causa conflictos
+      grpc:
+        enabled: false
       routes:
         # Drivers Service
         - id: drivers-service
