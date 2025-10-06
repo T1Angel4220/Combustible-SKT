@@ -1,0 +1,80 @@
+server:
+  port: 8085
+  
+spring:
+  application:
+    name: auth-service
+  
+  data:
+    mongodb:
+      uri: mongodb://${MONGO_USERNAME:auth_user}:${MONGO_PASSWORD:auth_password}@${MONGO_HOST:localhost}:${MONGO_PORT:27017}/${MONGO_DATABASE:auth_db}
+      database: ${MONGO_DATABASE:auth_db}
+        
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+# Security JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKey1234567890123456789012345}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging configurations  
+logging:
+  level:
+    com.skt.combustible.auth: ${LOG_LEVEL:INFO}
+    org.springframework.web: ${LOG_LEVEL:INFO}
+    org.springframework.data.mongodb: ${LOG_LEVEL:INFO}
+    org.springframework.security: ${LOG_LEVEL:INFO}
+
+# gRPC Configuration
+grpc:
+  server:
+    port: 9095
+    
+# Service Discovery (para comunicación entre microservicios)
+service:
+  urls:
+    drivers-service: ${DRIVERS_SERVICE_URL:http://localhost:8081}
+    vehicles-service: ${VEHICLES_SERVICE_URL:http://localhost:8082}
+    routes-service: ${ROUTES_SERVICE_URL:http://localhost:8083}
+    fuel-service: ${FUEL_SERVICE_URL:http://localhost:8084}
+
+---
+# Configuración para entorno de desarrollo
+spring:
+  config:
+    activate:
+      on-profile: dev
+      
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/auth_db
+      
+logging:
+  level:
+    com.skt.combustible.auth: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.data.mongodb: DEBUG
+
+---
+# Configuración para entorno de producción
+spring:
+  config:
+    activate:
+      on-profile: prod
+      
+logging:
+  level:
+    com.skt.combustible.auth: INFO
+    org.springframework.web: WARN
+    org.springframework.data.mongodb: WARN

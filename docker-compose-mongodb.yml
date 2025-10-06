@@ -1,0 +1,68 @@
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: combustible-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: combustible_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./init-mongodb.js:/docker-entrypoint-initdb.d/init-mongodb.js:ro
+      - ./src/auth-service/mongo-init:/docker-entrypoint-initdb.d/auth-init:ro
+    networks:
+      - combustible-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Drivers Service
+  drivers-service:
+    build:
+      context: .
+      dockerfile: ./src/drivers-service/Dockerfile
+    container_name: drivers-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/drivers_db?authSource=admin
+    ports:
+      - "8081:8081"
+      - "9091:9091"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - combustible-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./src/auth-service/Dockerfile
+    container_name: auth-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MONGO_USERNAME: admin
+      MONGO_PASSWORD: admin123
+      JWT_SECRET: mySecretKey1234567890123456789012345
+      JWT_EXPIRATION: 86400000
+    ports:
+      - "8085:8085"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - combustible-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  combustible-network:
+    driver: bridge

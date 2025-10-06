@@ -5,20 +5,10 @@ spring:
   application:
     name: drivers-service
   
-  datasource:
-    url: jdbc:postgresql://localhost:5432/drivers_db
-    username: ${DB_USERNAME:drivers_user}
-    password: ${DB_PASSWORD:drivers_pass}
-    driver-class-name: org.postgresql.Driver
-    
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/drivers_db
+      database: drivers_db
         
   profiles:
     active: dev
@@ -38,14 +28,22 @@ logging:
   level:
     com.skt.combustible.drivers: DEBUG
     org.springframework.web: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.data.mongodb.core.MongoTemplate: DEBUG
+    net.devh.boot.grpc: DEBUG
+    io.grpc: DEBUG
 
 # gRPC Configuration
 grpc:
   server:
     port: 9091
-    
+    address: 0.0.0.0
+    security:
+      enabled: false
+    reflection-service-enabled: true
+    health-service-enabled: true
+    max-inbound-message-size: 4194304
+    max-inbound-metadata-size: 8192
+
 # Service Discovery (para comunicación entre microservicios)
 service:
   urls:

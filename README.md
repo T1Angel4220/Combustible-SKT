@@ -16,7 +16,7 @@ Sistema distribuido basado en microservicios para la gestión de combustible de 
 3. **Routes Service** (Puerto: 8083, gRPC: 9093) - Gestión de rutas
 4. **Fuel Service** (Puerto: 8084, gRPC: 9094) - Gestión de combustible
 5. **Auth Service** (Puerto: 8085, gRPC: 9095) - Autenticación y autorización
-6. **Gateway Service** (Puerto: 8080) - API Gateway
+6. **Gateway Service** (Puerto: 8090) - API Gateway
 
 ## 🚀 Stack Tecnológico
 
@@ -106,7 +106,7 @@ mvn spring-boot:run -pl gateway-service
 - `JWT_SECRET`: Clave secreta para JWT (Auth Service)
 
 ### Puertos de Servicios
-- **Gateway**: http://localhost:8080
+- **Gateway**: http://localhost:8090
 - **Drivers Service**: http://localhost:8081 / gRPC:9091
 - **Vehicles Service**: http://localhost:8082 / gRPC:9092
 - **Routes Service**: http://localhost:8083 / gRPC:9093
@@ -182,7 +182,7 @@ Cada microservicio sigue la arquitectura de capas:
 ## 📚 Documentación API
 
 Una vez ejecutando el proyecto, la documentación estará disponible en:
-- **Gateway**: http://localhost:8080/actuator/info
+- **Gateway**: http://localhost:8090/actuator/info
 - **Swagger**: Integración futura con Swagger/OpenAPI
 
 ---

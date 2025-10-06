@@ -1,0 +1,50 @@
+server:
+  port: 8085
+  
+spring:
+  application:
+    name: auth-service
+  
+  data:
+    mongodb:
+      # MongoDB Atlas (gratuito) - Reemplaza con tu URL
+      uri: mongodb+srv://usuario:password@cluster0.mongodb.net/auth_db?retryWrites=true&w=majority
+      database: auth_db
+      
+  profiles:
+    active: dev
+
+# Security JWT Configuration
+jwt:
+  secret: mySecretKey1234567890123456789012345
+  expiration: 86400000 # 24 hours in milliseconds
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging configurations  
+logging:
+  level:
+    com.skt.combustible.auth: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.data.mongodb: DEBUG
+
+# gRPC Configuration
+grpc:
+  server:
+    port: 9095
+    
+# Service Discovery
+service:
+  urls:
+    drivers-service: http://localhost:8081
+    vehicles-service: http://localhost:8082
+    routes-service: http://localhost:8083
+    fuel-service: http://localhost:8084

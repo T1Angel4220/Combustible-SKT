@@ -1,0 +1,41 @@
+server:
+  port: 8081
+  
+spring:
+  application:
+    name: drivers-service
+  
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://admin:admin123@mongodb:27017/drivers_db?authSource=admin}
+      database: drivers_db
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging configurations  
+logging:
+  level:
+    com.skt.combustible.drivers: INFO
+    org.springframework.web: INFO
+    org.springframework.data.mongodb.core.MongoTemplate: INFO
+
+# gRPC Configuration
+grpc:
+  server:
+    port: 9091
+    
+# Service Discovery (para comunicación entre microservicios)
+service:
+  urls:
+    vehicles-service: http://vehicles-service:8082
+    routes-service: http://routes-service:8083
+    fuel-service: http://fuel-service:8084
+    auth-service: http://auth-service:8085
