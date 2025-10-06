@@ -1,0 +1,44 @@
+server:
+  port: 8082
+  
+spring:
+  application:
+    name: vehicles-service
+  
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://admin:admin123@mongodb:27017/vehicles_db?authSource=admin}
+      database: vehicles_db
+        
+  profiles:
+    active: docker
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging configurations  
+logging:
+  level:
+    com.skt.combustible.vehicles: INFO
+    org.springframework.web: INFO
+    org.springframework.data.mongodb: INFO
+
+# gRPC Configuration
+grpc:
+  server:
+    port: 9092
+    
+# Service Discovery (para comunicación entre microservicios)
+service:
+  urls:
+    drivers-service: http://drivers-service:8081
+    routes-service: http://routes-service:8083
+    fuel-service: http://fuel-service:8084
+    auth-service: http://auth-service:8085

@@ -12,8 +12,7 @@ public enum EstadoOperativo {
     FUERA_SERVICIO("Fuera de Servicio"),
     DISPONIBLE("Disponible"),
     EN_USO("En Uso"),
-    RESERVADO("Reservado"),
-    ASIGNADO("Asignado");
+    RESERVADO("Reservado");
 
     private final String descripcion;
 

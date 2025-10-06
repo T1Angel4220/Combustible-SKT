@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
 RUN mvn clean package -DskipTests
 
 # Exponer el puerto
-EXPOSE 8080
+EXPOSE 8090
 
 # Comando para ejecutar la aplicación
 CMD ["java", "-jar", "target/gateway-service-1.0.0.jar"]

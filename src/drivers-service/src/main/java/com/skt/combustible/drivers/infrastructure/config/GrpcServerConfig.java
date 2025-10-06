@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import net.devh.boot.grpc.server.service.AnnotationGrpcServiceDiscoverer;
 
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.util.Collection;
 
 /**
