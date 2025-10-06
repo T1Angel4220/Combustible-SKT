@@ -4,6 +4,12 @@ server:
 spring:
   application:
     name: gateway-service
+  devtools:
+    restart:
+      enabled: false
+      additional-exclude: static/**,public/**
+    livereload:
+      enabled: false
 
 # Configuración gRPC para comunicación con microservicios
 grpc:
