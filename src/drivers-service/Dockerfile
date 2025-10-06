@@ -55,13 +55,7 @@ USER spring:spring
 # Exponer puertos
 EXPOSE 8081 9091
 
-# Variables de entorno por defecto
-ENV SPRING_PROFILES_ACTIVE=docker
-ENV DB_HOST=postgres-db
-ENV DB_PORT=5432
-ENV DB_NAME=drivers_db
-ENV DB_USERNAME=drivers_user
-ENV DB_PASSWORD=drivers_pass
+
 
 # Comando para ejecutar la aplicación
 CMD ["java", "-jar", "app.jar"]
