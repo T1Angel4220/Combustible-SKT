@@ -50,6 +50,12 @@
             <artifactId>shared-lib</artifactId>
         </dependency>
 
+        <!-- Protocol Buffers -->
+        <dependency>
+            <groupId>com.skt.combustible</groupId>
+            <artifactId>protos</artifactId>
+        </dependency>
+
         <!-- MapStruct -->
         <dependency>
             <groupId>org.mapstruct</groupId>

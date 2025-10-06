@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+package com.skt.combustible.vehicles.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.skt.combustible.vehicles.grpc";
+option java_outer_classname = "MaintenanceProto";
+
+// Import Google's messages
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+// Enums
+enum TipoMantenimientoProto {
+    PREVENTIVO = 0;
+    CORRECTIVO = 1;
+    EMERGENCIA = 2;
+    REVISION = 3;
+}
+
+enum EstadoMantenimientoProto {
+    PROGRAMADO = 0;
+    EN_PROGRESO = 1;
+    COMPLETADO = 2;
+    CANCELADO = 3;
+    REPROGRAMADO = 4;
+}
+
+// Maintenance Messages
+message MantenimientoCreateRequestProto {
+    string vehicleId = 1;
+    TipoMantenimientoProto tipo = 2;
+    string descripcion = 3;
+    double costo = 4;
+    string fechaProgramada = 5;
+    string proveedor = 6;
+    EstadoMantenimientoProto estado = 7;
+    string observaciones = 8;
+}
+
+message MantenimientoUpdateRequestProto {
+    string id = 1;
+    string vehicleId = 2;
+    TipoMantenimientoProto tipo = 3;
+    string descripcion = 4;
+    double costo = 5;
+    string fechaProgramada = 6;
+    string fechaInicio = 7;
+    string fechaFin = 8;
+    string proveedor = 9;
+    EstadoMantenimientoProto estado = 10;
+    string observaciones = 11;
+}
+
+message MantenimientoResponseProto {
+    string id = 1;
+    string vehicleId = 2;
+    TipoMantenimientoProto tipo = 3;
+    string descripcion = 4;
+    double costo = 5;
+    string fechaProgramada = 6;
+    string fechaInicio = 7;
+    string fechaFin = 8;
+    string proveedor = 9;
+    EstadoMantenimientoProto estado = 10;
+    string observaciones = 11;
+    string fechaCreacion = 12;
+    string fechaActualizacion = 13;
+}
+
+message MantenimientoIdRequestProto {
+    string id = 1;
+}
+
+message MantenimientoVehicleIdRequestProto {
+    string vehicleId = 1;
+}
+
+message MantenimientoTipoRequestProto {
+    TipoMantenimientoProto tipo = 1;
+}
+
+message MantenimientoEstadoRequestProto {
+    EstadoMantenimientoProto estado = 1;
+}
+
+message MantenimientoCostoRequestProto {
+    string vehicleId = 1;
+    string fechaInicio = 2;
+    string fechaFin = 3;
+}
+
+message MantenimientoStatsResponseProto {
+    int64 totalMantenimientos = 1;
+    int64 mantenimientosCompletados = 2;
+    int64 mantenimientosEnProgreso = 3;
+    int64 mantenimientosProgramados = 4;
+    double costoTotal = 5;
+    double costoPromedio = 6;
+    int64 mantenimientosPreventivos = 7;
+    int64 mantenimientosCorrectivos = 8;
+}
+
+// Maintenance Service Definition
+service MantenimientoServiceProto {
+    // CRUD Operations
+    rpc CrearMantenimiento(MantenimientoCreateRequestProto) returns (MantenimientoResponseProto);
+    rpc ObtenerMantenimientoPorId(MantenimientoIdRequestProto) returns (MantenimientoResponseProto);
+    rpc ObtenerMantenimientosPorVehiculo(MantenimientoVehicleIdRequestProto) returns (stream MantenimientoResponseProto);
+    rpc ActualizarMantenimiento(MantenimientoUpdateRequestProto) returns (MantenimientoResponseProto);
+    rpc EliminarMantenimiento(MantenimientoIdRequestProto) returns (google.protobuf.Empty);
+    
+    // Query Operations
+    rpc ObtenerMantenimientosPorTipo(MantenimientoTipoRequestProto) returns (stream MantenimientoResponseProto);
+    rpc ObtenerMantenimientosPorEstado(MantenimientoEstadoRequestProto) returns (stream MantenimientoResponseProto);
+    rpc ObtenerTodosLosMantenimientos(google.protobuf.Empty) returns (stream MantenimientoResponseProto);
+    
+    // Business Operations
+    rpc ActualizarEstadoMantenimiento(MantenimientoUpdateRequestProto) returns (MantenimientoResponseProto);
+    rpc CalcularCostoTotalMantenimientos(MantenimientoCostoRequestProto) returns (google.protobuf.DoubleValue);
+    
+    // Statistics
+    rpc ObtenerEstadisticasMantenimiento(google.protobuf.Empty) returns (MantenimientoStatsResponseProto);
+    rpc ObtenerEstadisticasMantenimientoPorVehiculo(MantenimientoVehicleIdRequestProto) returns (MantenimientoStatsResponseProto);
+}

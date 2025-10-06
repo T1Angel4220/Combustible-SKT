@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package com.skt.combustible.vehicles.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.skt.combustible.vehicles.grpc";
+option java_outer_classname = "AssignmentProto";
+
+// Import Google's messages
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+// Enums
+enum EstadoAsignacionProto {
+    ACTIVA = 0;
+    COMPLETADA = 1;
+    CANCELADA = 2;
+    VENCIDA = 3;
+}
+
+// Assignment Messages
+message AsignacionCreateRequestProto {
+    string vehicleId = 1;
+    int64 choferId = 2;
+    string fechaInicio = 3;
+    string fechaFin = 4;
+    string motivo = 5;
+    string observaciones = 6;
+}
+
+message AsignacionUpdateRequestProto {
+    string id = 1;
+    string vehicleId = 2;
+    int64 choferId = 3;
+    string fechaInicio = 4;
+    string fechaFin = 5;
+    string fechaFinReal = 6;
+    string motivo = 7;
+    string observaciones = 8;
+    EstadoAsignacionProto estado = 9;
+}
+
+message AsignacionResponseProto {
+    string id = 1;
+    string vehicleId = 2;
+    int64 choferId = 3;
+    string fechaInicio = 4;
+    string fechaFin = 5;
+    string fechaFinReal = 6;
+    string motivo = 7;
+    string observaciones = 8;
+    EstadoAsignacionProto estado = 9;
+    string fechaCreacion = 10;
+    string fechaActualizacion = 11;
+}
+
+message AsignacionIdRequestProto {
+    string id = 1;
+}
+
+message AsignacionVehicleIdRequestProto {
+    string vehicleId = 1;
+}
+
+message AsignacionChoferIdRequestProto {
+    int64 choferId = 1;
+}
+
+message AsignacionEstadoRequestProto {
+    EstadoAsignacionProto estado = 1;
+}
+
+message AsignacionValidationRequestProto {
+    string vehicleId = 1;
+    int64 choferId = 2;
+}
+
+message AsignacionValidationResponseProto {
+    bool valid = 1;
+    string message = 2;
+}
+
+message AsignacionStatsResponseProto {
+    int64 totalAsignaciones = 1;
+    int64 asignacionesActivas = 2;
+    int64 asignacionesCompletadas = 3;
+    int64 asignacionesCanceladas = 4;
+    int64 choferesConAsignaciones = 5;
+    int64 vehiculosAsignados = 6;
+    double duracionPromedio = 7;
+}
+
+// Assignment Service Definition
+service AsignacionServiceProto {
+    // CRUD Operations
+    rpc CrearAsignacion(AsignacionCreateRequestProto) returns (AsignacionResponseProto);
+    rpc ObtenerAsignacionPorId(AsignacionIdRequestProto) returns (AsignacionResponseProto);
+    rpc ObtenerAsignacionesPorVehiculo(AsignacionVehicleIdRequestProto) returns (stream AsignacionResponseProto);
+    rpc ObtenerAsignacionesPorChofer(AsignacionChoferIdRequestProto) returns (stream AsignacionResponseProto);
+    rpc ActualizarAsignacion(AsignacionUpdateRequestProto) returns (AsignacionResponseProto);
+    rpc EliminarAsignacion(AsignacionIdRequestProto) returns (google.protobuf.Empty);
+    
+    // Query Operations
+    rpc ObtenerAsignacionesPorEstado(AsignacionEstadoRequestProto) returns (stream AsignacionResponseProto);
+    rpc ObtenerTodasLasAsignaciones(google.protobuf.Empty) returns (stream AsignacionResponseProto);
+    rpc ObtenerAsignacionesActivas(google.protobuf.Empty) returns (stream AsignacionResponseProto);
+    
+    // Business Operations
+    rpc AsignarVehiculoAChofer(AsignacionCreateRequestProto) returns (AsignacionResponseProto);
+    rpc DesasignarVehiculo(AsignacionIdRequestProto) returns (google.protobuf.Empty);
+    rpc CompletarAsignacion(AsignacionIdRequestProto) returns (AsignacionResponseProto);
+    rpc CancelarAsignacion(AsignacionIdRequestProto) returns (AsignacionResponseProto);
+    
+    // Validation Operations
+    rpc ValidarAsignacion(AsignacionValidationRequestProto) returns (AsignacionValidationResponseProto);
+    rpc IsVehiculoAsignado(AsignacionVehicleIdRequestProto) returns (google.protobuf.BoolValue);
+    rpc ContarVehiculosAsignadosPorChofer(AsignacionChoferIdRequestProto) returns (google.protobuf.Int64Value);
+    
+    // Statistics
+    rpc ObtenerEstadisticasAsignacion(google.protobuf.Empty) returns (AsignacionStatsResponseProto);
+    rpc ObtenerEstadisticasAsignacionPorChofer(AsignacionChoferIdRequestProto) returns (AsignacionStatsResponseProto);
+}

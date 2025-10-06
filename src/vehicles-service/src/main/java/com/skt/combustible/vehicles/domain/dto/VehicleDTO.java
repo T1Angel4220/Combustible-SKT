@@ -17,7 +17,7 @@ import jakarta.validation.constraints.Positive;
  */
 public class VehicleDTO {
     
-    private Long id;
+    private String id;
     
     @NotBlank(message = "La placa es obligatoria")
     private String placa;
@@ -65,11 +65,11 @@ public class VehicleDTO {
     }
     
     // Getters y Setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
     
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
     
