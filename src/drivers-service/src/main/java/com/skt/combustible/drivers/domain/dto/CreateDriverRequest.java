@@ -1,6 +1,5 @@
 package com.skt.combustible.drivers.domain.dto;
 
-import com.skt.combustible.shared.domain.enums.EstadoOperativo;
 import com.skt.combustible.shared.domain.enums.TipoMaquinaria;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -8,7 +7,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * DTO para crear un nuevo chofer
