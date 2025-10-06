@@ -35,6 +35,7 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
     
     public DriverGrpcController(DriverService driverService) {
         this.driverService = driverService;
+        logger.info("DriverGrpcController inicializado correctamente");
     }
     
     @Override
