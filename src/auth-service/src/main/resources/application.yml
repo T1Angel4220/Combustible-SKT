@@ -12,7 +12,7 @@ spring:
       database: authdb
       
   profiles:
-    active: mongodb
+    active: dev
 
 # Security JWT Configuration
 jwt:

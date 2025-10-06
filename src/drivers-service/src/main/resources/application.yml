@@ -7,7 +7,7 @@ spring:
   
   data:
     mongodb:
-      uri: mongodb://admin:admin123@localhost:27017/drivers_db?authSource=admin
+      uri: mongodb://localhost:27017/drivers_db
       database: drivers_db
         
   profiles:

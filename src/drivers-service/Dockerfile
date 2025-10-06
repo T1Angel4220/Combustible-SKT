@@ -1,5 +1,5 @@
 # Dockerfile para Drivers Service
-FROM maven:3.9.4-openjdk-17-slim AS build
+FROM maven:latest AS build
 
 # Información del mantenedor
 LABEL maintainer="Sistema SKT"
@@ -18,6 +18,17 @@ COPY src/protos ./src/protos
 
 # Copiar código fuente del drivers-service
 COPY src/drivers-service ./src/drivers-service
+
+# Instalar el proyecto padre en el repositorio local
+RUN mvn clean install -N -DskipTests
+
+# Compilar dependencias primero
+WORKDIR /app/src/shared-lib
+RUN mvn clean install -DskipTests
+
+# Compilar protos
+WORKDIR /app/src/protos
+RUN mvn clean install -DskipTests
 
 # Compilar el proyecto
 WORKDIR /app/src/drivers-service

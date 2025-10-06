@@ -9,9 +9,6 @@ spring:
     mongodb:
       uri: ${MONGODB_URI:mongodb://admin:admin123@mongodb:27017/drivers_db?authSource=admin}
       database: drivers_db
-        
-  profiles:
-    active: docker
 
 # Management endpoints
 management:
