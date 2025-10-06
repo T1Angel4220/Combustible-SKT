@@ -5,18 +5,31 @@ spring:
   application:
     name: auth-service
   
-  # Configuración MongoDB
-  data:
-    mongodb:
-      uri: mongodb://localhost:27017/authdb
-      database: authdb
+  # Configuración H2 para pruebas rápidas (sin MongoDB)
+  datasource:
+    url: jdbc:h2:mem:authdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+    
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
       
-  profiles:
-    active: mongodb
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+        
 
 # Security JWT Configuration
 jwt:
-  secret: ${JWT_SECRET:mySecretKey1234567890123456789012345}
+  secret: mySecretKey1234567890123456789012345
   expiration: 86400000 # 24 hours in milliseconds
 
 # Management endpoints
@@ -35,14 +48,13 @@ logging:
     com.skt.combustible.auth: DEBUG
     org.springframework.web: DEBUG
     org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
 # gRPC Configuration
 grpc:
   server:
     port: 9095
     
-# Service Discovery (para comunicación entre microservicios)
+# Service Discovery
 service:
   urls:
     drivers-service: http://localhost:8081

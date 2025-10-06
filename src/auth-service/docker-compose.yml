@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # MongoDB para el servicio de autenticación
+  auth-mongodb:
+    image: mongo:7.0
+    container_name: auth-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: auth_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - auth_mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - auth-network
+
+  # Servicio de autenticación
+  auth-service:
+    build:
+      context: .
+      dockerfile: src/auth-service/Dockerfile
+    container_name: auth-service
+    restart: unless-stopped
+    environment:
+      MONGO_USERNAME: admin
+      MONGO_PASSWORD: password
+      JWT_SECRET: mySecretKey1234567890123456789012345
+      JWT_EXPIRATION: 86400000
+      SPRING_PROFILES_ACTIVE: prod
+    ports:
+      - "8085:8085"
+    depends_on:
+      - auth-mongodb
+    networks:
+      - auth-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  auth_mongodb_data:
+    driver: local
+
+networks:
+  auth-network:
+    driver: bridge
