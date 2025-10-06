@@ -1,45 +1,43 @@
-// Configuration
+// Configuración de la API
 const API_BASE_URL = 'http://localhost:8085/api/auth';
 
-// State management
+// Variables globales
 let currentUser = null;
 let authToken = null;
 
-// DOM elements
-const loginSection = document.getElementById('loginSection');
-const registerSection = document.getElementById('registerSection');
-const dashboardSection = document.getElementById('dashboardSection');
-const loginForm = document.getElementById('loginForm');
-const registerForm = document.getElementById('registerForm');
-const loginLink = document.getElementById('loginLink');
-const registerLink = document.getElementById('registerLink');
-const dashboardLink = document.getElementById('dashboardLink');
-const logoutLink = document.getElementById('logoutLink');
-const userInfo = document.getElementById('userInfo');
-const messageContainer = document.getElementById('messageContainer');
+// Elementos del DOM
+let loginSection, registerSection, dashboardSection;
+let loginBtn, registerBtn, dashboardBtn, logoutBtn;
 
-// Initialize the application
+// Inicialización de la aplicación
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
     setupEventListeners();
 });
 
 function initializeApp() {
-    // Check if user is already logged in
+    // Obtener elementos del DOM
+    loginSection = document.getElementById('loginSection');
+    registerSection = document.getElementById('registerSection');
+    dashboardSection = document.getElementById('dashboardSection');
+    
+    loginBtn = document.getElementById('loginBtn');
+    registerBtn = document.getElementById('registerBtn');
+    dashboardBtn = document.getElementById('dashboardBtn');
+    logoutBtn = document.getElementById('logoutBtn');
+    
+    // Cargar datos del localStorage
     const savedToken = localStorage.getItem('authToken');
     const savedUser = localStorage.getItem('currentUser');
     
-    if (savedToken && savedUser && savedUser !== 'null') {
+    if (savedToken && savedUser) {
         try {
             authToken = savedToken;
             currentUser = JSON.parse(savedUser);
             showDashboard();
         } catch (error) {
             console.error('Error parsing saved user data:', error);
-            // Limpiar datos corruptos
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('currentUser');
-            showLogin();
+            clearAuthData();
         }
     } else {
         showLogin();
@@ -47,92 +45,74 @@ function initializeApp() {
 }
 
 function setupEventListeners() {
-    // Navigation
-    loginLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        showLogin();
-    });
+    // Event listeners para navegación
+    loginBtn.addEventListener('click', showLogin);
+    registerBtn.addEventListener('click', showRegister);
+    dashboardBtn.addEventListener('click', showDashboard);
+    logoutBtn.addEventListener('click', logout);
     
-    registerLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        showRegister();
-    });
-    
-    dashboardLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        showDashboard();
-    });
-    
-    logoutLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        logout();
-    });
-    
-    // Forms
-    loginForm.addEventListener('submit', handleLogin);
-    registerForm.addEventListener('submit', handleRegister);
-    
-    // Dashboard buttons
-    document.getElementById('validateTokenBtn').addEventListener('click', validateToken);
-    document.getElementById('refreshTokenBtn').addEventListener('click', refreshToken);
+    // Event listeners para formularios
+    document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    document.getElementById('registerForm').addEventListener('submit', handleRegister);
 }
 
-// Navigation functions
+// Funciones de navegación
 function showLogin() {
     hideAllSections();
     loginSection.classList.add('active');
-    updateNavigation('login');
+    updateNavButtons('login');
 }
 
 function showRegister() {
     hideAllSections();
     registerSection.classList.add('active');
-    updateNavigation('register');
+    updateNavButtons('register');
 }
 
 function showDashboard() {
     hideAllSections();
     dashboardSection.classList.add('active');
-    updateNavigation('dashboard');
+    updateNavButtons('dashboard');
     loadUserInfo();
 }
 
 function hideAllSections() {
-    document.querySelectorAll('.form-section').forEach(section => {
-        section.classList.remove('active');
-    });
+    loginSection.classList.remove('active');
+    registerSection.classList.remove('active');
+    dashboardSection.classList.remove('active');
 }
 
-function updateNavigation(activeSection) {
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.remove('active');
-    });
+function updateNavButtons(activeSection) {
+    // Resetear todos los botones
+    loginBtn.classList.remove('active');
+    registerBtn.classList.remove('active');
     
-    if (activeSection === 'login') {
-        loginLink.classList.add('active');
-        registerLink.style.display = 'block';
-        dashboardLink.style.display = 'none';
-        logoutLink.style.display = 'none';
-    } else if (activeSection === 'register') {
-        registerLink.classList.add('active');
-        loginLink.style.display = 'block';
-        dashboardLink.style.display = 'none';
-        logoutLink.style.display = 'none';
-    } else if (activeSection === 'dashboard') {
-        dashboardLink.classList.add('active');
-        loginLink.style.display = 'none';
-        registerLink.style.display = 'none';
-        dashboardLink.style.display = 'block';
-        logoutLink.style.display = 'block';
+    // Mostrar/ocultar botones según el estado
+    if (activeSection === 'dashboard') {
+        loginBtn.style.display = 'none';
+        registerBtn.style.display = 'none';
+        dashboardBtn.style.display = 'inline-flex';
+        logoutBtn.style.display = 'inline-flex';
+    } else {
+        loginBtn.style.display = 'inline-flex';
+        registerBtn.style.display = 'inline-flex';
+        dashboardBtn.style.display = 'none';
+        logoutBtn.style.display = 'none';
+        
+        // Activar el botón correspondiente
+        if (activeSection === 'login') {
+            loginBtn.classList.add('active');
+        } else if (activeSection === 'register') {
+            registerBtn.classList.add('active');
+        }
     }
 }
 
-// Form handlers
-async function handleLogin(e) {
-    e.preventDefault();
-    console.log('Iniciando proceso de login...');
+// Funciones de autenticación
+async function handleLogin(event) {
+    event.preventDefault();
     
-    const formData = new FormData(loginForm);
+    const formData = new FormData(event.target);
     const loginData = {
         usernameOrEmail: formData.get('usernameOrEmail'),
         password: formData.get('password')
@@ -141,108 +121,98 @@ async function handleLogin(e) {
     console.log('Datos de login:', loginData);
     
     try {
-        showLoading(loginForm);
-        console.log('Haciendo petición a:', `${API_BASE_URL}/login`);
+        showMessage('Iniciando sesión...', 'info');
         
         const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(loginData)
         });
         
-        console.log('Respuesta recibida:', response.status, response.statusText);
-        
         const data = await response.json();
-        console.log('Datos de respuesta:', data);
         
         if (response.ok) {
             authToken = data.token;
             currentUser = data.user;
             
-            // Save to localStorage
+            // Guardar en localStorage
             localStorage.setItem('authToken', authToken);
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             
-            showMessage('Login exitoso! Bienvenido ' + currentUser.username, 'success');
+            showMessage('¡Inicio de sesión exitoso!', 'success');
             showDashboard();
         } else {
-            showMessage(data.message || 'Error en el login', 'error');
+            showMessage('Error: ' + (data.message || 'Credenciales inválidas'), 'error');
         }
     } catch (error) {
         console.error('Error en login:', error);
-        showMessage('Error de conexión: ' + error.message, 'error');
-    } finally {
-        hideLoading(loginForm);
+        showMessage('Error de conexión al iniciar sesión', 'error');
     }
 }
 
-async function handleRegister(e) {
-    e.preventDefault();
-    console.log('Iniciando proceso de registro...');
+async function handleRegister(event) {
+    event.preventDefault();
     
-    const formData = new FormData(registerForm);
-    const password = formData.get('password');
-    const confirmPassword = formData.get('confirmPassword');
-    
-    console.log('Datos del formulario:', {
-        username: formData.get('username'),
-        email: formData.get('email'),
-        nombre: formData.get('nombre'),
-        apellido: formData.get('apellido'),
-        rol: formData.get('rol')
-    });
-    
-    if (password !== confirmPassword) {
-        showMessage('Las contraseñas no coinciden', 'error');
-        return;
-    }
-    
+    const formData = new FormData(event.target);
     const registerData = {
         username: formData.get('username'),
         email: formData.get('email'),
-        password: password,
         nombre: formData.get('nombre'),
         apellido: formData.get('apellido'),
+        password: formData.get('password'),
         rol: formData.get('rol')
     };
     
-    console.log('Enviando datos de registro:', registerData);
+    console.log('Datos de registro:', registerData);
     
     try {
-        showLoading(registerForm);
-        console.log('Haciendo petición a:', `${API_BASE_URL}/register`);
+        showMessage('Registrando usuario...', 'info');
         
         const response = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(registerData)
         });
         
-        console.log('Respuesta recibida:', response.status, response.statusText);
-        
         const data = await response.json();
-        console.log('Datos de respuesta:', data);
         
         if (response.ok) {
-            showMessage('Registro exitoso! Ahora puedes iniciar sesión', 'success');
-            registerForm.reset();
-            showLogin();
+            authToken = data.token;
+            currentUser = data.user;
+            
+            // Guardar en localStorage
+            localStorage.setItem('authToken', authToken);
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            showMessage('¡Registro exitoso!', 'success');
+            showDashboard();
         } else {
-            showMessage(data.message || 'Error en el registro', 'error');
+            showMessage('Error: ' + (data.message || 'No se pudo completar el registro'), 'error');
         }
     } catch (error) {
         console.error('Error en registro:', error);
-        showMessage('Error de conexión: ' + error.message, 'error');
-    } finally {
-        hideLoading(registerForm);
+        showMessage('Error de conexión al registrar usuario', 'error');
     }
 }
 
-// Dashboard functions
+function logout() {
+    clearAuthData();
+    showMessage('Sesión cerrada correctamente', 'info');
+    showLogin();
+}
+
+function clearAuthData() {
+    authToken = null;
+    currentUser = null;
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
+}
+
+// Funciones del dashboard
 function loadUserInfo() {
     if (!currentUser) return;
     
@@ -260,9 +230,12 @@ function loadUserInfo() {
     }
     
     if (userRole) {
-        userRole.textContent = currentUser.rol;
+        userRole.textContent = `Rol: ${currentUser.rol}`;
     }
     
+    console.log('Información del usuario cargada:', currentUser);
+}
+
 async function getCurrentUser() {
     if (!authToken) {
         showMessage('No hay token para obtener información del usuario', 'error');
@@ -295,7 +268,6 @@ async function getCurrentUser() {
         showMessage('Error de conexión al obtener información del usuario', 'error');
     }
 }
-}
 
 async function validateToken() {
     if (!authToken) {
@@ -316,122 +288,102 @@ async function validateToken() {
         const data = await response.json();
         
         if (response.ok) {
-            showMessage('Token válido!', 'success');
+            showMessage('✅ Token válido - Sesión activa', 'success');
         } else {
-            showMessage('Token inválido: ' + (data.message || 'Error desconocido'), 'error');
+            showMessage('❌ Token inválido: ' + (data.message || 'Error desconocido'), 'error');
         }
     } catch (error) {
         showMessage('Error validando token: ' + error.message, 'error');
     }
 }
 
-async function refreshToken() {
-    if (!authToken) {
-        showMessage('No hay token para refrescar', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/me`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${authToken}`
-            }
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            currentUser = data;
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            loadUserInfo();
-            showMessage('Información del usuario actualizada', 'success');
-        } else {
-            showMessage('Error refrescando información: ' + (data.message || 'Error desconocido'), 'error');
-        }
-    } catch (error) {
-        showMessage('Error refrescando: ' + error.message, 'error');
-    }
-}
-
-// Utility functions
-function logout() {
-    authToken = null;
-    currentUser = null;
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('currentUser');
-    showMessage('Sesión cerrada correctamente', 'info');
-    showLogin();
-}
-
+// Función para llenar datos de prueba en el registro
 function fillRegisterForm() {
-    const timestamp = Date.now();
-    document.getElementById('registerUsername').value = `testuser${timestamp}`;
-    document.getElementById('registerEmail').value = `test${timestamp}@test.com`;
-    document.getElementById('registerPassword').value = 'test123';
-    document.getElementById('registerConfirmPassword').value = 'test123';
-    document.getElementById('registerNombre').value = 'Test';
-    document.getElementById('registerApellido').value = 'User';
+    document.getElementById('registerUsername').value = 'testuser' + Math.floor(Math.random() * 1000);
+    document.getElementById('registerEmail').value = 'test' + Math.floor(Math.random() * 1000) + '@skt.com';
+    document.getElementById('registerNombre').value = 'Usuario';
+    document.getElementById('registerApellido').value = 'Prueba';
+    document.getElementById('registerPassword').value = 'password123';
     document.getElementById('registerRol').value = 'OPERADOR';
     
-    console.log('Formulario de registro llenado con datos de prueba');
+    showMessage('Datos de prueba cargados', 'info');
 }
 
+// Sistema de notificaciones
 function showMessage(message, type = 'info') {
-    const messageEl = document.createElement('div');
-    messageEl.className = `message ${type}`;
-    messageEl.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
+    const container = document.getElementById('notificationContainer');
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    const icon = getNotificationIcon(type);
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="${icon}" style="color: ${getNotificationColor(type)};"></i>
+            <span style="color: #1a1a2e; font-weight: 500;">${message}</span>
+        </div>
     `;
     
-    messageContainer.appendChild(messageEl);
+    container.appendChild(notification);
     
-    // Auto remove after 5 seconds
+    // Auto-remover después de 5 segundos
     setTimeout(() => {
-        if (messageEl.parentNode) {
-            messageEl.parentNode.removeChild(messageEl);
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
         }
     }, 5000);
 }
 
-function showLoading(form) {
-    form.classList.add('loading');
-    const submitBtn = form.querySelector('button[type="submit"]');
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+function getNotificationIcon(type) {
+    switch (type) {
+        case 'success': return 'fas fa-check-circle';
+        case 'error': return 'fas fa-exclamation-circle';
+        case 'info': return 'fas fa-info-circle';
+        default: return 'fas fa-info-circle';
     }
 }
 
-function hideLoading(form) {
-    form.classList.remove('loading');
-    const submitBtn = form.querySelector('button[type="submit"]');
-    if (submitBtn) {
-        submitBtn.disabled = false;
-        const originalText = form.id === 'loginForm' ? 
-            '<i class="fas fa-sign-in-alt"></i> Iniciar Sesión' : 
-            '<i class="fas fa-user-plus"></i> Registrarse';
-        submitBtn.innerHTML = originalText;
+function getNotificationColor(type) {
+    switch (type) {
+        case 'success': return '#28a745';
+        case 'error': return '#dc3545';
+        case 'info': return '#17a2b8';
+        default: return '#6c757d';
     }
 }
 
-// Health check function
-async function checkServiceHealth() {
-    try {
-        const response = await fetch('http://localhost:8085/actuator/health');
-        const data = await response.json();
-        
-        if (data.status === 'UP') {
-            console.log('✅ Servicio funcionando correctamente');
-        } else {
-            console.warn('⚠️ Servicio con problemas:', data);
-        }
-    } catch (error) {
-        console.error('❌ Error conectando con el servicio:', error);
-        showMessage('Error conectando con el servicio. Verifica que esté ejecutándose en el puerto 8085.', 'error');
-    }
+// Funciones de utilidad
+function formatDate(date) {
+    return new Date(date).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
-// Check service health on load
-checkServiceHealth();
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP'
+    }).format(amount);
+}
+
+// Manejo de errores globales
+window.addEventListener('error', function(event) {
+    console.error('Error global:', event.error);
+    showMessage('Ha ocurrido un error inesperado', 'error');
+});
+
+// Manejo de promesas rechazadas
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Promesa rechazada:', event.reason);
+    showMessage('Error de conexión con el servidor', 'error');
+});
+
+// Inicialización de la aplicación sin verificación automática de conexión
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('SKT Combustible - Sistema de Autenticación iniciado');
+    console.log('Servidor disponible en: http://localhost:8085');
+});
