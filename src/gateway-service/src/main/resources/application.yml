@@ -25,7 +25,7 @@ spring:
           predicates:
             - Path=/api/v1/vehicles/**
           filters:
-            - StripPrefix=3
+            - StripPrefix=2
             
         # Routes Service
         - id: routes-service
