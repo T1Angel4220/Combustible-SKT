@@ -98,7 +98,7 @@ public class VehicleReportService {
                 
                 return consumo;
             })
-            .collect(Collectors.toList());
+                .collect(Collectors.toList());
         
         reporte.put("fechaGeneracion", LocalDateTime.now());
         reporte.put("totalVehiculos", vehiculos.size());
@@ -162,9 +162,9 @@ public class VehicleReportService {
         Map<String, Object> reporte = new HashMap<>();
         
         List<AsignacionVehiculo> asignaciones = asignacionRepository.findAll()
-            .stream()
+                .stream()
             .filter(AsignacionVehiculo::getActivo)
-            .collect(Collectors.toList());
+                .collect(Collectors.toList());
         
         // Agrupar por estado
         Map<String, Long> asignacionesPorEstado = asignaciones.stream()

@@ -193,8 +193,8 @@ public class AsignacionService {
      */
     private AsignacionResponse mapToResponse(AsignacionVehiculo asignacion) {
         AsignacionResponse response = new AsignacionResponse();
-        response.setId(Long.parseLong(asignacion.getId()));
-        response.setVehicleId(Long.parseLong(asignacion.getVehicle().getId()));
+        response.setId(asignacion.getId());
+        response.setVehicleId(asignacion.getVehicle().getId());
         response.setPlacaVehiculo(asignacion.getVehicle().getPlaca());
         response.setMarcaVehiculo(asignacion.getVehicle().getMarca());
         response.setModeloVehiculo(asignacion.getVehicle().getModelo());

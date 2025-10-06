@@ -184,8 +184,8 @@ public class MantenimientoService {
      */
     private MantenimientoResponse mapToResponse(Mantenimiento mantenimiento) {
         MantenimientoResponse response = new MantenimientoResponse();
-        response.setId(Long.parseLong(mantenimiento.getId()));
-        response.setVehicleId(Long.parseLong(mantenimiento.getVehicle().getId()));
+        response.setId(mantenimiento.getId());
+        response.setVehicleId(mantenimiento.getVehicle().getId());
         response.setPlacaVehiculo(mantenimiento.getVehicle().getPlaca());
         response.setMarcaVehiculo(mantenimiento.getVehicle().getMarca());
         response.setModeloVehiculo(mantenimiento.getVehicle().getModelo());

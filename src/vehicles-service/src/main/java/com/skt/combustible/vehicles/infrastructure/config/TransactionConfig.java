@@ -1,32 +1,21 @@
 package com.skt.combustible.vehicles.infrastructure.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 /**
- * Configuración de transacciones para el servicio de vehículos
+ * Configuración de MongoDB
  * 
  * @author Sistema SKT
  * @version 1.0
  */
 @Configuration
-@EnableTransactionManagement
-public class TransactionConfig {
+@EnableMongoRepositories(basePackages = "com.skt.combustible.vehicles.domain.repository")
+public class TransactionConfig extends AbstractMongoClientConfiguration {
     
-    @Autowired
-    private PlatformTransactionManager transactionManager;
-    
-    /**
-     * Template de transacciones para operaciones programáticas
-     */
-    @Bean
-    public TransactionTemplate transactionTemplate() {
-        TransactionTemplate template = new TransactionTemplate();
-        template.setTransactionManager(transactionManager);
-        return template;
+    @Override
+    protected String getDatabaseName() {
+        return "vehicles_db";
     }
 }

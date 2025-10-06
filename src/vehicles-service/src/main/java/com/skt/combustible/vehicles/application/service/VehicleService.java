@@ -247,7 +247,7 @@ public class VehicleService {
      */
     private VehicleResponse mapToResponse(Vehicle vehicle) {
         VehicleResponse response = new VehicleResponse();
-        response.setId(Long.parseLong(vehicle.getId()));
+        response.setId(vehicle.getId());
         response.setPlaca(vehicle.getPlaca());
         response.setMarca(vehicle.getMarca());
         response.setModelo(vehicle.getModelo());

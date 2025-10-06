@@ -19,10 +19,7 @@ services:
   vehicles-db:
     image: mongo:7.0
     container_name: vehicles-db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: vehicles_user
-      MONGO_INITDB_ROOT_PASSWORD: vehicles_pass
-      MONGO_INITDB_DATABASE: vehicles_db
+    command: mongod --noauth
     ports:
       - "27017:27017"
     volumes:

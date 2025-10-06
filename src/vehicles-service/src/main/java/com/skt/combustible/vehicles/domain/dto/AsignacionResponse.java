@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
  */
 public class AsignacionResponse {
     
-    private Long id;
-    private Long vehicleId;
+    private String id;
+    private String vehicleId;
     private String placaVehiculo;
     private String marcaVehiculo;
     private String modeloVehiculo;
@@ -27,7 +27,7 @@ public class AsignacionResponse {
     // Constructores
     public AsignacionResponse() {}
     
-    public AsignacionResponse(Long id, Long vehicleId, Long choferId, 
+    public AsignacionResponse(String id, String vehicleId, Long choferId, 
                             LocalDateTime fechaAsignacion, String estado) {
         this.id = id;
         this.vehicleId = vehicleId;
@@ -37,19 +37,19 @@ public class AsignacionResponse {
     }
     
     // Getters y Setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
     
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
     
-    public Long getVehicleId() {
+    public String getVehicleId() {
         return vehicleId;
     }
     
-    public void setVehicleId(Long vehicleId) {
+    public void setVehicleId(String vehicleId) {
         this.vehicleId = vehicleId;
     }
     

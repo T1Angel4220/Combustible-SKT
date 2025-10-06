@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  */
 public class VehicleResponse {
     
-    private Long id;
+    private String id;
     private String placa;
     private String marca;
     private String modelo;
@@ -30,7 +30,7 @@ public class VehicleResponse {
     // Constructores
     public VehicleResponse() {}
     
-    public VehicleResponse(Long id, String placa, String marca, String modelo, Integer anio, 
+    public VehicleResponse(String id, String placa, String marca, String modelo, Integer anio, 
                           TipoMaquinaria tipoMaquinaria, EstadoOperativo estadoOperativo) {
         this.id = id;
         this.placa = placa;
@@ -43,11 +43,11 @@ public class VehicleResponse {
     }
     
     // Getters y Setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
     
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
     

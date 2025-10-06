@@ -42,11 +42,11 @@ public class Vehicle {
     private Integer anio;
     
     @NotNull(message = "El tipo de maquinaria es obligatorio")
-    @Field("tipo_maquinaria")
+    @Field("tipoMaquinaria")
     private TipoMaquinaria tipoMaquinaria;
     
     @NotNull(message = "El estado operativo es obligatorio")
-    @Field("estado_operativo")
+    @Field("estadoOperativo")
     private EstadoOperativo estadoOperativo;
     
     @Field("capacidad_tanque")
@@ -55,7 +55,7 @@ public class Vehicle {
     @Field("consumo_promedio")
     private Double consumoPromedio;
     
-    @Field("kilometraje_actual")
+    @Field("kilometraje")
     private Double kilometrajeActual;
     
     @Field("fecha_creacion")
