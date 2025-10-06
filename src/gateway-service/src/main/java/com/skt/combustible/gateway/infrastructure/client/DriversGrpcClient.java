@@ -49,7 +49,7 @@ public class DriversGrpcClient {
     /**
      * Obtiene un chofer por ID
      */
-    public DriverResponse getDriverById(Long id) {
+    public DriverResponse getDriverById(String id) {
         initialize();
         try {
             GetDriverByIdRequest request = GetDriverByIdRequest.newBuilder()
@@ -117,7 +117,7 @@ public class DriversGrpcClient {
     /**
      * Verifica si un chofer está disponible
      */
-    public Boolean isDriverAvailable(Long id) {
+    public Boolean isDriverAvailable(String id) {
         initialize();
         try {
             IsDriverAvailableRequest request = IsDriverAvailableRequest.newBuilder()

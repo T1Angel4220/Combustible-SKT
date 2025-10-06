@@ -42,9 +42,7 @@ public class DriversGatewayController {
         logger.info("Gateway REST: Obteniendo chofer por ID: {}", id);
 
         try {
-            // Convertir ObjectId de MongoDB a Long para gRPC
-            Long numericId = convertObjectIdToLong(id);
-            var grpcResponse = driversGrpcClient.getDriverById(numericId);
+            var grpcResponse = driversGrpcClient.getDriverById(id);
             var restResponse = driverMapper.toRestResponse(grpcResponse);
 
             return ResponseEntity.ok(restResponse);
@@ -109,9 +107,7 @@ public class DriversGatewayController {
         logger.info("Gateway REST: Verificando disponibilidad del chofer ID: {}", id);
 
         try {
-            // Convertir ObjectId de MongoDB a Long para gRPC
-            Long numericId = convertObjectIdToLong(id);
-            var available = driversGrpcClient.isDriverAvailable(numericId);
+            var available = driversGrpcClient.isDriverAvailable(id);
             return ResponseEntity.ok(available);
         } catch (Exception e) {
             logger.error("Error verificando disponibilidad del chofer {}: {}", id, e.getMessage());
@@ -126,24 +122,5 @@ public class DriversGatewayController {
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("Drivers Gateway Service is running");
-    }
-    
-    /**
-     * Convierte un ObjectId de MongoDB (string hexadecimal) a Long
-     * Para compatibilidad con el sistema gRPC que espera Long
-     */
-    private Long convertObjectIdToLong(String objectId) {
-        if (objectId == null || objectId.isEmpty()) {
-            throw new IllegalArgumentException("ObjectId no puede ser nulo o vacío");
-        }
-        
-        try {
-            // Tomar los últimos 8 caracteres del ObjectId y convertir a Long
-            String last8Chars = objectId.substring(objectId.length() - 8);
-            return Long.parseLong(last8Chars, 16);
-        } catch (Exception e) {
-            logger.error("Error convirtiendo ObjectId {} a Long: {}", objectId, e.getMessage());
-            throw new IllegalArgumentException("ObjectId inválido: " + objectId);
-        }
     }
 }

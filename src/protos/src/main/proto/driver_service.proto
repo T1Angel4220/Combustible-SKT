@@ -92,7 +92,7 @@ message CreateDriverRequest {
 }
 
 message GetDriverByIdRequest {
-  int64 id = 1;
+  string id = 1;
 }
 
 message GetDriverByDniRequest {
@@ -127,7 +127,7 @@ message SearchDriversByNameRequest {
 }
 
 message UpdateDriverRequest {
-  int64 id = 1;
+  string id = 1;
   optional string nombre = 2;
   optional string apellido = 3;
   optional string telefono = 4;
@@ -139,21 +139,21 @@ message UpdateDriverRequest {
 }
 
 message ChangeDriverStatusRequest {
-  int64 id = 1;
+  string id = 1;
   EstadoOperativo nuevo_estado = 2;
 }
 
 message AssignMachineryTypeRequest {
-  int64 id = 1;
+  string id = 1;
   TipoMaquinaria tipo_maquinaria = 2;
 }
 
 message DeactivateDriverRequest {
-  int64 id = 1;
+  string id = 1;
 }
 
 message DeleteDriverRequest {
-  int64 id = 1;
+  string id = 1;
 }
 
 message CountAvailableDriversRequest {
@@ -165,12 +165,12 @@ message CountAvailableDriversByMachineryTypeRequest {
 }
 
 message IsDriverAvailableRequest {
-  int64 id = 1;
+  string id = 1;
 }
 
 // Mensajes de response
 message DriverResponse {
-  int64 id = 1;
+  string id = 1;
   string nombre = 2;
   string apellido = 3;
   string dni = 4;
@@ -226,7 +226,7 @@ message CountAvailableDriversByMachineryTypeResponse {
 
 message IsDriverAvailableResponse {
   bool available = 1;
-  int64 driver_id = 2;
+  string driver_id = 2;
 }
 
 message Empty {

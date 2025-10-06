@@ -325,7 +325,7 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
     private com.skt.combustible.drivers.grpc.DriverResponse mapToGrpcResponse(com.skt.combustible.drivers.domain.dto.DriverResponse response) {
         com.skt.combustible.drivers.grpc.DriverResponse.Builder builder = 
             com.skt.combustible.drivers.grpc.DriverResponse.newBuilder()
-            .setId(Long.parseLong(response.getId()))
+            .setId(response.getId())
             .setNombre(response.getNombre())
             .setApellido(response.getApellido())
             .setDni(response.getDni())

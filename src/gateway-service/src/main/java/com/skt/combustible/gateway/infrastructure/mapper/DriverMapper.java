@@ -28,7 +28,7 @@ public class DriverMapper {
     public DriverRestResponse toRestResponse(DriverResponse grpcResponse) {
         DriverRestResponse restResponse = new DriverRestResponse();
         
-        restResponse.setId(String.valueOf(grpcResponse.getId()));
+        restResponse.setId(grpcResponse.getId());
         restResponse.setNombre(grpcResponse.getNombre());
         restResponse.setApellido(grpcResponse.getApellido());
         restResponse.setDni(grpcResponse.getDni());
