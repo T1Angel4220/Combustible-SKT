@@ -2,7 +2,7 @@ services:
   # MongoDB Database
   mongodb:
     image: mongo:7.0
-    container_name: combustible-mongodb
+    container_name: mongodb-local
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: admin123
@@ -12,7 +12,8 @@ services:
     volumes:
       - mongodb_data:/data/db
       - ./init-mongodb.js:/docker-entrypoint-initdb.d/init-mongodb.js:ro
-      - ./src/auth-service/mongo-init:/docker-entrypoint-initdb.d/auth-init:ro
+      - ./src/auth-service/mongo-init/01-init-auth-db.js:/docker-entrypoint-initdb.d/01-init-auth-db.js:ro
+      - ./src/vehicles-service/mongo-init/01-init-vehicles-db.js:/docker-entrypoint-initdb.d/01-init-vehicles-db.js:ro
     networks:
       - combustible-network
     healthcheck:

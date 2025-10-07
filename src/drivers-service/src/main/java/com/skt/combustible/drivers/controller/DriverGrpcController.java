@@ -359,6 +359,7 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
             case DISPONIBLE -> com.skt.combustible.drivers.grpc.EstadoOperativo.DISPONIBLE;
             case EN_USO -> com.skt.combustible.drivers.grpc.EstadoOperativo.EN_USO;
             case RESERVADO -> com.skt.combustible.drivers.grpc.EstadoOperativo.RESERVADO;
+            default -> com.skt.combustible.drivers.grpc.EstadoOperativo.ACTIVO; // Fallback por defecto
         };
     }
     

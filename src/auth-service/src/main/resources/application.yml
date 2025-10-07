@@ -8,8 +8,8 @@ spring:
   # Configuración MongoDB
   data:
     mongodb:
-      uri: mongodb://localhost:27017/authdb
-      database: authdb
+      uri: mongodb://localhost:27017/auth_db
+      database: auth_db
       
   profiles:
     active: dev

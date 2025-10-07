@@ -7,7 +7,7 @@ spring:
   
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://admin:admin123@mongodb:27017/vehicles_db?authSource=admin}
+      uri: ${MONGODB_URI:mongodb://vehicles_user:vehicles_pass@mongodb:27017/vehicles_db?authSource=admin}
       database: vehicles_db
         
   profiles:
