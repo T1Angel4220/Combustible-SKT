@@ -81,3 +81,5 @@ print('Usuario creado: vehicles_user');
 print('Colección vehicles creada con índices');
 print('Datos de ejemplo insertados');
 
+
+

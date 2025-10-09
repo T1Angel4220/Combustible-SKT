@@ -70,3 +70,5 @@ echo - src/vehicles-service/mongo-init/01-init-vehicles-db.js (vehicles_db)
 echo.
 pause
 
+
+
