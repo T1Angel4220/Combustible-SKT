@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKT Combustible - Gestión de Vehículos (Simple)</title>
+  <link rel="stylesheet" href="vehicles-styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚛</text></svg>">
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header Profesional -->
+    <header class="header">
+      <div class="logo">
+        <i class="fas fa-truck"></i>
+        <div>
+          <h1>SKT Combustible</h1>
+          <div class="subtitle">Gestión de Vehículos (Modo Simple)</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button id="backToMainBtn" onclick="goBackToMainDashboard()">
+          <i class="fas fa-arrow-left"></i> Volver
+        </button>
+        <button id="dashboardBtn" class="active">
+          <i class="fas fa-tachometer-alt"></i> Dashboard
+        </button>
+        <button id="vehiclesBtn">
+          <i class="fas fa-truck"></i> Vehículos
+        </button>
+        <button id="addVehicleBtn">
+          <i class="fas fa-plus-circle"></i> Nuevo Vehículo
+        </button>
+        <button id="logoutBtn">
+          <i class="fas fa-sign-out-alt"></i> Salir
+        </button>
+      </nav>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="main-content">
+      <!-- Dashboard Section -->
+      <div id="dashboardSection" class="form-section active">
+        <!-- Header del Dashboard -->
+        <div class="dashboard-header">
+            <div class="welcome-banner">
+              <div class="user-avatar">
+                <i class="fas fa-truck"></i>
+              </div>
+              <div class="welcome-text">
+                <h2 id="welcomeTitle">Gestión de Flota Vehicular</h2>
+                <p id="welcomeSubtitle">Panel de control de vehículos y maquinaria</p>
+                <p id="userInfo" style="font-size: 0.9rem; opacity: 0.8; margin-top: 5px;"></p>
+              </div>
+            </div>
+        </div>
+
+        <!-- Grid de Estadísticas -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-truck"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="totalVehicles">0</h3>
+              <p>Total de Vehículos</p>
+              <div class="stat-status online">
+                <i class="fas fa-circle"></i>
+                <span>Registrados</span>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="availableVehicles">0</h3>
+              <p>Vehículos Disponibles</p>
+              <div class="stat-status online">
+                <i class="fas fa-circle"></i>
+                <span>Listos para usar</span>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-cog"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="maintenanceVehicles">0</h3>
+              <p>En Mantenimiento</p>
+              <div class="stat-status offline">
+                <i class="fas fa-circle"></i>
+                <span>Fuera de servicio</span>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-route"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="inUseVehicles">0</h3>
+              <p>En Uso</p>
+              <div class="stat-status warning">
+                <i class="fas fa-circle"></i>
+                <span>En operación</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid de Acciones Rápidas -->
+        <div class="action-grid">
+          <div class="action-card" onclick="showVehiclesList()">
+            <div class="card-header">
+              <i class="fas fa-list"></i>
+            </div>
+            <h4>Ver Todos</h4>
+            <p>Lista completa de vehículos</p>
+          </div>
+          <div class="action-card" onclick="filterByType('DISPONIBLE')">
+            <div class="card-header">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <h4>Disponibles</h4>
+            <p>Vehículos listos para usar</p>
+          </div>
+          <div class="action-card" onclick="filterByType('CAMION')">
+            <div class="card-header">
+              <i class="fas fa-truck"></i>
+            </div>
+            <h4>Camiones</h4>
+            <p>Flota de camiones</p>
+          </div>
+          <div class="action-card" onclick="filterByType('EXCAVADORA')">
+            <div class="card-header">
+              <i class="fas fa-hard-hat"></i>
+            </div>
+            <h4>Excavadoras</h4>
+            <p>Maquinaria pesada</p>
+          </div>
+          <div class="action-card" onclick="filterByType('VOLQUETE')">
+            <div class="card-header">
+              <i class="fas fa-truck-pickup"></i>
+            </div>
+            <h4>Volquetes</h4>
+            <p>Transporte de carga</p>
+          </div>
+          <div class="action-card" onclick="showAddVehicle()">
+            <div class="card-header">
+              <i class="fas fa-plus-circle"></i>
+            </div>
+            <h4>Agregar Nuevo</h4>
+            <p>Registrar vehículo</p>
+          </div>
+        </div>
+
+        <!-- Tipos de Maquinaria -->
+        <div class="recent-activity">
+          <h3><i class="fas fa-th-large"></i> Distribución por Tipo de Maquinaria</h3>
+          <div class="machinery-types-grid">
+            <div class="machinery-type-card" data-type="CAMION">
+              <div class="machinery-icon">
+                <i class="fas fa-truck"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Camiones</h4>
+                <p class="machinery-count" id="count-CAMION">0 unidades</p>
+              </div>
+            </div>
+            <div class="machinery-type-card" data-type="VOLQUETE">
+              <div class="machinery-icon">
+                <i class="fas fa-truck-pickup"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Volquetes</h4>
+                <p class="machinery-count" id="count-VOLQUETE">0 unidades</p>
+              </div>
+            </div>
+            <div class="machinery-type-card" data-type="EXCAVADORA">
+              <div class="machinery-icon">
+                <i class="fas fa-hard-hat"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Excavadoras</h4>
+                <p class="machinery-count" id="count-EXCAVADORA">0 unidades</p>
+              </div>
+            </div>
+            <div class="machinery-type-card" data-type="CARGADOR">
+              <div class="machinery-icon">
+                <i class="fas fa-dolly"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Cargadores</h4>
+                <p class="machinery-count" id="count-CARGADOR">0 unidades</p>
+              </div>
+            </div>
+            <div class="machinery-type-card" data-type="GRUA">
+              <div class="machinery-icon">
+                <i class="fas fa-crane"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Grúas</h4>
+                <p class="machinery-count" id="count-GRUA">0 unidades</p>
+              </div>
+            </div>
+            <div class="machinery-type-card" data-type="MOTONIVELADORA">
+              <div class="machinery-icon">
+                <i class="fas fa-road"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Motoniveladoras</h4>
+                <p class="machinery-count" id="count-MOTONIVELADORA">0 unidades</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista de Vehículos Section -->
+      <div id="vehiclesSection" class="form-section">
+        <div class="section-header">
+          <h2><i class="fas fa-truck"></i> Lista de Vehículos</h2>
+          <div class="filter-controls">
+            <input type="text" id="searchInput" class="search-input" placeholder="Buscar por placa, marca o modelo...">
+            <select id="filterType" class="filter-select">
+              <option value="">Todos los tipos</option>
+              <option value="CAMION">Camión</option>
+              <option value="VOLQUETE">Volquete</option>
+              <option value="EXCAVADORA">Excavadora</option>
+              <option value="CARGADOR">Cargador</option>
+              <option value="GRUA">Grúa</option>
+              <option value="MOTONIVELADORA">Motoniveladora</option>
+            </select>
+            <select id="filterStatus" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="DISPONIBLE">Disponible</option>
+              <option value="EN_USO">En Uso</option>
+              <option value="MANTENIMIENTO">Mantenimiento</option>
+              <option value="FUERA_SERVICIO">Fuera de Servicio</option>
+            </select>
+            <button class="btn btn-primary" onclick="loadVehicles()">
+              <i class="fas fa-sync"></i> Actualizar
+            </button>
+          </div>
+        </div>
+
+        <div id="vehiclesGrid" class="vehicles-grid">
+          <!-- Los vehículos se cargarán dinámicamente aquí -->
+        </div>
+      </div>
+
+      <!-- Formulario Nuevo/Editar Vehículo Section -->
+      <div id="vehicleFormSection" class="form-section">
+        <div class="form-container">
+          <h2><i class="fas fa-plus-circle"></i> <span id="formTitle">Nuevo Vehículo</span></h2>
+
+          <form id="vehicleForm" class="vehicle-form">
+            <input type="hidden" id="vehicleId" name="id">
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="placa">
+                  <i class="fas fa-id-card"></i> Placa *
+                </label>
+                <input type="text" id="placa" name="placa" required placeholder="ABC-123">
+              </div>
+
+              <div class="form-group">
+                <label for="marca">
+                  <i class="fas fa-industry"></i> Marca *
+                </label>
+                <input type="text" id="marca" name="marca" required placeholder="Volvo, Mercedes, etc.">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="modelo">
+                  <i class="fas fa-tag"></i> Modelo *
+                </label>
+                <input type="text" id="modelo" name="modelo" required placeholder="FH16, Actros, etc.">
+              </div>
+
+              <div class="form-group">
+                <label for="anio">
+                  <i class="fas fa-calendar"></i> Año *
+                </label>
+                <input type="number" id="anio" name="anio" required min="1990" max="2030" placeholder="2023">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tipoMaquinaria">
+                  <i class="fas fa-truck"></i> Tipo de Maquinaria *
+                </label>
+                <select id="tipoMaquinaria" name="tipoMaquinaria" required>
+                  <option value="">Seleccionar tipo</option>
+                  <option value="CAMION">Camión</option>
+                  <option value="VOLQUETE">Volquete</option>
+                  <option value="EXCAVADORA">Excavadora</option>
+                  <option value="CARGADOR">Cargador</option>
+                  <option value="GRUA">Grúa</option>
+                  <option value="MOTONIVELADORA">Motoniveladora</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="estadoOperativo">
+                  <i class="fas fa-info-circle"></i> Estado Operativo *
+                </label>
+                <select id="estadoOperativo" name="estadoOperativo" required>
+                  <option value="">Seleccionar estado</option>
+                  <option value="DISPONIBLE">Disponible</option>
+                  <option value="EN_USO">En Uso</option>
+                  <option value="MANTENIMIENTO">Mantenimiento</option>
+                  <option value="FUERA_SERVICIO">Fuera de Servicio</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="capacidadTanque">
+                  <i class="fas fa-gas-pump"></i> Capacidad Tanque (Litros)
+                </label>
+                <input type="number" id="capacidadTanque" name="capacidadTanque" step="0.01" min="0" placeholder="200.00">
+              </div>
+
+              <div class="form-group">
+                <label for="consumoPromedio">
+                  <i class="fas fa-tachometer-alt"></i> Consumo Promedio (L/100km)
+                </label>
+                <input type="number" id="consumoPromedio" name="consumoPromedio" step="0.01" min="0" placeholder="15.50">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="kilometrajeActual">
+                  <i class="fas fa-road"></i> Kilometraje Actual
+                </label>
+                <input type="number" id="kilometrajeActual" name="kilometrajeActual" step="0.01" min="0" placeholder="50000.00">
+              </div>
+
+              <div class="form-group">
+                <label for="activo">
+                  <i class="fas fa-toggle-on"></i> Estado
+                </label>
+                <select id="activo" name="activo">
+                  <option value="true">Activo</option>
+                  <option value="false">Inactivo</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Guardar Vehículo
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="showDashboard()">
+                <i class="fas fa-times"></i> Cancelar
+              </button>
+              <button type="button" class="btn btn-info" onclick="fillTestData()">
+                <i class="fas fa-magic"></i> Datos de Prueba
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal para Detalles del Vehículo -->
+  <div id="vehicleModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2><i class="fas fa-truck"></i> Detalles del Vehículo</h2>
+      <div id="vehicleDetails"></div>
+    </div>
+  </div>
+
+  <!-- Contenedor de Notificaciones -->
+  <div class="notification-container" id="notificationContainer"></div>
+
+  <script src="vehicles-script-simple.js"></script>
+</body>
+
+</html>

@@ -309,6 +309,25 @@ function fillRegisterForm() {
     showMessage('Datos de prueba cargados', 'info');
 }
 
+// Función para ir a la gestión de vehículos
+function goToVehiclesManagement() {
+    // Verificar que el usuario esté autenticado
+    if (!authToken) {
+        showMessage('Debes iniciar sesión para acceder a la gestión de vehículos', 'error');
+        return;
+    }
+    
+    showMessage('Redirigiendo a la gestión de vehículos...', 'info');
+    
+    // Pasar el token y datos del usuario como parámetros URL
+    const tokenParam = encodeURIComponent(authToken);
+    const userParam = encodeURIComponent(JSON.stringify(currentUser));
+    
+    setTimeout(() => {
+        window.location.href = `http://localhost:8082/vehicles-simple.html?token=${tokenParam}&user=${userParam}`;
+    }, 1000);
+}
+
 // Sistema de notificaciones
 function showMessage(message, type = 'info') {
     const container = document.getElementById('notificationContainer');
