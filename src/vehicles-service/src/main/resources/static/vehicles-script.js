@@ -1,5 +1,5 @@
 // Configuración de la API
-const API_BASE_URL = 'http://localhost:8082/api/v1/vehicles'; // Ajusta según tu configuración
+const API_BASE_URL = 'http://localhost:8082/api/v1/vehicles';
 
 // Variables globales
 let vehicles = [];
@@ -19,7 +19,6 @@ let dashboardBtn, vehiclesBtn, addVehicleBtn, logoutBtn;
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
     setupEventListeners();
-    loadDashboardData();
 });
 
 function initializeApp() {
@@ -33,114 +32,101 @@ function initializeApp() {
     addVehicleBtn = document.getElementById('addVehicleBtn');
     logoutBtn = document.getElementById('logoutBtn');
     
-    // Verificar autenticación antes de continuar
+    // Verificar autenticación
     checkAuthentication();
 }
 
-async function checkAuthentication() {
-    try {
-        // Cargar datos del localStorage
-        const savedToken = localStorage.getItem('authToken');
-        const savedUser = localStorage.getItem('currentUser');
+function checkAuthentication() {
+    console.log('🔍 Verificando autenticación...');
+    
+    // Primero verificar si hay datos en la URL (venimos del Auth Service)
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get('token');
+    const userFromUrl = urlParams.get('user');
+    
+    if (tokenFromUrl && userFromUrl) {
+        console.log('📥 Datos recibidos desde Auth Service');
         
-        console.log('🔍 Verificando autenticación...');
-        console.log('📝 Token encontrado:', savedToken ? 'Sí' : 'No');
-        console.log('👤 Usuario encontrado:', savedUser ? 'Sí' : 'No');
-        
-        if (!savedToken || !savedUser) {
-            console.log('❌ No hay datos de autenticación');
-            showMessage('Debes iniciar sesión para acceder a este módulo', 'error');
-            setTimeout(() => {
-                window.location.href = 'http://localhost:8085/';
-            }, 2000);
+        try {
+            // Guardar en localStorage para futuras cargas
+            localStorage.setItem('authToken', tokenFromUrl);
+            localStorage.setItem('currentUser', userFromUrl);
+            
+            // Parsear y asignar datos
+            authToken = tokenFromUrl;
+            currentUser = JSON.parse(userFromUrl);
+            
+            console.log('✅ Datos guardados en localStorage');
+            
+            // Limpiar URL para que no se vean los parámetros
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Continuar con la autenticación
+            proceedWithAuthentication();
+            return;
+            
+        } catch (error) {
+            console.error('❌ Error procesando datos de URL:', error);
+            redirectToLogin();
             return;
         }
-        
-        // Parsear datos del usuario
-        authToken = savedToken;
-        currentUser = JSON.parse(savedUser);
-        
+    }
+    
+    // Si no hay datos en URL, intentar cargar del localStorage
+    const savedToken = localStorage.getItem('authToken');
+    const savedUser = localStorage.getItem('currentUser');
+    
+    console.log('📝 Token en localStorage:', savedToken ? 'Sí' : 'No');
+    console.log('👤 Usuario en localStorage:', savedUser ? 'Sí' : 'No');
+    
+    if (!savedToken || !savedUser) {
+        console.log('❌ No hay datos de autenticación');
+        showMessage('Debes iniciar sesión para acceder a este módulo', 'error');
+        setTimeout(() => {
+            window.location.href = 'http://localhost:8085/';
+        }, 2000);
+        return;
+    }
+    
+    // Parsear datos del localStorage
+    authToken = savedToken;
+    currentUser = JSON.parse(savedUser);
+    
+    // Continuar con la autenticación
+    proceedWithAuthentication();
+}
+
+function proceedWithAuthentication() {
+    try {
         console.log('✅ Datos cargados:', {
             username: currentUser.username,
-            tokenLength: authToken.length
+            tokenLength: authToken.length,
+            tokenStart: authToken.substring(0, 20) + '...'
         });
         
-        // Validar el token con el backend de autenticación
-        console.log('🔐 Validando token con Auth Service...');
-        const isValid = await validateTokenWithAuthService();
-        
-        if (isValid) {
-            console.log('✅ Usuario autenticado:', currentUser.username);
+        // Verificación básica del token JWT
+        if (authToken.startsWith('eyJ') && currentUser && currentUser.username) {
+            console.log('✅ Token JWT válido y usuario encontrado');
+            console.log('🎉 Usuario autenticado:', currentUser.username);
+            
             updateUserInfo();
             showDashboard();
+            loadDashboardData();
         } else {
-            // Fallback: si la validación falla pero tenemos un token con formato JWT válido
-            // y datos de usuario, permitir acceso (útil para desarrollo)
-            if (authToken && authToken.startsWith('eyJ') && currentUser && currentUser.username) {
-                console.log('⚠️ Validación falló pero usando fallback para desarrollo');
-                console.log('✅ Usuario autenticado (fallback):', currentUser.username);
-                updateUserInfo();
-                showDashboard();
-            } else {
-                console.log('❌ Token inválido y sin datos de fallback');
-                redirectToLogin();
-            }
+            console.log('❌ Token o usuario inválido');
+            redirectToLogin();
         }
         
     } catch (error) {
-        console.error('❌ Error verificando autenticación:', error);
+        console.error('❌ Error procesando datos de autenticación:', error);
         redirectToLogin();
     }
 }
 
-async function validateTokenWithAuthService() {
-    try {
-        console.log('📡 Enviando petición de validación a Auth Service...');
-        
-        const response = await fetch('http://localhost:8085/api/auth/validate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            },
-            body: JSON.stringify({ token: authToken })
-        });
-        
-        console.log('📊 Respuesta del Auth Service:', response.status, response.statusText);
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('📄 Datos de validación:', data);
-            
-            const isValid = data.valid === true;
-            console.log('✅ Token válido:', isValid);
-            
-            return isValid;
-        } else {
-            console.log('❌ Error en validación:', response.status, response.statusText);
-            
-            // Intentar leer el mensaje de error
-            try {
-                const errorData = await response.json();
-                console.log('📄 Error details:', errorData);
-            } catch (e) {
-                console.log('📄 No se pudo leer error details');
-            }
-            
-            return false;
-        }
-    } catch (error) {
-        console.error('❌ Error de conexión validando token:', error);
-        return false;
-    }
-}
-
 function updateUserInfo() {
-    // Actualizar la información del usuario en la interfaz
     if (currentUser) {
-        console.log(`Usuario autenticado: ${currentUser.nombre} (${currentUser.rol})`);
+        console.log(`👤 Usuario autenticado: ${currentUser.nombre} (${currentUser.rol})`);
         
-        // Actualizar elementos del DOM si existen
         const welcomeTitle = document.getElementById('welcomeTitle');
         const userInfo = document.getElementById('userInfo');
         
@@ -155,9 +141,8 @@ function updateUserInfo() {
 }
 
 function redirectToLogin() {
-    showMessage('Sesión expirada o inválida. Redirigiendo al login...', 'error');
+    showMessage('Sesión inválida. Redirigiendo al login...', 'error');
     setTimeout(() => {
-        // Limpiar datos locales
         localStorage.removeItem('authToken');
         localStorage.removeItem('currentUser');
         window.location.href = 'http://localhost:8085/';
@@ -218,12 +203,10 @@ function hideAllSections() {
 }
 
 function updateNavButtons(activeSection) {
-    // Resetear todos los botones
     dashboardBtn.classList.remove('active');
     vehiclesBtn.classList.remove('active');
     addVehicleBtn.classList.remove('active');
     
-    // Activar el botón correspondiente
     if (activeSection === 'dashboard') {
         dashboardBtn.classList.add('active');
     } else if (activeSection === 'vehicles') {
@@ -235,7 +218,6 @@ function updateNavButtons(activeSection) {
 
 function logout() {
     if (confirm('¿Estás seguro de que deseas salir?')) {
-        // Limpiar datos de autenticación
         localStorage.removeItem('authToken');
         localStorage.removeItem('currentUser');
         authToken = null;
@@ -251,7 +233,7 @@ function logout() {
 function goBackToMainDashboard() {
     showMessage('Volviendo al dashboard principal...', 'info');
     setTimeout(() => {
-        window.location.href = 'http://localhost:8085/'; // Redirigir al auth-service
+        window.location.href = 'http://localhost:8085/';
     }, 500);
 }
 
@@ -269,6 +251,8 @@ async function loadDashboardData() {
 
 async function loadVehicles() {
     try {
+        console.log('📡 Cargando vehículos...');
+        
         const response = await fetch(`${API_BASE_URL}`, {
             method: 'GET',
             headers: {
@@ -277,11 +261,15 @@ async function loadVehicles() {
             }
         });
         
+        console.log('📊 Respuesta:', response.status, response.statusText);
+        
         if (response.ok) {
             vehicles = await response.json();
+            console.log('✅ Vehículos cargados:', vehicles.length);
             renderVehicles();
             updateDashboardStats();
         } else if (response.status === 401) {
+            console.log('❌ Error 401: No autorizado');
             showMessage('Sesión expirada. Redirigiendo al login...', 'error');
             setTimeout(() => redirectToLogin(), 2000);
         } else {
@@ -299,11 +287,13 @@ function updateDashboardStats() {
     const available = vehicles.filter(v => v.estadoOperativo === 'DISPONIBLE').length;
     const maintenance = vehicles.filter(v => v.estadoOperativo === 'MANTENIMIENTO').length;
     const inUse = vehicles.filter(v => v.estadoOperativo === 'EN_USO').length;
+    const outOfService = vehicles.filter(v => v.estadoOperativo === 'FUERA_SERVICIO').length;
     
     document.getElementById('totalVehicles').textContent = total;
     document.getElementById('availableVehicles').textContent = available;
     document.getElementById('maintenanceVehicles').textContent = maintenance;
     document.getElementById('inUseVehicles').textContent = inUse;
+    document.getElementById('outOfServiceVehicles').textContent = outOfService;
 }
 
 function updateMachineryTypeCount() {
@@ -519,13 +509,13 @@ function handleFilterStatus(event) {
 }
 
 function filterByType(type) {
-    if (type === 'DISPONIBLE') {
-        // Filtrar por estado
+    if (type === 'DISPONIBLE' || type === 'MANTENIMIENTO' || type === 'EN_USO' || type === 'FUERA_SERVICIO') {
+        // Es un estado operativo
         document.getElementById('filterStatus').value = type;
         currentFilter.status = type;
         currentFilter.type = '';
     } else {
-        // Filtrar por tipo de maquinaria
+        // Es un tipo de maquinaria
         document.getElementById('filterType').value = type;
         currentFilter.type = type;
         currentFilter.status = '';
@@ -555,10 +545,8 @@ async function handleFormSubmit(event) {
     
     try {
         if (vehicleId) {
-            // Actualizar vehículo existente
             await updateVehicle(vehicleId, vehicleData);
         } else {
-            // Crear nuevo vehículo
             await createVehicle(vehicleData);
         }
     } catch (error) {
@@ -727,7 +715,6 @@ function showMessage(message, type = 'info') {
     
     container.appendChild(notification);
     
-    // Auto-remover después de 5 segundos
     setTimeout(() => {
         if (notification.parentNode) {
             notification.parentNode.removeChild(notification);
@@ -761,11 +748,5 @@ window.onclick = function(event) {
     }
 }
 
-// Manejo de errores globales
-window.addEventListener('error', function(event) {
-    console.error('Error global:', event.error);
-});
-
-console.log('SKT Combustible - Gestión de Vehículos iniciado');
-console.log('API Base URL:', API_BASE_URL);
-
+console.log('🚛 SKT Combustible - Gestión de Vehículos iniciado');
+console.log('📡 API Base URL:', API_BASE_URL);

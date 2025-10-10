@@ -94,9 +94,9 @@
             <div class="stat-content">
               <h3 id="maintenanceVehicles">0</h3>
               <p>En Mantenimiento</p>
-              <div class="stat-status offline">
+              <div class="stat-status warning">
                 <i class="fas fa-circle"></i>
-                <span>Fuera de servicio</span>
+                <span>En reparación</span>
               </div>
             </div>
           </div>
@@ -107,9 +107,22 @@
             <div class="stat-content">
               <h3 id="inUseVehicles">0</h3>
               <p>En Uso</p>
-              <div class="stat-status warning">
+              <div class="stat-status online">
                 <i class="fas fa-circle"></i>
                 <span>En operación</span>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-ban"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="outOfServiceVehicles">0</h3>
+              <p>Fuera de Servicio</p>
+              <div class="stat-status offline">
+                <i class="fas fa-circle"></i>
+                <span>No operativo</span>
               </div>
             </div>
           </div>
@@ -151,6 +164,20 @@
             </div>
             <h4>Volquetes</h4>
             <p>Transporte de carga</p>
+          </div>
+          <div class="action-card" onclick="filterByType('MANTENIMIENTO')">
+            <div class="card-header">
+              <i class="fas fa-cog"></i>
+            </div>
+            <h4>Mantenimiento</h4>
+            <p>Vehículos en reparación</p>
+          </div>
+          <div class="action-card" onclick="filterByType('FUERA_SERVICIO')">
+            <div class="card-header">
+              <i class="fas fa-ban"></i>
+            </div>
+            <h4>Fuera de Servicio</h4>
+            <p>Vehículos no operativos</p>
           </div>
           <div class="action-card" onclick="showAddVehicle()">
             <div class="card-header">
@@ -394,4 +421,3 @@
 </body>
 
 </html>
-

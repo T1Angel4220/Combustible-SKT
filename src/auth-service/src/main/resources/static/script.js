@@ -324,7 +324,7 @@ function goToVehiclesManagement() {
     const userParam = encodeURIComponent(JSON.stringify(currentUser));
     
     setTimeout(() => {
-        window.location.href = `http://localhost:8082/vehicles-simple.html?token=${tokenParam}&user=${userParam}`;
+        window.location.href = `http://localhost:8082/vehicles.html?token=${tokenParam}&user=${userParam}`;
     }, 1000);
 }
 
