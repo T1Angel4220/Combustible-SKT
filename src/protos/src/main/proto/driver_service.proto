@@ -62,12 +62,20 @@ service DriverService {
 
 // Enums
 enum EstadoOperativo {
-  ACTIVO = 0;
-  MANTENIMIENTO = 1;
-  FUERA_SERVICIO = 2;
-  DISPONIBLE = 3;
-  EN_USO = 4;
-  RESERVADO = 5;
+  // Estados para choferes (principales)
+  DISPONIBLE = 0;
+  ASIGNADO = 1;
+  EN_RUTA = 2;
+  DESCANSANDO = 3;
+  VACACIONES = 4;
+  ENFERMO = 5;
+  LICENCIA = 6;
+  
+  // Estados para vehículos (compatibilidad)
+  EN_USO = 7;
+  MANTENIMIENTO = 8;
+  FUERA_SERVICIO = 9;
+  RESERVADO = 10;
 }
 
 enum TipoMaquinaria {

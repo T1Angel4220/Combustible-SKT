@@ -150,6 +150,6 @@ public class DriverResponse {
     }
     
     public boolean isDisponible() {
-        return activo && estado == EstadoOperativo.ACTIVO;
+        return activo && estado == EstadoOperativo.DISPONIBLE;
     }
 }

@@ -328,6 +328,25 @@ function goToVehiclesManagement() {
     }, 1000);
 }
 
+// Función para ir a la gestión de choferes
+function goToDriversManagement() {
+    // Verificar que el usuario esté autenticado
+    if (!authToken) {
+        showMessage('Debes iniciar sesión para acceder a la gestión de choferes', 'error');
+        return;
+    }
+    
+    showMessage('Redirigiendo a la gestión de choferes...', 'info');
+    
+    // Pasar el token y datos del usuario como parámetros URL
+    const tokenParam = encodeURIComponent(authToken);
+    const userParam = encodeURIComponent(JSON.stringify(currentUser));
+    
+    setTimeout(() => {
+        window.location.href = `http://localhost:8081/drivers.html?token=${tokenParam}&user=${userParam}`;
+    }, 1000);
+}
+
 // Sistema de notificaciones
 function showMessage(message, type = 'info') {
     const container = document.getElementById('notificationContainer');

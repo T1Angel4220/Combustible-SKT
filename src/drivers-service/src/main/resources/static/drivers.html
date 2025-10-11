@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKT Combustible - Gestión de Choferes</title>
+  <link rel="stylesheet" href="drivers-styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👷</text></svg>">
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header Profesional -->
+    <header class="header">
+      <div class="logo">
+        <i class="fas fa-user-tie"></i>
+        <div>
+          <h1>SKT Combustible</h1>
+          <div class="subtitle">Gestión de Choferes</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button id="backToMainBtn" onclick="goBackToMainDashboard()">
+          <i class="fas fa-arrow-left"></i> Volver
+        </button>
+        <button id="dashboardBtn" class="active">
+          <i class="fas fa-tachometer-alt"></i> Dashboard
+        </button>
+        <button id="driversBtn">
+          <i class="fas fa-users"></i> Choferes
+        </button>
+        <button id="addDriverBtn">
+          <i class="fas fa-user-plus"></i> Nuevo Chofer
+        </button>
+        <button id="logoutBtn">
+          <i class="fas fa-sign-out-alt"></i> Salir
+        </button>
+      </nav>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="main-content">
+      <!-- Dashboard Section -->
+      <div id="dashboardSection" class="form-section active">
+        <!-- Header del Dashboard -->
+        <div class="dashboard-header">
+            <div class="welcome-banner">
+              <div class="user-avatar">
+                <i class="fas fa-user-tie"></i>
+              </div>
+              <div class="welcome-text">
+                <h2 id="welcomeTitle">Gestión de Personal Conductor</h2>
+                <p id="welcomeSubtitle">Panel de control de choferes y conductores</p>
+                <p id="userInfo" style="font-size: 0.9rem; opacity: 0.8; margin-top: 5px;"></p>
+              </div>
+            </div>
+        </div>
+
+        <!-- Grid de Estadísticas -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="totalDrivers">0</h3>
+              <p>Total de Choferes</p>
+              <div class="stat-status online">
+                <i class="fas fa-circle"></i>
+                <span>Registrados</span>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-user-check"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="availableDrivers">0</h3>
+              <p>Choferes Disponibles</p>
+              <div class="stat-status online">
+                <i class="fas fa-circle"></i>
+                <span>Listos para asignar</span>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-cogs"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="activeDrivers">0</h3>
+              <p>En Servicio</p>
+              <div class="stat-status online">
+                <i class="fas fa-circle"></i>
+                <span>Operando</span>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-user-clock"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="inactiveDrivers">0</h3>
+              <p>Inactivos</p>
+              <div class="stat-status offline">
+                <i class="fas fa-circle"></i>
+                <span>No disponibles</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid de Acciones Rápidas -->
+        <div class="action-grid">
+          <div class="action-card" onclick="showAllDrivers()">
+            <div class="card-header">
+              <i class="fas fa-list"></i>
+            </div>
+            <h4>Ver Todos</h4>
+            <p>Lista completa de choferes</p>
+          </div>
+          <div class="action-card" onclick="filterAvailableDrivers()">
+            <div class="card-header">
+              <i class="fas fa-user-check"></i>
+            </div>
+            <h4>Disponibles</h4>
+            <p>Choferes listos para asignar</p>
+          </div>
+          <div class="action-card" onclick="filterByMachinery('CAMION')">
+            <div class="card-header">
+              <i class="fas fa-truck"></i>
+            </div>
+            <h4>Camiones</h4>
+            <p>Conductores de camiones</p>
+          </div>
+          <div class="action-card" onclick="filterByMachinery('EXCAVADORA')">
+            <div class="card-header">
+              <i class="fas fa-truck-monster"></i>
+            </div>
+            <h4>Excavadoras</h4>
+            <p>Operadores de excavadoras</p>
+          </div>
+          <div class="action-card" onclick="filterByMachinery('VOLQUETE')">
+            <div class="card-header">
+              <i class="fas fa-truck-pickup"></i>
+            </div>
+            <h4>Volquetes</h4>
+            <p>Conductores de volquetes</p>
+          </div>
+          <div class="action-card" onclick="filterInactiveDrivers()">
+            <div class="card-header">
+              <i class="fas fa-user-slash"></i>
+            </div>
+            <h4>Inactivos</h4>
+            <p>Choferes no disponibles</p>
+          </div>
+          <div class="action-card" onclick="showSearchDrivers()">
+            <div class="card-header">
+              <i class="fas fa-search"></i>
+            </div>
+            <h4>Buscar</h4>
+            <p>Buscar chofer específico</p>
+          </div>
+          <div class="action-card" onclick="showAddDriver()">
+            <div class="card-header">
+              <i class="fas fa-user-plus"></i>
+            </div>
+            <h4>Agregar Nuevo</h4>
+            <p>Registrar nuevo chofer</p>
+          </div>
+        </div>
+
+        <!-- Distribución por Tipo de Maquinaria -->
+        <div class="recent-activity">
+          <h3><i class="fas fa-chart-pie"></i> Distribución por Tipo de Maquinaria</h3>
+          <div class="machinery-types-grid">
+            <div class="machinery-type-card" data-type="CAMION">
+              <div class="machinery-icon">
+                <i class="fas fa-truck"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Camiones</h4>
+                <p class="machinery-count" id="count-CAMION">0 choferes</p>
+              </div>
+            </div>
+            <div class="machinery-type-card" data-type="VOLQUETE">
+              <div class="machinery-icon">
+                <i class="fas fa-truck-pickup"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Volquetes</h4>
+                <p class="machinery-count" id="count-VOLQUETE">0 choferes</p>
+              </div>
+            </div>
+            <div class="machinery-type-card" data-type="EXCAVADORA">
+              <div class="machinery-icon">
+                <i class="fas fa-truck-monster"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Excavadoras</h4>
+                <p class="machinery-count" id="count-EXCAVADORA">0 choferes</p>
+              </div>
+            </div>
+            <div class="machinery-type-card" data-type="CARGADOR">
+              <div class="machinery-icon">
+                <i class="fas fa-truck-loading"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Cargadores</h4>
+                <p class="machinery-count" id="count-CARGADOR">0 choferes</p>
+              </div>
+            </div>
+            <div class="machinery-type-card" data-type="GRUA">
+              <div class="machinery-icon">
+                <i class="fas fa-crane"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Grúas</h4>
+                <p class="machinery-count" id="count-GRUA">0 choferes</p>
+              </div>
+            </div>
+            <div class="machinery-type-card" data-type="MOTONIVELADORA">
+              <div class="machinery-icon">
+                <i class="fas fa-tractor"></i>
+              </div>
+              <div class="machinery-info">
+                <h4>Motoniveladoras</h4>
+                <p class="machinery-count" id="count-MOTONIVELADORA">0 choferes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista de Choferes Section -->
+      <div id="driversSection" class="form-section">
+        <div class="section-header">
+          <h2><i class="fas fa-users"></i> Lista de Choferes</h2>
+          <div class="filter-controls">
+            <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nombre, DNI o licencia...">
+            <select id="filterMachinery" class="filter-select">
+              <option value="">Todos los tipos</option>
+              <option value="CAMION">Camión</option>
+              <option value="VOLQUETE">Volquete</option>
+              <option value="EXCAVADORA">Excavadora</option>
+              <option value="CARGADOR">Cargador</option>
+              <option value="GRUA">Grúa</option>
+              <option value="MOTONIVELADORA">Motoniveladora</option>
+            </select>
+            <select id="filterStatus" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="DISPONIBLE">Disponible</option>
+              <option value="ASIGNADO">Asignado</option>
+              <option value="EN_RUTA">En Ruta</option>
+              <option value="DESCANSANDO">Descansando</option>
+              <option value="VACACIONES">En Vacaciones</option>
+              <option value="ENFERMO">Enfermo</option>
+              <option value="LICENCIA">En Licencia</option>
+            </select>
+            <select id="filterActive" class="filter-select">
+              <option value="">Todos los registros</option>
+              <option value="true">Solo activos</option>
+              <option value="false">Solo inactivos</option>
+            </select>
+            <button class="btn btn-primary" onclick="loadDrivers()">
+              <i class="fas fa-sync"></i> Actualizar
+            </button>
+            <button class="btn btn-secondary" onclick="clearAllFilters(); renderDrivers();">
+              <i class="fas fa-times"></i> Limpiar Filtros
+            </button>
+          </div>
+        </div>
+
+        <div id="driversGrid" class="drivers-grid">
+          <!-- Los choferes se cargarán dinámicamente aquí -->
+        </div>
+      </div>
+
+      <!-- Formulario Nuevo/Editar Chofer Section -->
+      <div id="driverFormSection" class="form-section">
+        <div class="form-container">
+          <h2><i class="fas fa-user-plus"></i> <span id="formTitle">Nuevo Chofer</span></h2>
+
+          <form id="driverForm" class="driver-form">
+            <input type="hidden" id="driverId" name="id">
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="nombre">
+                  <i class="fas fa-user"></i> Nombre *
+                </label>
+                <input type="text" id="nombre" name="nombre" required placeholder="Juan">
+              </div>
+
+              <div class="form-group">
+                <label for="apellido">
+                  <i class="fas fa-user"></i> Apellido *
+                </label>
+                <input type="text" id="apellido" name="apellido" required placeholder="Pérez">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="dni">
+                  <i class="fas fa-id-card"></i> DNI *
+                </label>
+                <input type="text" id="dni" name="dni" required placeholder="12345678" pattern="[0-9]{8,12}">
+              </div>
+
+              <div class="form-group">
+                <label for="licencia">
+                  <i class="fas fa-id-badge"></i> Número de Licencia *
+                </label>
+                <input type="text" id="licencia" name="licencia" required placeholder="ABC123456">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="telefono">
+                  <i class="fas fa-phone"></i> Teléfono
+                </label>
+                <input type="tel" id="telefono" name="telefono" placeholder="+51987654321" pattern="[+]?[0-9]{7,15}">
+              </div>
+
+              <div class="form-group">
+                <label for="email">
+                  <i class="fas fa-envelope"></i> Email
+                </label>
+                <input type="email" id="email" name="email" placeholder="chofer@example.com">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="fechaContratacion">
+                  <i class="fas fa-calendar"></i> Fecha de Contratación
+                </label>
+                <input type="date" id="fechaContratacion" name="fechaContratacion">
+              </div>
+
+              <div class="form-group">
+                <label for="tipoMaquinariaAsignada">
+                  <i class="fas fa-truck"></i> Tipo de Maquinaria Asignada
+                </label>
+                <select id="tipoMaquinariaAsignada" name="tipoMaquinariaAsignada">
+                  <option value="">Sin asignar</option>
+                  <option value="CAMION">Camión</option>
+                  <option value="VOLQUETE">Volquete</option>
+                  <option value="EXCAVADORA">Excavadora</option>
+                  <option value="CARGADOR">Cargador</option>
+                  <option value="GRUA">Grúa</option>
+                  <option value="MOTONIVELADORA">Motoniveladora</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="estado">
+                  <i class="fas fa-info-circle"></i> Estado *
+                </label>
+                <select id="estado" name="estado" required>
+                  <option value="DISPONIBLE">Disponible</option>
+                  <option value="ASIGNADO">Asignado</option>
+                  <option value="EN_RUTA">En Ruta</option>
+                  <option value="DESCANSANDO">Descansando</option>
+                  <option value="VACACIONES">En Vacaciones</option>
+                  <option value="ENFERMO">Enfermo</option>
+                  <option value="LICENCIA">En Licencia</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="activo">
+                  <i class="fas fa-toggle-on"></i> Estado del Registro
+                </label>
+                <select id="activo" name="activo">
+                  <option value="true">Activo</option>
+                  <option value="false">Inactivo</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Guardar Chofer
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="showDashboard()">
+                <i class="fas fa-times"></i> Cancelar
+              </button>
+              <button type="button" class="btn btn-info" onclick="fillTestData()">
+                <i class="fas fa-magic"></i> Datos de Prueba
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal para Detalles del Chofer -->
+  <div id="driverModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2><i class="fas fa-user-tie"></i> Detalles del Chofer</h2>
+      <div id="driverDetails"></div>
+    </div>
+  </div>
+
+  <!-- Contenedor de Notificaciones -->
+  <div class="notification-container" id="notificationContainer"></div>
+
+  <script src="drivers-script.js"></script>
+</body>
+
+</html>
+

@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS common_schema.choferes (
     telefono VARCHAR(20),
     email VARCHAR(100),
     fecha_contratacion DATE,
-    estado common_schema.estado_operativo_enum NOT NULL DEFAULT 'ACTIVO',
+    estado common_schema.estado_operativo_enum NOT NULL DEFAULT 'DISPONIBLE',
     tipo_maquinaria_asignada common_schema.tipo_maquinaria_enum,
     activo BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS common_schema.choferes (
 -- -----------------------------------------------------------------------------
 -- 4. Tablas en liviana_schema (Maquinaria Liviana)
 -- -----------------------------------------------------------------------------
-
 -- Tabla de Vehículos Livianos
 CREATE TABLE IF NOT EXISTS liviana_schema.vehiculos (
     id SERIAL PRIMARY KEY,
@@ -102,7 +101,6 @@ CREATE TABLE IF NOT EXISTS liviana_schema.registros_combustible (
 -- -----------------------------------------------------------------------------
 -- 5. Tablas en pesada_schema (Maquinaria Pesada)
 -- -----------------------------------------------------------------------------
-
 -- Tabla de Vehículos Pesados
 CREATE TABLE IF NOT EXISTS pesada_schema.vehiculos (
     id SERIAL PRIMARY KEY,

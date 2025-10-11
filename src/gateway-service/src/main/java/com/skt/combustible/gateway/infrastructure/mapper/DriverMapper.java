@@ -79,13 +79,20 @@ public class DriverMapper {
      */
     private EstadoOperativo mapEstadoOperativo(com.skt.combustible.drivers.grpc.EstadoOperativo estado) {
         return switch (estado) {
-            case ACTIVO -> EstadoOperativo.ACTIVO;
+            // Estados para choferes
+            case DISPONIBLE -> EstadoOperativo.DISPONIBLE;
+            case ASIGNADO -> EstadoOperativo.ASIGNADO;
+            case EN_RUTA -> EstadoOperativo.EN_RUTA;
+            case DESCANSANDO -> EstadoOperativo.DESCANSANDO;
+            case VACACIONES -> EstadoOperativo.VACACIONES;
+            case ENFERMO -> EstadoOperativo.ENFERMO;
+            case LICENCIA -> EstadoOperativo.LICENCIA;
+            // Estados para vehículos (compatibilidad)
+            case EN_USO -> EstadoOperativo.EN_USO;
             case MANTENIMIENTO -> EstadoOperativo.MANTENIMIENTO;
             case FUERA_SERVICIO -> EstadoOperativo.FUERA_SERVICIO;
-            case DISPONIBLE -> EstadoOperativo.DISPONIBLE;
-            case EN_USO -> EstadoOperativo.EN_USO;
             case RESERVADO -> EstadoOperativo.RESERVADO;
-            case UNRECOGNIZED -> EstadoOperativo.ACTIVO;
+            case UNRECOGNIZED -> EstadoOperativo.DISPONIBLE;
         };
     }
     
