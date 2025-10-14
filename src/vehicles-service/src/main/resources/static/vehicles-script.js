@@ -1,5 +1,5 @@
-// Configuración de la API
-const API_BASE_URL = 'http://localhost:8082/api/v1/vehicles';
+// Configuración de la API - Usando Gateway
+const API_BASE_URL = 'http://localhost:8090/api/v1/vehicles';
 
 // Variables globales
 let vehicles = [];

@@ -1,5 +1,5 @@
-// Configuración de la API
-const API_BASE_URL = 'http://localhost:8081/api/v1/drivers';
+// Configuración de la API - Usando Gateway
+const API_BASE_URL = 'http://localhost:8090/api/v1/drivers';
 
 // Variables globales
 let drivers = [];
@@ -12,9 +12,20 @@ let currentFilter = {
     active: ''
 };
 
+// Variables para modales
+let currentDriverId = null;
+let currentDriverName = null;
+
+// Variables para paginación
+let currentPage = 0;
+let pageSize = 12;
+let totalPages = 0;
+let totalElements = 0;
+let isLoading = false;
+
 // Elementos del DOM
 let dashboardSection, driversSection, driverFormSection;
-let dashboardBtn, driversBtn, addDriverBtn, logoutBtn;
+let dashboardBtn, driversBtn, addDriverBtn;
 
 // Inicialización de la aplicación
 document.addEventListener('DOMContentLoaded', function() {
@@ -31,7 +42,6 @@ function initializeApp() {
     dashboardBtn = document.getElementById('dashboardBtn');
     driversBtn = document.getElementById('driversBtn');
     addDriverBtn = document.getElementById('addDriverBtn');
-    logoutBtn = document.getElementById('logoutBtn');
     
     // Verificar autenticación
     checkAuthentication();
@@ -155,7 +165,6 @@ function setupEventListeners() {
     dashboardBtn.addEventListener('click', showDashboard);
     driversBtn.addEventListener('click', showDriversList);
     addDriverBtn.addEventListener('click', showAddDriver);
-    logoutBtn.addEventListener('click', logout);
     
     // Event listener para el formulario
     document.getElementById('driverForm').addEventListener('submit', handleFormSubmit);
@@ -230,19 +239,6 @@ function updateNavButtons(activeSection) {
     }
 }
 
-function logout() {
-    if (confirm('¿Estás seguro de que deseas salir?')) {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('currentUser');
-        authToken = null;
-        currentUser = null;
-        
-        showMessage('Sesión cerrada correctamente', 'info');
-        setTimeout(() => {
-            window.location.href = 'http://localhost:8085/';
-        }, 1000);
-    }
-}
 
 function goBackToMainDashboard() {
     showMessage('Volviendo al dashboard principal...', 'info');
@@ -263,12 +259,24 @@ async function loadDashboardData() {
     }
 }
 
-async function loadDrivers() {
+async function loadDrivers(page = 0, size = 12, forceReload = false) {
+    if (isLoading && !forceReload) return;
+    
     try {
-        console.log('📡 Cargando choferes...');
+        isLoading = true;
+        console.log(`📡 Cargando choferes página ${page + 1}, tamaño ${size}...`);
         
-        // Usar el endpoint que incluye todos los choferes (activos e inactivos)
-        const response = await fetch(`${API_BASE_URL}/all?page=0&size=1000`, {
+        // Mostrar indicador de carga
+        showPaginationLoading();
+        
+        // Construir URL con parámetros de paginación
+        const url = new URL(`${API_BASE_URL}/all`);
+        url.searchParams.append('page', page);
+        url.searchParams.append('size', size);
+        url.searchParams.append('sortBy', 'nombre');
+        url.searchParams.append('sortDir', 'asc');
+        
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -280,10 +288,28 @@ async function loadDrivers() {
         
         if (response.ok) {
             const data = await response.json();
-            drivers = data.content || data;
-            console.log('✅ Choferes cargados:', drivers.length);
+            
+            // Manejar respuesta paginada
+            if (data.content !== undefined) {
+                drivers = data.content;
+                currentPage = data.number;
+                pageSize = data.size;
+                totalPages = data.totalPages;
+                totalElements = data.totalElements;
+            } else {
+                // Fallback para respuesta no paginada
+                drivers = Array.isArray(data) ? data : [];
+                currentPage = 0;
+                totalPages = 1;
+                totalElements = drivers.length;
+            }
+            
+            console.log(`✅ Choferes cargados: ${drivers.length} de ${totalElements} total (página ${currentPage + 1} de ${totalPages})`);
+            
             renderDrivers();
+            updatePaginationControls();
             updateDashboardStats();
+            
         } else if (response.status === 401) {
             console.log('❌ Error 401: No autorizado');
             showMessage('Sesión expirada. Redirigiendo al login...', 'error');
@@ -294,7 +320,10 @@ async function loadDrivers() {
     } catch (error) {
         console.error('Error cargando choferes:', error);
         showMessage('Error al cargar la lista de choferes', 'error');
-        drivers = [];
+        showNoDriversMessage();
+    } finally {
+        isLoading = false;
+        hidePaginationLoading();
     }
 }
 
@@ -424,7 +453,16 @@ function createDriverCard(driver) {
                 <button class="btn btn-primary btn-sm" onclick='editDriver(${JSON.stringify(driver).replace(/'/g, "&apos;")})'>
                     <i class="fas fa-edit"></i> Editar
                 </button>
-                <button class="btn btn-danger btn-sm" onclick="deleteDriver('${driver.id}', '${driver.nombre} ${driver.apellido}')">
+                ${driver.activo ? `
+                <button class="btn btn-warning btn-sm" onclick="showDeactivateModal('${driver.id}', '${driver.nombre} ${driver.apellido}')">
+                    <i class="fas fa-user-slash"></i> Poner Inactivo
+                </button>
+                ` : `
+                <button class="btn btn-success btn-sm" onclick="showActivateModal('${driver.id}', '${driver.nombre} ${driver.apellido}')">
+                    <i class="fas fa-user-check"></i> Volver Activo
+                </button>
+                `}
+                <button class="btn btn-danger btn-sm" onclick="showDeleteModal('${driver.id}', '${driver.nombre} ${driver.apellido}')">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
             </div>
@@ -481,13 +519,62 @@ function editDriver(driver) {
     showEditDriver(driver);
 }
 
-async function deleteDriver(id, nombre) {
-    if (!confirm(`¿Estás seguro de que deseas eliminar al chofer ${nombre}?`)) {
-        return;
-    }
+// ==========================================
+// FUNCIONES DE MODALES PERSONALIZADOS
+// ==========================================
+
+// Mostrar modal de desactivación
+function showDeactivateModal(id, nombre) {
+    currentDriverId = id;
+    currentDriverName = nombre;
+    
+    document.getElementById('deactivateDriverName').textContent = nombre;
+    document.getElementById('deactivateModal').style.display = 'block';
+}
+
+// Mostrar modal de eliminación permanente
+function showDeleteModal(id, nombre) {
+    currentDriverId = id;
+    currentDriverName = nombre;
+    
+    document.getElementById('deleteDriverName').textContent = nombre;
+    document.getElementById('deleteModal').style.display = 'block';
+}
+
+// Mostrar modal de reactivación
+function showActivateModal(id, nombre) {
+    currentDriverId = id;
+    currentDriverName = nombre;
+    
+    document.getElementById('activateDriverName').textContent = nombre;
+    document.getElementById('activateModal').style.display = 'block';
+}
+
+// Cerrar modales
+function closeDeactivateModal() {
+    document.getElementById('deactivateModal').style.display = 'none';
+    currentDriverId = null;
+    currentDriverName = null;
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    currentDriverId = null;
+    currentDriverName = null;
+}
+
+function closeActivateModal() {
+    document.getElementById('activateModal').style.display = 'none';
+    currentDriverId = null;
+    currentDriverName = null;
+}
+
+// Confirmar acciones
+async function confirmDeactivate() {
+    if (!currentDriverId) return;
     
     try {
-        const response = await fetch(`${API_BASE_URL}/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/${currentDriverId}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -496,46 +583,295 @@ async function deleteDriver(id, nombre) {
         });
         
         if (response.ok || response.status === 204) {
-            showMessage('Chofer eliminado correctamente', 'success');
-            await loadDrivers();
+            showMessage('Chofer puesto como inactivo correctamente', 'success');
+            closeDeactivateModal();
+            await reloadDrivers();
         } else if (response.status === 401) {
             showMessage('Sesión expirada. Redirigiendo al login...', 'error');
             setTimeout(() => redirectToLogin(), 2000);
         } else {
-            throw new Error('Error al eliminar el chofer');
+            throw new Error('Error al desactivar el chofer');
         }
     } catch (error) {
-        console.error('Error eliminando chofer:', error);
-        showMessage('Error al eliminar el chofer', 'error');
+        console.error('Error desactivando chofer:', error);
+        showMessage('Error al desactivar el chofer', 'error');
     }
+}
+
+async function confirmDelete() {
+    if (!currentDriverId) return;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/${currentDriverId}/permanent`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok || response.status === 204) {
+            showMessage('Chofer eliminado permanentemente de la base de datos', 'success');
+            closeDeleteModal();
+            await reloadDrivers();
+        } else if (response.status === 401) {
+            showMessage('Sesión expirada. Redirigiendo al login...', 'error');
+            setTimeout(() => redirectToLogin(), 2000);
+        } else {
+            throw new Error('Error al eliminar permanentemente el chofer');
+        }
+    } catch (error) {
+        console.error('Error eliminando chofer permanentemente:', error);
+        showMessage('Error al eliminar permanentemente el chofer', 'error');
+    }
+}
+
+async function confirmActivate() {
+    if (!currentDriverId) return;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/${currentDriverId}/activate`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            showMessage('Chofer reactivado correctamente', 'success');
+            closeActivateModal();
+            await reloadDrivers();
+        } else if (response.status === 401) {
+            showMessage('Sesión expirada. Redirigiendo al login...', 'error');
+            setTimeout(() => redirectToLogin(), 2000);
+        } else {
+            throw new Error('Error al reactivar el chofer');
+        }
+    } catch (error) {
+        console.error('Error reactivando chofer:', error);
+        showMessage('Error al reactivar el chofer', 'error');
+    }
+}
+
+// Cerrar modales al hacer clic fuera
+window.onclick = function(event) {
+    const deactivateModal = document.getElementById('deactivateModal');
+    const deleteModal = document.getElementById('deleteModal');
+    const activateModal = document.getElementById('activateModal');
+    
+    if (event.target === deactivateModal) {
+        closeDeactivateModal();
+    }
+    if (event.target === deleteModal) {
+        closeDeleteModal();
+    }
+    if (event.target === activateModal) {
+        closeActivateModal();
+    }
+}
+
+// ==========================================
+// FUNCIONES DE PAGINACIÓN
+// ==========================================
+
+// Mostrar indicador de carga
+function showPaginationLoading() {
+    const grid = document.getElementById('driversGrid');
+    grid.innerHTML = `
+        <div class="pagination-loading">
+            <i class="fas fa-spinner"></i>
+            Cargando choferes...
+        </div>
+    `;
+}
+
+// Ocultar indicador de carga
+function hidePaginationLoading() {
+    // El contenido se actualizará en renderDrivers()
+}
+
+// Mostrar mensaje cuando no hay choferes
+function showNoDriversMessage() {
+    const grid = document.getElementById('driversGrid');
+    grid.innerHTML = `
+        <div class="no-drivers-message">
+            <i class="fas fa-users"></i>
+            <h3>No hay choferes registrados</h3>
+            <p>Comienza agregando tu primer chofer al sistema.</p>
+            <button class="btn btn-primary" onclick="showAddDriver()">
+                <i class="fas fa-user-plus"></i> Agregar Primer Chofer
+            </button>
+        </div>
+    `;
+}
+
+// Actualizar controles de paginación
+function updatePaginationControls() {
+    const paginationInfo = document.getElementById('paginationInfo');
+    const firstPageBtn = document.getElementById('firstPageBtn');
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+    const lastPageBtn = document.getElementById('lastPageBtn');
+    const pageNumbers = document.getElementById('pageNumbers');
+    const pageSizeSelect = document.getElementById('pageSizeSelect');
+    
+    if (!paginationInfo) return;
+    
+    // Actualizar información
+    const startItem = (currentPage * pageSize) + 1;
+    const endItem = Math.min((currentPage + 1) * pageSize, totalElements);
+    paginationInfo.textContent = `Mostrando ${startItem}-${endItem} de ${totalElements} choferes`;
+    
+    // Actualizar estado de botones
+    firstPageBtn.disabled = currentPage === 0;
+    prevPageBtn.disabled = currentPage === 0;
+    nextPageBtn.disabled = currentPage >= totalPages - 1;
+    lastPageBtn.disabled = currentPage >= totalPages - 1;
+    
+    // Actualizar selector de tamaño
+    pageSizeSelect.value = pageSize;
+    
+    // Generar números de página
+    generatePageNumbers(pageNumbers);
+}
+
+// Generar números de página
+function generatePageNumbers(container) {
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    const maxVisiblePages = 7;
+    let startPage = Math.max(0, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1);
+    
+    // Ajustar si estamos cerca del final
+    if (endPage - startPage < maxVisiblePages - 1) {
+        startPage = Math.max(0, endPage - maxVisiblePages + 1);
+    }
+    
+    // Primera página si no está visible
+    if (startPage > 0) {
+        addPageNumber(container, 0);
+        if (startPage > 1) {
+            addEllipsis(container);
+        }
+    }
+    
+    // Páginas visibles
+    for (let i = startPage; i <= endPage; i++) {
+        addPageNumber(container, i);
+    }
+    
+    // Última página si no está visible
+    if (endPage < totalPages - 1) {
+        if (endPage < totalPages - 2) {
+            addEllipsis(container);
+        }
+        addPageNumber(container, totalPages - 1);
+    }
+}
+
+// Agregar número de página
+function addPageNumber(container, pageNum) {
+    const pageElement = document.createElement('span');
+    pageElement.className = `page-number ${pageNum === currentPage ? 'active' : ''}`;
+    pageElement.textContent = pageNum + 1;
+    pageElement.onclick = () => goToPage(pageNum);
+    container.appendChild(pageElement);
+}
+
+// Agregar puntos suspensivos
+function addEllipsis(container) {
+    const ellipsis = document.createElement('span');
+    ellipsis.className = 'page-number ellipsis';
+    ellipsis.textContent = '...';
+    container.appendChild(ellipsis);
+}
+
+// Navegación de páginas
+function goToFirstPage() {
+    if (currentPage > 0) {
+        goToPage(0);
+    }
+}
+
+function goToPreviousPage() {
+    if (currentPage > 0) {
+        goToPage(currentPage - 1);
+    }
+}
+
+function goToNextPage() {
+    if (currentPage < totalPages - 1) {
+        goToPage(currentPage + 1);
+    }
+}
+
+function goToLastPage() {
+    if (currentPage < totalPages - 1) {
+        goToPage(totalPages - 1);
+    }
+}
+
+function goToPage(page) {
+    if (page !== currentPage && page >= 0 && page < totalPages) {
+        loadDrivers(page, pageSize, true);
+    }
+}
+
+// Cambiar tamaño de página
+function changePageSize(newSize) {
+    const size = parseInt(newSize);
+    if (size !== pageSize) {
+        pageSize = size;
+        currentPage = 0; // Volver a la primera página
+        loadDrivers(currentPage, pageSize, true);
+    }
+}
+
+// Función para recargar datos (usada después de crear/editar/eliminar)
+async function reloadDrivers() {
+    // Mantener la página actual si es válida
+    if (currentPage >= totalPages && totalPages > 0) {
+        currentPage = totalPages - 1;
+    }
+    await loadDrivers(currentPage, pageSize, true);
 }
 
 // Funciones de filtrado
 function handleSearch(event) {
     currentFilter.search = event.target.value;
-    renderDrivers();
+    // Con paginación, necesitamos recargar desde la primera página
+    currentPage = 0;
+    loadDrivers(currentPage, pageSize, true);
 }
 
 function clearSearch() {
     currentFilter.search = '';
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.value = '';
-    renderDrivers();
+    currentPage = 0;
+    loadDrivers(currentPage, pageSize, true);
 }
 
 function handleFilterMachinery(event) {
     currentFilter.machinery = event.target.value;
-    renderDrivers();
+    currentPage = 0;
+    loadDrivers(currentPage, pageSize, true);
 }
 
 function handleFilterStatus(event) {
     currentFilter.status = event.target.value;
-    renderDrivers();
+    currentPage = 0;
+    loadDrivers(currentPage, pageSize, true);
 }
 
 function handleFilterActive(event) {
     currentFilter.active = event.target.value;
-    renderDrivers();
+    currentPage = 0;
+    loadDrivers(currentPage, pageSize, true);
 }
 
 function clearAllFilters() {
@@ -557,6 +893,9 @@ function clearAllFilters() {
     if (filterMachinery) filterMachinery.value = '';
     if (filterStatus) filterStatus.value = '';
     if (filterActive) filterActive.value = '';
+    
+    currentPage = 0;
+    loadDrivers(currentPage, pageSize, true);
 }
 
 function filterByStatus(status) {

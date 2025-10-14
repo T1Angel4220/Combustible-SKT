@@ -330,6 +330,28 @@ public class DriverService {
     }
 
     /**
+     * Reactiva un chofer (cambia activo = true)
+     * 
+     * @param id ID del chofer a reactivar
+     * @return DriverResponse con los datos del chofer reactivado
+     * @throws DriverNotFoundException si no se encuentra el chofer
+     */
+    public DriverResponse activateDriver(String id) {
+        logger.info("Reactivando chofer con ID: {}", id);
+
+        Driver driver = driverRepository.findById(id)
+                .orElseThrow(() -> DriverNotFoundException.withId(id));
+
+        driver.setActivo(true);
+        driver.setEstado(EstadoOperativo.DISPONIBLE); // Reactivar como disponible por defecto
+        Driver savedDriver = driverRepository.save(driver);
+
+        logger.info("Chofer reactivado exitosamente");
+
+        return driverMapper.toResponse(savedDriver);
+    }
+
+    /**
      * Elimina permanentemente un chofer
      * 
      * @param id ID del chofer a eliminar
@@ -344,6 +366,31 @@ public class DriverService {
 
         driverRepository.deleteById(id);
         logger.info("Chofer eliminado permanentemente");
+    }
+
+    /**
+     * Alias para deleteDriver - elimina permanentemente un chofer
+     * 
+     * @param id ID del chofer a eliminar
+     * @throws DriverNotFoundException si no se encuentra el chofer
+     */
+    public void deleteDriverPermanently(String id) {
+        deleteDriver(id);
+    }
+
+    /**
+     * Obtiene todos los choferes activos
+     * 
+     * @return Lista de choferes activos
+     */
+    @Transactional(readOnly = true)
+    public List<DriverResponse> getActiveDrivers() {
+        logger.info("Obteniendo todos los choferes activos");
+
+        List<Driver> drivers = driverRepository.findByActivoTrue();
+        logger.info("Encontrados {} choferes activos", drivers.size());
+
+        return driverMapper.toResponseList(drivers);
     }
 
     /**

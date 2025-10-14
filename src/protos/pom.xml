@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -40,20 +39,20 @@
             <artifactId>protobuf-java-util</artifactId>
             <version>${protobuf.version}</version>
         </dependency>
-        
+
         <!-- Optional: For JSON support -->
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf-lite</artifactId>
             <version>${grpc.version}</version>
         </dependency>
-        
+
         <!-- Jakarta annotation-api for @Generated annotation -->
         <dependency>
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
         </dependency>
-        
+
         <!-- Temporal: javax.annotation-api for compatibility -->
         <dependency>
             <groupId>javax.annotation</groupId>
@@ -70,7 +69,7 @@
                 <version>1.7.0</version>
             </extension>
         </extensions>
-        
+
         <plugins>
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
@@ -82,7 +81,7 @@
                     <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
                     <protoSourceRoot>src/main/proto</protoSourceRoot>
                     <checkStaleness>false</checkStaleness>
-                    <clearOutputDirectory>false</clearOutputDirectory>
+                    <clearOutputDirectory>true</clearOutputDirectory>
                     <temporaryProtoFileDirectory>${project.build.directory}/protoc-temp</temporaryProtoFileDirectory>
                 </configuration>
                 <executions>

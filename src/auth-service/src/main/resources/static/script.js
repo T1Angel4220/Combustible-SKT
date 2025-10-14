@@ -1,5 +1,5 @@
-// Configuración de la API
-const API_BASE_URL = 'http://localhost:8085/api/auth';
+// Configuración de la API - Usando Gateway
+const API_BASE_URL = 'http://localhost:8090/api/v1/auth';
 
 // Variables globales
 let currentUser = null;

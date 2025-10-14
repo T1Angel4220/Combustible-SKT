@@ -251,6 +251,18 @@ public class DriverRestController {
     }
 
     /**
+     * Reactiva un chofer (cambia activo = true)
+     * PATCH /api/v1/drivers/{id}/activate
+     */
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<DriverResponse> activateDriver(@PathVariable("id") String id) {
+        logger.info("PATCH /api/v1/drivers/{}/activate - Reactivando chofer", id);
+
+        DriverResponse response = driverService.activateDriver(id);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Elimina permanentemente un chofer
      * DELETE /api/v1/drivers/{id}/permanent
      */

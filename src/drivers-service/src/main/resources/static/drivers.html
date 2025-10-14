@@ -35,9 +35,6 @@
         <button id="addDriverBtn">
           <i class="fas fa-user-plus"></i> Nuevo Chofer
         </button>
-        <button id="logoutBtn">
-          <i class="fas fa-sign-out-alt"></i> Salir
-        </button>
       </nav>
     </header>
 
@@ -279,6 +276,42 @@
         <div id="driversGrid" class="drivers-grid">
           <!-- Los choferes se cargarán dinámicamente aquí -->
         </div>
+
+        <!-- Controles de Paginación -->
+        <div class="pagination-container" id="paginationContainer">
+          <div class="pagination-info">
+            <span id="paginationInfo">Mostrando 0 de 0 choferes</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn btn-secondary btn-sm" id="firstPageBtn" onclick="goToFirstPage()">
+              <i class="fas fa-angle-double-left"></i> Primera
+            </button>
+            <button class="btn btn-secondary btn-sm" id="prevPageBtn" onclick="goToPreviousPage()">
+              <i class="fas fa-angle-left"></i> Anterior
+            </button>
+            
+            <div class="page-numbers" id="pageNumbers">
+              <!-- Los números de página se generarán dinámicamente -->
+            </div>
+            
+            <button class="btn btn-secondary btn-sm" id="nextPageBtn" onclick="goToNextPage()">
+              Siguiente <i class="fas fa-angle-right"></i>
+            </button>
+            <button class="btn btn-secondary btn-sm" id="lastPageBtn" onclick="goToLastPage()">
+              Última <i class="fas fa-angle-double-right"></i>
+            </button>
+          </div>
+          
+          <div class="pagination-size">
+            <label for="pageSizeSelect">Mostrar:</label>
+            <select id="pageSizeSelect" onchange="changePageSize(this.value)">
+              <option value="6">6 por página</option>
+              <option value="12" selected>12 por página</option>
+              <option value="24">24 por página</option>
+              <option value="48">48 por página</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <!-- Formulario Nuevo/Editar Chofer Section -->
@@ -411,6 +444,93 @@
       <span class="close" onclick="closeModal()">&times;</span>
       <h2><i class="fas fa-user-tie"></i> Detalles del Chofer</h2>
       <div id="driverDetails"></div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación para Poner Inactivo -->
+  <div id="deactivateModal" class="modal">
+    <div class="modal-content confirmation-modal">
+      <div class="modal-header">
+        <h2><i class="fas fa-user-slash"></i> Poner Chofer Inactivo</h2>
+      </div>
+      <div class="modal-body">
+        <div class="confirmation-icon warning">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <p class="confirmation-message" id="deactivateMessage">
+          ¿Estás seguro de que deseas poner inactivo al chofer <strong id="deactivateDriverName"></strong>?
+        </p>
+        <div class="confirmation-details">
+          <p><i class="fas fa-info-circle"></i> El chofer seguirá en la base de datos pero no aparecerá en las listas activas.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDeactivateModal()">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
+        <button class="btn btn-warning" onclick="confirmDeactivate()">
+          <i class="fas fa-user-slash"></i> Poner Inactivo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación para Eliminar Permanentemente -->
+  <div id="deleteModal" class="modal">
+    <div class="modal-content confirmation-modal danger">
+      <div class="modal-header">
+        <h2><i class="fas fa-trash"></i> Eliminar Chofer Permanentemente</h2>
+      </div>
+      <div class="modal-body">
+        <div class="confirmation-icon danger">
+          <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <p class="confirmation-message" id="deleteMessage">
+          ¿Estás seguro de que deseas <strong>ELIMINAR PERMANENTEMENTE</strong> al chofer <strong id="deleteDriverName"></strong>?
+        </p>
+        <div class="confirmation-details danger">
+          <p><i class="fas fa-warning"></i> <strong>¡ATENCIÓN!</strong> Esta acción NO se puede deshacer.</p>
+          <p><i class="fas fa-database"></i> Todos los datos del chofer serán eliminados permanentemente de la base de datos.</p>
+          <p><i class="fas fa-history"></i> No habrá forma de recuperar esta información.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
+        <button class="btn btn-danger" onclick="confirmDelete()">
+          <i class="fas fa-trash"></i> Eliminar Permanentemente
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación para Reactivar -->
+  <div id="activateModal" class="modal">
+    <div class="modal-content confirmation-modal success">
+      <div class="modal-header">
+        <h2><i class="fas fa-user-check"></i> Reactivar Chofer</h2>
+      </div>
+      <div class="modal-body">
+        <div class="confirmation-icon success">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <p class="confirmation-message" id="activateMessage">
+          ¿Estás seguro de que deseas reactivar al chofer <strong id="activateDriverName"></strong>?
+        </p>
+        <div class="confirmation-details">
+          <p><i class="fas fa-info-circle"></i> El chofer volverá a aparecer en las listas activas.</p>
+          <p><i class="fas fa-user-check"></i> Su estado se cambiará automáticamente a "Disponible".</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeActivateModal()">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
+        <button class="btn btn-success" onclick="confirmActivate()">
+          <i class="fas fa-user-check"></i> Reactivar
+        </button>
+      </div>
     </div>
   </div>
 

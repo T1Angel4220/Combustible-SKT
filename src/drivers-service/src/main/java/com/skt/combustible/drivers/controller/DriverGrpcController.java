@@ -10,6 +10,7 @@ import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -342,6 +343,132 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
         }
     }
 
+    @Override
+    public void getAllDrivers(com.skt.combustible.drivers.grpc.GetAllDriversRequest request,
+            StreamObserver<com.skt.combustible.drivers.grpc.GetAllDriversResponse> responseObserver) {
+        logger.info("gRPC: Obteniendo todos los choferes - página: {}, tamaño: {}", request.getPage(),
+                request.getSize());
+
+        try {
+            Pageable pageable = PageRequest.of(request.getPage(), request.getSize(),
+                    Sort.by(Sort.Direction.fromString(request.getSortDir()), request.getSortBy()));
+
+            Page<com.skt.combustible.drivers.domain.dto.DriverResponse> page = driverService.getAllDrivers(pageable);
+
+            com.skt.combustible.drivers.grpc.GetAllDriversResponse.Builder builder = com.skt.combustible.drivers.grpc.GetAllDriversResponse
+                    .newBuilder()
+                    .setTotalPages(page.getTotalPages())
+                    .setTotalElements(page.getTotalElements())
+                    .setCurrentPage(page.getNumber())
+                    .setPageSize(page.getSize());
+
+            for (com.skt.combustible.drivers.domain.dto.DriverResponse driver : page.getContent()) {
+                builder.addDrivers(mapToGrpcResponse(driver));
+            }
+
+            responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
+
+        } catch (Exception e) {
+            logger.error("Error obteniendo todos los choferes: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+        }
+    }
+
+    @Override
+    public void getActiveDrivers(com.skt.combustible.drivers.grpc.GetActiveDriversRequest request,
+            StreamObserver<com.skt.combustible.drivers.grpc.GetActiveDriversResponse> responseObserver) {
+        logger.info("gRPC: Obteniendo choferes activos");
+
+        try {
+            List<com.skt.combustible.drivers.domain.dto.DriverResponse> drivers = driverService.getActiveDrivers();
+
+            com.skt.combustible.drivers.grpc.GetActiveDriversResponse.Builder builder = com.skt.combustible.drivers.grpc.GetActiveDriversResponse
+                    .newBuilder()
+                    .setCount(drivers.size());
+
+            for (com.skt.combustible.drivers.domain.dto.DriverResponse driver : drivers) {
+                builder.addDrivers(mapToGrpcResponse(driver));
+            }
+
+            responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
+
+        } catch (Exception e) {
+            logger.error("Error obteniendo choferes activos: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+        }
+    }
+
+    @Override
+    public void searchDriversByName(com.skt.combustible.drivers.grpc.SearchDriversByNameRequest request,
+            StreamObserver<com.skt.combustible.drivers.grpc.SearchDriversByNameResponse> responseObserver) {
+        logger.info("gRPC: Buscando choferes por nombre: {}", request.getName());
+
+        try {
+            List<com.skt.combustible.drivers.domain.dto.DriverResponse> drivers = driverService
+                    .searchDriversByName(request.getName());
+
+            com.skt.combustible.drivers.grpc.SearchDriversByNameResponse.Builder builder = com.skt.combustible.drivers.grpc.SearchDriversByNameResponse
+                    .newBuilder()
+                    .setCount(drivers.size())
+                    .setSearchTerm(request.getName());
+
+            for (com.skt.combustible.drivers.domain.dto.DriverResponse driver : drivers) {
+                builder.addDrivers(mapToGrpcResponse(driver));
+            }
+
+            responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
+
+        } catch (Exception e) {
+            logger.error("Error buscando choferes por nombre: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+        }
+    }
+
+    @Override
+    public void deleteDriver(com.skt.combustible.drivers.grpc.DeleteDriverRequest request,
+            StreamObserver<com.skt.combustible.drivers.grpc.Empty> responseObserver) {
+        logger.info("gRPC: Eliminando chofer permanentemente con ID: {}", request.getId());
+
+        try {
+            driverService.deleteDriverPermanently(request.getId());
+
+            responseObserver.onNext(com.skt.combustible.drivers.grpc.Empty.newBuilder().build());
+            responseObserver.onCompleted();
+
+        } catch (Exception e) {
+            logger.error("Error eliminando chofer permanentemente: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+        }
+    }
+
+    @Override
+    public void countAvailableDriversByMachineryType(
+            com.skt.combustible.drivers.grpc.CountAvailableDriversByMachineryTypeRequest request,
+            StreamObserver<com.skt.combustible.drivers.grpc.CountAvailableDriversByMachineryTypeResponse> responseObserver) {
+        logger.info("gRPC: Contando choferes disponibles por tipo de maquinaria: {}", request.getTipoMaquinaria());
+
+        try {
+            TipoMaquinaria tipoMaquinaria = mapTipoMaquinaria(request.getTipoMaquinaria());
+            long count = driverService.countAvailableDriversByMachineryType(tipoMaquinaria);
+
+            com.skt.combustible.drivers.grpc.CountAvailableDriversByMachineryTypeResponse response = com.skt.combustible.drivers.grpc.CountAvailableDriversByMachineryTypeResponse
+                    .newBuilder()
+                    .setCount(count)
+                    .setTipoMaquinaria(request.getTipoMaquinaria())
+                    .build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+
+        } catch (Exception e) {
+            logger.error("Error contando choferes disponibles por tipo de maquinaria: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+        }
+    }
+
     // Métodos de mapeo
     private com.skt.combustible.drivers.grpc.DriverResponse mapToGrpcResponse(
             com.skt.combustible.drivers.domain.dto.DriverResponse response) {
@@ -353,9 +480,7 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
                 .setDni(response.getDni())
                 .setLicencia(response.getLicencia())
                 .setEstado(mapEstadoOperativo(response.getEstado()))
-                .setActivo(response.getActivo())
-                .setCreatedAt(response.getCreatedAt().toString())
-                .setUpdatedAt(response.getUpdatedAt().toString());
+                .setActivo(response.getActivo());
 
         if (response.getTelefono() != null) {
             builder.setTelefono(response.getTelefono());
@@ -368,6 +493,12 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
         }
         if (response.getTipoMaquinariaAsignada() != null) {
             builder.setTipoMaquinariaAsignada(mapTipoMaquinaria(response.getTipoMaquinariaAsignada()));
+        }
+        if (response.getCreatedAt() != null) {
+            builder.setCreatedAt(response.getCreatedAt().toString());
+        }
+        if (response.getUpdatedAt() != null) {
+            builder.setUpdatedAt(response.getUpdatedAt().toString());
         }
 
         return builder.build();
