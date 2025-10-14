@@ -1,14 +1,14 @@
 server:
   port: 8082
-  
+
 spring:
   application:
     name: vehicles-service
-  
+
   data:
     mongodb:
       uri: mongodb://localhost:27017/vehicles_db
-        
+
   profiles:
     active: dev
 
@@ -22,7 +22,7 @@ management:
     health:
       show-details: always
 
-# Logging configurations  
+# Logging configurations
 logging:
   level:
     com.skt.combustible.vehicles: DEBUG
@@ -34,7 +34,7 @@ logging:
 grpc:
   server:
     port: 9092
-    
+
 # Service Discovery (para comunicación entre microservicios)
 service:
   urls:
@@ -42,3 +42,8 @@ service:
     routes-service: http://localhost:8083
     fuel-service: http://localhost:8084
     auth-service: http://localhost:8085
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKey1234567890123456789012345}
+  expiration: 86400000 # 24 horas en milisegundos

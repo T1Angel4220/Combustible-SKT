@@ -25,27 +25,36 @@ management:
 grpc:
   client:
     drivers-service:
-      address: 'static://localhost:9091'
+      address: "static://localhost:9091"
       enableKeepAlive: true
       keepAliveWithoutCalls: true
     vehicles-service:
-      address: 'static://localhost:9092'
+      address: "static://localhost:9092"
       enableKeepAlive: true
       keepAliveWithoutCalls: true
     routes-service:
-      address: 'static://localhost:9093'
+      address: "static://localhost:9093"
       enableKeepAlive: true
       keepAliveWithoutCalls: true
     fuel-service:
-      address: 'static://localhost:9094'
+      address: "static://localhost:9094"
       enableKeepAlive: true
       keepAliveWithoutCalls: true
     auth-service:
-      address: 'static://localhost:9095'
+      address: "static://localhost:9095"
       enableKeepAlive: true
       keepAliveWithoutCalls: true
 
-# Logging configurations  
+# Service Discovery (para comunicación HTTP REST)
+service:
+  urls:
+    drivers-service: http://localhost:8081
+    vehicles-service: http://localhost:8082
+    routes-service: http://localhost:8083
+    fuel-service: http://localhost:8084
+    auth-service: http://localhost:8085
+
+# Logging configurations
 logging:
   level:
     com.skt.combustible.gateway: DEBUG

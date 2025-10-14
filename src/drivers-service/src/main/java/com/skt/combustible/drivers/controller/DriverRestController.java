@@ -323,6 +323,16 @@ public class DriverRestController {
     }
 
     /**
+     * Health check endpoint
+     * GET /api/v1/drivers/health
+     */
+    @GetMapping("/health")
+    public ResponseEntity<String> health() {
+        logger.info("GET /api/v1/drivers/health - Health check");
+        return ResponseEntity.ok("Drivers Service is running");
+    }
+
+    /**
      * Manejo de excepciones para validaciones
      */
     @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)

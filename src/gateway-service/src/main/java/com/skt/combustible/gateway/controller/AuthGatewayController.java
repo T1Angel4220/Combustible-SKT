@@ -2,9 +2,12 @@ package com.skt.combustible.gateway.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,6 +24,25 @@ import java.util.Map;
 public class AuthGatewayController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthGatewayController.class);
+
+    @Value("${service.urls.auth-service}")
+    private String authServiceUrl;
+
+    private final RestTemplate restTemplate;
+
+    public AuthGatewayController(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    private HttpHeaders getHeaders(HttpServletRequest request) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Content-Type", MediaType.APPLICATION_JSON_VALUE);
+        String authorizationHeader = request.getHeader("Authorization");
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            headers.set("Authorization", authorizationHeader);
+        }
+        return headers;
+    }
 
     /**
      * Endpoint raíz del servicio de auth
@@ -78,15 +100,25 @@ public class AuthGatewayController {
      * POST /api/v1/auth/login
      */
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> loginRequest) {
-        logger.info("Gateway REST: Login de usuario (placeholder)");
+    public ResponseEntity<Object> login(@RequestBody Map<String, String> loginRequest, HttpServletRequest request) {
+        logger.info("Gateway REST: Login de usuario via proxy a auth-service");
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Login endpoint via Gateway");
-        response.put("status", "PLACEHOLDER");
-        response.put("note", "Implementar proxy HTTP a auth-service");
+        try {
+            String url = authServiceUrl + "/api/auth/login";
+            HttpHeaders headers = getHeaders(request);
+            HttpEntity<Map<String, String>> entity = new HttpEntity<>(loginRequest, headers);
 
-        return ResponseEntity.ok(response);
+            ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
+            logger.info("Gateway REST: Login exitoso via auth-service");
+            return response;
+
+        } catch (Exception e) {
+            logger.error("Gateway REST: Error en login via auth-service: {}", e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error de conexión con auth-service");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 
     /**
@@ -94,15 +126,26 @@ public class AuthGatewayController {
      * POST /api/v1/auth/register
      */
     @PostMapping("/register")
-    public ResponseEntity<Map<String, Object>> register(@RequestBody Map<String, String> registerRequest) {
-        logger.info("Gateway REST: Registro de usuario (placeholder)");
+    public ResponseEntity<Object> register(@RequestBody Map<String, String> registerRequest,
+            HttpServletRequest request) {
+        logger.info("Gateway REST: Registro de usuario via proxy a auth-service");
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Register endpoint via Gateway");
-        response.put("status", "PLACEHOLDER");
-        response.put("note", "Implementar proxy HTTP a auth-service");
+        try {
+            String url = authServiceUrl + "/api/auth/register";
+            HttpHeaders headers = getHeaders(request);
+            HttpEntity<Map<String, String>> entity = new HttpEntity<>(registerRequest, headers);
 
-        return ResponseEntity.ok(response);
+            ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
+            logger.info("Gateway REST: Registro exitoso via auth-service");
+            return response;
+
+        } catch (Exception e) {
+            logger.error("Gateway REST: Error en registro via auth-service: {}", e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error de conexión con auth-service");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 
     /**

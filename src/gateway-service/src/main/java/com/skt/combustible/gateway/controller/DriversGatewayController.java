@@ -1,20 +1,18 @@
 package com.skt.combustible.gateway.controller;
 
-import com.skt.combustible.gateway.domain.dto.DriverRestResponse;
-import com.skt.combustible.gateway.infrastructure.client.DriversGrpcClient;
-import com.skt.combustible.gateway.infrastructure.mapper.DriverMapper;
-import com.skt.combustible.shared.domain.enums.TipoMaquinaria;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
+import java.util.Map;
 
 /**
  * Controlador REST para el Gateway Service
  * Expone endpoints REST que internamente se comunican con microservicios via
- * gRPC
+ * HTTP REST reenviando tokens JWT
  * 
  * @author Sistema SKT
  * @version 1.0.0
@@ -26,12 +24,13 @@ public class DriversGatewayController {
 
     private static final Logger logger = LoggerFactory.getLogger(DriversGatewayController.class);
 
-    private final DriversGrpcClient driversGrpcClient;
-    private final DriverMapper driverMapper;
+    @Value("${service.urls.drivers-service}")
+    private String driversServiceUrl;
 
-    public DriversGatewayController(DriversGrpcClient driversGrpcClient, DriverMapper driverMapper) {
-        this.driversGrpcClient = driversGrpcClient;
-        this.driverMapper = driverMapper;
+    private final RestTemplate restTemplate;
+
+    public DriversGatewayController(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
     /**
@@ -39,79 +38,19 @@ public class DriversGatewayController {
      * GET /api/v1/drivers/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<DriverRestResponse> getDriverById(@PathVariable String id) {
+    public ResponseEntity<Object> getDriverById(@PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         logger.info("Gateway REST: Obteniendo chofer por ID: {}", id);
 
         try {
-            var grpcResponse = driversGrpcClient.getDriverById(id);
-            var restResponse = driverMapper.toRestResponse(grpcResponse);
+            String url = driversServiceUrl + "/api/v1/drivers/" + id;
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            return ResponseEntity.ok(restResponse);
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.GET, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
-            logger.error("Error obteniendo chofer por ID {}: {}", id, e.getMessage());
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    /**
-     * Obtiene choferes disponibles (con filtro opcional por tipo de maquinaria)
-     * GET /api/v1/drivers/available
-     * GET /api/v1/drivers/available?tipoMaquinaria={tipo}
-     */
-    @GetMapping("/available")
-    public ResponseEntity<List<DriverRestResponse>> getAvailableDrivers(
-            @RequestParam(value = "tipoMaquinaria", required = false) TipoMaquinaria tipoMaquinaria) {
-
-        logger.info("Gateway REST: Obteniendo choferes disponibles por tipo de maquinaria: {}", tipoMaquinaria);
-
-        try {
-            List<DriverRestResponse> restResponses;
-
-            if (tipoMaquinaria != null) {
-                var grpcResponses = driversGrpcClient.getAvailableDriversByMachineryType(tipoMaquinaria);
-                restResponses = driverMapper.toRestResponseList(grpcResponses);
-            } else {
-                var grpcResponses = driversGrpcClient.getAvailableDrivers();
-                restResponses = driverMapper.toRestResponseList(grpcResponses);
-            }
-
-            return ResponseEntity.ok(restResponses);
-        } catch (Exception e) {
-            logger.error("Error obteniendo choferes disponibles: {}", e.getMessage());
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    /**
-     * Cuenta choferes disponibles
-     * GET /api/v1/drivers/count
-     */
-    @GetMapping("/count")
-    public ResponseEntity<Long> countAvailableDrivers() {
-        logger.info("Gateway REST: Contando choferes disponibles");
-
-        try {
-            var count = driversGrpcClient.countAvailableDrivers();
-            return ResponseEntity.ok(count);
-        } catch (Exception e) {
-            logger.error("Error contando choferes disponibles: {}", e.getMessage());
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    /**
-     * Verifica si un chofer está disponible
-     * GET /api/v1/drivers/{id}/available
-     */
-    @GetMapping("/{id}/available")
-    public ResponseEntity<Boolean> isDriverAvailable(@PathVariable String id) {
-        logger.info("Gateway REST: Verificando disponibilidad del chofer ID: {}", id);
-
-        try {
-            var available = driversGrpcClient.isDriverAvailable(id);
-            return ResponseEntity.ok(available);
-        } catch (Exception e) {
-            logger.error("Error verificando disponibilidad del chofer {}: {}", id, e.getMessage());
+            logger.error("Error obteniendo chofer por ID: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -121,19 +60,21 @@ public class DriversGatewayController {
      * GET /api/v1/drivers?page=0&size=10
      */
     @GetMapping
-    public ResponseEntity<List<DriverRestResponse>> getAllDrivers(
+    public ResponseEntity<Object> getAllDrivers(
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
         logger.info("Gateway REST: Obteniendo todos los choferes - página: {}, tamaño: {}", page, size);
 
         try {
-            // Por ahora retornamos todos los disponibles
-            // En el futuro se puede implementar paginación real via gRPC
-            var grpcResponses = driversGrpcClient.getAvailableDrivers();
-            var restResponses = driverMapper.toRestResponseList(grpcResponses);
+            String url = driversServiceUrl + "/api/v1/drivers/all?page=" + page + "&size=" + size
+                    + "&sortBy=nombre&sortDir=asc";
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            return ResponseEntity.ok(restResponses);
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.GET, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
             logger.error("Error obteniendo todos los choferes: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
@@ -141,51 +82,114 @@ public class DriversGatewayController {
     }
 
     /**
-     * Obtiene choferes por estado operativo
-     * GET /api/v1/drivers/status/{estado}
+     * Crea un nuevo chofer
+     * POST /api/v1/drivers
      */
-    @GetMapping("/status/{estado}")
-    public ResponseEntity<List<DriverRestResponse>> getDriversByStatus(@PathVariable String estado) {
-        logger.info("Gateway REST: Obteniendo choferes por estado: {}", estado);
+    @PostMapping
+    public ResponseEntity<Object> createDriver(@RequestBody Map<String, Object> driverData,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Creando nuevo chofer");
 
         try {
-            // Mapear estado de string a enum si es necesario
-            var grpcResponses = driversGrpcClient.getAvailableDrivers();
-            var restResponses = driverMapper.toRestResponseList(grpcResponses);
+            String url = driversServiceUrl + "/api/v1/drivers";
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(driverData, headers);
 
-            // Filtrar por estado (por ahora todos los disponibles)
-            return ResponseEntity.ok(restResponses);
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.POST, entity, Object.class);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response.getBody());
         } catch (Exception e) {
-            logger.error("Error obteniendo choferes por estado {}: {}", estado, e.getMessage());
+            logger.error("Error creando chofer: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
 
     /**
-     * Busca choferes por nombre
-     * GET /api/v1/drivers/search?name={nombre}
+     * Actualiza un chofer
+     * PUT /api/v1/drivers/{id}
      */
-    @GetMapping("/search")
-    public ResponseEntity<List<DriverRestResponse>> searchDriversByName(
-            @RequestParam String name) {
-
-        logger.info("Gateway REST: Buscando choferes por nombre: {}", name);
+    @PutMapping("/{id}")
+    public ResponseEntity<Object> updateDriver(@PathVariable String id,
+            @RequestBody Map<String, Object> driverData,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Actualizando chofer ID: {}", id);
 
         try {
-            // Por ahora retornamos todos y filtramos en el gateway
-            // En el futuro se puede implementar búsqueda real via gRPC
-            var grpcResponses = driversGrpcClient.getAvailableDrivers();
-            var allResponses = driverMapper.toRestResponseList(grpcResponses);
+            String url = driversServiceUrl + "/api/v1/drivers/" + id;
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(driverData, headers);
 
-            // Filtrar por nombre que contenga el parámetro
-            var filteredResponses = allResponses.stream()
-                    .filter(driver -> driver.getNombre().toLowerCase().contains(name.toLowerCase()) ||
-                            driver.getApellido().toLowerCase().contains(name.toLowerCase()))
-                    .toList();
-
-            return ResponseEntity.ok(filteredResponses);
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.PUT, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
-            logger.error("Error buscando choferes por nombre {}: {}", name, e.getMessage());
+            logger.error("Error actualizando chofer {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Desactiva un chofer (soft delete)
+     * DELETE /api/v1/drivers/{id}
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Object> deactivateDriver(@PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Desactivando chofer ID: {}", id);
+
+        try {
+            String url = driversServiceUrl + "/api/v1/drivers/" + id;
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.DELETE, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Error desactivando chofer {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Elimina permanentemente un chofer (hard delete)
+     * DELETE /api/v1/drivers/{id}/permanent
+     */
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<Object> deleteDriverPermanently(@PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Eliminando permanentemente chofer ID: {}", id);
+
+        try {
+            String url = driversServiceUrl + "/api/v1/drivers/" + id + "/permanent";
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.DELETE, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Error eliminando permanentemente chofer {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Reactiva un chofer
+     * PATCH /api/v1/drivers/{id}/activate
+     */
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<Object> activateDriver(@PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Reactivando chofer ID: {}", id);
+
+        try {
+            String url = driversServiceUrl + "/api/v1/drivers/" + id + "/activate";
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.PATCH, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Error reactivando chofer {}: {}", id, e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -197,5 +201,19 @@ public class DriversGatewayController {
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("Drivers Gateway Service is running");
+    }
+
+    /**
+     * Crea headers HTTP con autorización JWT
+     */
+    private HttpHeaders createHeadersWithAuth(String authHeader) {
+        HttpHeaders headers = new HttpHeaders();
+        if (authHeader != null && !authHeader.isEmpty()) {
+            headers.set("Authorization", authHeader);
+            logger.debug("Reenviando token JWT al servicio backend");
+        } else {
+            logger.warn("No se encontró token JWT en la request del cliente");
+        }
+        return headers;
     }
 }
