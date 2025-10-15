@@ -559,6 +559,9 @@ function viewDriver(driver) {
     const modal = document.getElementById('driverModal');
     const details = document.getElementById('driverDetails');
     
+    console.log('🔍 showDriverDetails - Datos del driver:', driver);
+    console.log('🔍 showDriverDetails - fechaContratacion:', driver.fechaContratacion);
+    
     details.innerHTML = `
         <div style="display: grid; gap: 15px;">
             <div style="padding: 15px; background: #f8f9fa; border-radius: 10px;">
@@ -1151,6 +1154,9 @@ function clearForm() {
 }
 
 function fillForm(driver) {
+    console.log('🔍 fillForm - Datos del driver recibidos:', driver);
+    console.log('🔍 fillForm - fechaContratacion:', driver.fechaContratacion);
+    
     document.getElementById('driverId').value = driver.id;
     document.getElementById('nombre').value = driver.nombre;
     document.getElementById('apellido').value = driver.apellido;
@@ -1162,6 +1168,8 @@ function fillForm(driver) {
     document.getElementById('estado').value = driver.estado || 'DISPONIBLE';
     document.getElementById('tipoMaquinariaAsignada').value = driver.tipoMaquinariaAsignada || '';
     document.getElementById('activo').value = driver.activo ? 'true' : 'false';
+    
+    console.log('🔍 fillForm - Campo fechaContratacion asignado:', document.getElementById('fechaContratacion').value);
 }
 
 function fillTestData() {
@@ -1173,7 +1181,7 @@ function fillTestData() {
     document.getElementById('telefono').value = '+51987654321';
     document.getElementById('email').value = `chofer${randomNum}@skt.com`;
     document.getElementById('fechaContratacion').value = '2024-01-15';
-    document.getElementById('estado').value = 'DISPONIBLE';
+    document.getElementById('estado').value = 'DISPONIBLE'; // Cambiar a ASIGNADO para probar "En Servicio"
     document.getElementById('tipoMaquinariaAsignada').value = 'CAMION';
     document.getElementById('activo').value = 'true';
     

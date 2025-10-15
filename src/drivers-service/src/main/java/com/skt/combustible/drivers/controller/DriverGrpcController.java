@@ -49,6 +49,9 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
                     .setLicencia(domainResponse.getLicencia())
                     .setEmail(domainResponse.getEmail() != null ? domainResponse.getEmail() : "")
                     .setTelefono(domainResponse.getTelefono() != null ? domainResponse.getTelefono() : "")
+                    .setFechaContratacion(domainResponse.getFechaContratacion() != null
+                            ? domainResponse.getFechaContratacion().toString()
+                            : "")
                     .setEstado(mapEstadoToGrpc(domainResponse.getEstado()))
                     .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(domainResponse.getTipoMaquinariaAsignada()))
                     .setActivo(domainResponse.getActivo() != null ? domainResponse.getActivo() : false)
@@ -91,6 +94,8 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
                         .setLicencia(driver.getLicencia())
                         .setEmail(driver.getEmail() != null ? driver.getEmail() : "")
                         .setTelefono(driver.getTelefono() != null ? driver.getTelefono() : "")
+                        .setFechaContratacion(
+                                driver.getFechaContratacion() != null ? driver.getFechaContratacion().toString() : "")
                         .setEstado(mapEstadoToGrpc(driver.getEstado()))
                         .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(driver.getTipoMaquinariaAsignada()))
                         .setActivo(driver.getActivo() != null ? driver.getActivo() : false)
@@ -204,6 +209,9 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
                     .setLicencia(domainResponse.getLicencia())
                     .setEmail(domainResponse.getEmail() != null ? domainResponse.getEmail() : "")
                     .setTelefono(domainResponse.getTelefono() != null ? domainResponse.getTelefono() : "")
+                    .setFechaContratacion(domainResponse.getFechaContratacion() != null
+                            ? domainResponse.getFechaContratacion().toString()
+                            : "")
                     .setEstado(mapEstadoToGrpc(domainResponse.getEstado()))
                     .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(domainResponse.getTipoMaquinariaAsignada()))
                     .setActivo(domainResponse.getActivo() != null ? domainResponse.getActivo() : false)
@@ -306,6 +314,9 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
                     .setLicencia(domainResponse.getLicencia())
                     .setEmail(domainResponse.getEmail() != null ? domainResponse.getEmail() : "")
                     .setTelefono(domainResponse.getTelefono() != null ? domainResponse.getTelefono() : "")
+                    .setFechaContratacion(domainResponse.getFechaContratacion() != null
+                            ? domainResponse.getFechaContratacion().toString()
+                            : "")
                     .setEstado(mapEstadoToGrpc(domainResponse.getEstado()))
                     .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(domainResponse.getTipoMaquinariaAsignada()))
                     .setActivo(domainResponse.getActivo() != null ? domainResponse.getActivo() : false)
@@ -355,6 +366,8 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
                         .setLicencia(driver.getLicencia())
                         .setEmail(driver.getEmail() != null ? driver.getEmail() : "")
                         .setTelefono(driver.getTelefono() != null ? driver.getTelefono() : "")
+                        .setFechaContratacion(
+                                driver.getFechaContratacion() != null ? driver.getFechaContratacion().toString() : "")
                         .setEstado(mapEstadoToGrpc(driver.getEstado()))
                         .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(driver.getTipoMaquinariaAsignada()))
                         .setActivo(driver.getActivo() != null ? driver.getActivo() : false)
