@@ -1,23 +1,24 @@
 server:
   port: 8085
-  
+
 spring:
   application:
     name: auth-service
-  
+
   # Configuración MongoDB
   data:
     mongodb:
       uri: mongodb://localhost:27017/auth_db
       database: auth_db
-      
+
   profiles:
     active: dev
 
 # Security JWT Configuration
 jwt:
   secret: ${JWT_SECRET:mySecretKey1234567890123456789012345}
-  expiration: 86400000 # 24 hours in milliseconds
+  expiration: 86400000 # 24 hours in milliseconds (access token)
+  refresh-expiration: 604800000 # 7 days in milliseconds (refresh token)
 
 # Management endpoints
 management:
@@ -29,7 +30,7 @@ management:
     health:
       show-details: always
 
-# Logging configurations  
+# Logging configurations
 logging:
   level:
     com.skt.combustible.auth: DEBUG
@@ -41,7 +42,14 @@ logging:
 grpc:
   server:
     port: 9095
-    
+    address: 0.0.0.0
+    security:
+      enabled: false
+    reflection-service-enabled: true
+    health-service-enabled: true
+    max-inbound-message-size: 4194304
+    max-inbound-metadata-size: 8192
+
 # Service Discovery (para comunicación entre microservicios)
 service:
   urls:

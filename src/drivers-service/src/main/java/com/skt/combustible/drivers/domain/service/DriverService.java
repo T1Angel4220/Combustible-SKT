@@ -131,7 +131,8 @@ public class DriverService {
     }
 
     /**
-     * Obtiene todos los choferes con paginación
+     * Obtiene todos los choferes con paginación (activos e inactivos, pero no
+     * eliminados)
      * 
      * @param pageable Configuración de paginación
      * @return Página de DriverResponse
@@ -140,7 +141,9 @@ public class DriverService {
     public Page<DriverResponse> getAllDrivers(Pageable pageable) {
         logger.debug("Obteniendo todos los choferes con paginación: {}", pageable);
 
-        Page<Driver> drivers = driverRepository.findByActivoTrue(pageable);
+        // Cambiar para obtener todos los choferes (activos e inactivos)
+        // Los eliminados permanentemente ya no existen en la BD, así que no aparecerán
+        Page<Driver> drivers = driverRepository.findAll(pageable);
         return drivers.map(driverMapper::toResponse);
     }
 

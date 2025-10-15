@@ -19,7 +19,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/vehicles")
-@CrossOrigin(origins = "*")
 public class VehiclesGatewayController {
 
     private static final Logger logger = LoggerFactory.getLogger(VehiclesGatewayController.class);
@@ -145,6 +144,184 @@ public class VehiclesGatewayController {
             return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
             logger.error("Error eliminando vehículo {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Obtiene un vehículo por placa
+     * GET /api/v1/vehicles/placa/{placa}
+     */
+    @GetMapping("/placa/{placa}")
+    public ResponseEntity<Object> getVehicleByPlaca(@PathVariable String placa,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Obteniendo vehículo por placa: {}", placa);
+
+        try {
+            String url = vehiclesServiceUrl + "/api/v1/vehicles/placa/" + placa;
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.GET, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Error obteniendo vehículo por placa {}: {}", placa, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Obtiene vehículos por tipo de maquinaria
+     * GET /api/v1/vehicles/tipo/{tipoMaquinaria}
+     */
+    @GetMapping("/tipo/{tipoMaquinaria}")
+    public ResponseEntity<Object> getVehiclesByTipo(@PathVariable String tipoMaquinaria,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Obteniendo vehículos por tipo: {}", tipoMaquinaria);
+
+        try {
+            String url = vehiclesServiceUrl + "/api/v1/vehicles/tipo/" + tipoMaquinaria;
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.GET, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Error obteniendo vehículos por tipo {}: {}", tipoMaquinaria, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Obtiene vehículos por estado operativo
+     * GET /api/v1/vehicles/estado/{estadoOperativo}
+     */
+    @GetMapping("/estado/{estadoOperativo}")
+    public ResponseEntity<Object> getVehiclesByEstado(@PathVariable String estadoOperativo,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Obteniendo vehículos por estado: {}", estadoOperativo);
+
+        try {
+            String url = vehiclesServiceUrl + "/api/v1/vehicles/estado/" + estadoOperativo;
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.GET, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Error obteniendo vehículos por estado {}: {}", estadoOperativo, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Obtiene vehículos disponibles
+     * GET /api/v1/vehicles/disponibles
+     */
+    @GetMapping("/disponibles")
+    public ResponseEntity<Object> getAvailableVehicles(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Obteniendo vehículos disponibles");
+
+        try {
+            String url = vehiclesServiceUrl + "/api/v1/vehicles/disponibles";
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.GET, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Error obteniendo vehículos disponibles: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Obtiene vehículos disponibles por tipo de maquinaria
+     * GET /api/v1/vehicles/disponibles/tipo/{tipoMaquinaria}
+     */
+    @GetMapping("/disponibles/tipo/{tipoMaquinaria}")
+    public ResponseEntity<Object> getAvailableVehiclesByTipo(@PathVariable String tipoMaquinaria,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Obteniendo vehículos disponibles por tipo: {}", tipoMaquinaria);
+
+        try {
+            String url = vehiclesServiceUrl + "/api/v1/vehicles/disponibles/tipo/" + tipoMaquinaria;
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.GET, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Error obteniendo vehículos disponibles por tipo {}: {}", tipoMaquinaria, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Cambia el estado operativo de un vehículo
+     * PATCH /api/v1/vehicles/{id}/estado?nuevoEstado=DISPONIBLE
+     */
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Object> changeVehicleEstado(@PathVariable String id,
+            @RequestParam String nuevoEstado,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Cambiando estado de vehículo {} a {}", id, nuevoEstado);
+
+        try {
+            String url = vehiclesServiceUrl + "/api/v1/vehicles/" + id + "/estado?nuevoEstado=" + nuevoEstado;
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.PATCH, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Error cambiando estado de vehículo {} a {}: {}", id, nuevoEstado, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Actualiza el kilometraje de un vehículo
+     * PATCH /api/v1/vehicles/{id}/kilometraje?kilometraje=15000
+     */
+    @PatchMapping("/{id}/kilometraje")
+    public ResponseEntity<Object> updateKilometraje(@PathVariable String id,
+            @RequestParam Integer kilometraje,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Actualizando kilometraje de vehículo {} a {}", id, kilometraje);
+
+        try {
+            String url = vehiclesServiceUrl + "/api/v1/vehicles/" + id + "/kilometraje?kilometraje=" + kilometraje;
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.PATCH, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Error actualizando kilometraje de vehículo {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Obtiene estadísticas de vehículos
+     * GET /api/v1/vehicles/estadisticas
+     */
+    @GetMapping("/estadisticas")
+    public ResponseEntity<Object> getVehicleStatistics(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway REST: Obteniendo estadísticas de vehículos");
+
+        try {
+            String url = vehiclesServiceUrl + "/api/v1/vehicles/estadisticas";
+            HttpHeaders headers = createHeadersWithAuth(authHeader);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.GET, entity, Object.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            logger.error("Error obteniendo estadísticas de vehículos: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }

@@ -8,8 +8,7 @@ import org.springframework.stereotype.Component;
 import com.skt.combustible.vehicles.application.service.AsignacionService;
 import com.skt.combustible.vehicles.domain.dto.AsignacionCreateRequest;
 import com.skt.combustible.vehicles.domain.dto.AsignacionResponse;
-import com.skt.combustible.vehicles.domain.entity.AsignacionVehiculo;
-import com.skt.combustible.vehicles.domain.entity.Vehicle;
+import com.skt.combustible.vehicles.grpc.AsignacionServiceProtoGrpc;
 
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
@@ -22,174 +21,234 @@ import net.devh.boot.grpc.server.service.GrpcService;
  */
 @GrpcService
 @Component
-public class AsignacionGrpcController {
-    
+public class AsignacionGrpcController extends AsignacionServiceProtoGrpc.AsignacionServiceProtoImplBase {
+
     @Autowired
     private AsignacionService asignacionService;
-    
-    /**
-     * Asigna un vehículo a un chofer
-     */
-    public void asignarVehiculoAChofer(AsignacionCreateRequest request, StreamObserver<AsignacionResponse> responseObserver) {
+
+    @Override
+    public void asignarVehiculoAChofer(com.skt.combustible.vehicles.grpc.AsignacionCreateRequestProto request,
+            StreamObserver<com.skt.combustible.vehicles.grpc.AsignacionResponseProto> responseObserver) {
         try {
-            AsignacionResponse response = asignacionService.asignarVehiculoAChofer(request);
-            responseObserver.onNext(response);
+            // Convertir de gRPC a dominio
+            AsignacionCreateRequest domainRequest = new AsignacionCreateRequest();
+            domainRequest.setVehicleId(Long.parseLong(request.getVehicleId()));
+            domainRequest.setChoferId(request.getChoferId());
+            domainRequest.setFechaAsignacion(java.time.LocalDateTime.now());
+            domainRequest.setObservaciones(request.getObservaciones());
+
+            AsignacionResponse domainResponse = asignacionService.asignarVehiculoAChofer(domainRequest);
+
+            // Convertir de dominio a gRPC
+            com.skt.combustible.vehicles.grpc.AsignacionResponseProto grpcResponse = com.skt.combustible.vehicles.grpc.AsignacionResponseProto
+                    .newBuilder()
+                    .setId(domainResponse.getId())
+                    .setVehicleId(domainResponse.getVehicleId())
+                    .setChoferId(domainResponse.getChoferId())
+                    .setFechaInicio(
+                            domainResponse.getFechaAsignacion() != null ? domainResponse.getFechaAsignacion().toString()
+                                    : "")
+                    .setFechaFin(domainResponse.getFechaDesasignacion() != null
+                            ? domainResponse.getFechaDesasignacion().toString()
+                            : "")
+                    .setFechaFinReal("")
+                    .setMotivo("")
+                    .setObservaciones(
+                            domainResponse.getObservaciones() != null ? domainResponse.getObservaciones() : "")
+                    .setEstado(mapEstadoToGrpc(domainResponse.getEstado()))
+                    .build();
+
+            responseObserver.onNext(grpcResponse);
             responseObserver.onCompleted();
         } catch (Exception e) {
             responseObserver.onError(io.grpc.Status.INVALID_ARGUMENT
-                .withDescription("Error al asignar vehículo: " + e.getMessage())
-                .asRuntimeException());
-        }
-    }
-    
-    /**
-     * Desasigna un vehículo de un chofer
-     */
-    public void desasignarVehiculo(Long vehicleId, StreamObserver<AsignacionResponse> responseObserver) {
-        try {
-            AsignacionResponse response = asignacionService.desasignarVehiculo(vehicleId);
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-        } catch (Exception e) {
-            responseObserver.onError(io.grpc.Status.INVALID_ARGUMENT
-                .withDescription("Error al desasignar vehículo: " + e.getMessage())
-                .asRuntimeException());
-        }
-    }
-    
-    /**
-     * Obtiene una asignación por ID
-     */
-    public void obtenerAsignacionPorId(Long id, StreamObserver<AsignacionResponse> responseObserver) {
-        try {
-            var response = asignacionService.obtenerAsignacionPorId(id.toString());
-            if (response.isPresent()) {
-                responseObserver.onNext(response.get());
-            } else {
-                responseObserver.onError(io.grpc.Status.NOT_FOUND
-                    .withDescription("Asignación no encontrada con ID: " + id)
+                    .withDescription("Error al asignar vehículo: " + e.getMessage())
                     .asRuntimeException());
-            }
-            responseObserver.onCompleted();
-        } catch (Exception e) {
-            responseObserver.onError(io.grpc.Status.INTERNAL
-                .withDescription("Error al obtener asignación: " + e.getMessage())
-                .asRuntimeException());
         }
     }
-    
-    /**
-     * Obtiene asignaciones por vehículo
-     */
-    public void obtenerAsignacionesPorVehiculo(Long vehicleId, StreamObserver<AsignacionResponse> responseObserver) {
-        try {
-            List<AsignacionResponse> responses = asignacionService.obtenerAsignacionesPorVehiculo(vehicleId);
-            for (AsignacionResponse response : responses) {
-                responseObserver.onNext(response);
-            }
-            responseObserver.onCompleted();
-        } catch (Exception e) {
-            responseObserver.onError(io.grpc.Status.INTERNAL
-                .withDescription("Error al obtener asignaciones por vehículo: " + e.getMessage())
-                .asRuntimeException());
-        }
-    }
-    
-    /**
-     * Obtiene asignaciones activas por chofer
-     */
-    public void obtenerAsignacionesActivasPorChofer(Long choferId, StreamObserver<AsignacionResponse> responseObserver) {
-        try {
-            List<AsignacionResponse> responses = asignacionService.obtenerAsignacionesActivasPorChofer(choferId);
-            for (AsignacionResponse response : responses) {
-                responseObserver.onNext(response);
-            }
-            responseObserver.onCompleted();
-        } catch (Exception e) {
-            responseObserver.onError(io.grpc.Status.INTERNAL
-                .withDescription("Error al obtener asignaciones activas por chofer: " + e.getMessage())
-                .asRuntimeException());
-        }
-    }
-    
-    /**
-     * Obtiene todas las asignaciones
-     */
-    public void obtenerTodasLasAsignaciones(StreamObserver<AsignacionResponse> responseObserver) {
+
+    @Override
+    public void obtenerTodasLasAsignaciones(com.google.protobuf.Empty request,
+            StreamObserver<com.skt.combustible.vehicles.grpc.AsignacionResponseProto> responseObserver) {
         try {
             List<AsignacionResponse> responses = asignacionService.obtenerTodasLasAsignaciones();
             for (AsignacionResponse response : responses) {
-                responseObserver.onNext(response);
+                // Convertir de dominio a gRPC
+                com.skt.combustible.vehicles.grpc.AsignacionResponseProto grpcResponse = com.skt.combustible.vehicles.grpc.AsignacionResponseProto
+                        .newBuilder()
+                        .setId(response.getId())
+                        .setVehicleId(response.getVehicleId())
+                        .setChoferId(response.getChoferId())
+                        .setFechaInicio(
+                                response.getFechaAsignacion() != null ? response.getFechaAsignacion().toString() : "")
+                        .setFechaFin(
+                                response.getFechaDesasignacion() != null ? response.getFechaDesasignacion().toString()
+                                        : "")
+                        .setFechaFinReal("")
+                        .setMotivo("")
+                        .setObservaciones(response.getObservaciones() != null ? response.getObservaciones() : "")
+                        .setEstado(mapEstadoToGrpc(response.getEstado()))
+                        .build();
+
+                responseObserver.onNext(grpcResponse);
             }
             responseObserver.onCompleted();
         } catch (Exception e) {
             responseObserver.onError(io.grpc.Status.INTERNAL
-                .withDescription("Error al obtener asignaciones: " + e.getMessage())
-                .asRuntimeException());
+                    .withDescription("Error al obtener asignaciones: " + e.getMessage())
+                    .asRuntimeException());
         }
     }
-    
-    /**
-     * Obtiene asignaciones por estado
-     */
-    public void obtenerAsignacionesPorEstado(AsignacionVehiculo.EstadoAsignacion estado, StreamObserver<AsignacionResponse> responseObserver) {
+
+    @Override
+    public void obtenerAsignacionPorId(com.skt.combustible.vehicles.grpc.AsignacionIdRequestProto request,
+            StreamObserver<com.skt.combustible.vehicles.grpc.AsignacionResponseProto> responseObserver) {
         try {
-            List<AsignacionResponse> responses = asignacionService.obtenerAsignacionesPorEstado(estado);
+            var response = asignacionService.obtenerAsignacionPorId(request.getId());
+            if (response.isPresent()) {
+                AsignacionResponse domainResponse = response.get();
+                // Convertir de dominio a gRPC
+                com.skt.combustible.vehicles.grpc.AsignacionResponseProto grpcResponse = com.skt.combustible.vehicles.grpc.AsignacionResponseProto
+                        .newBuilder()
+                        .setId(domainResponse.getId())
+                        .setVehicleId(domainResponse.getVehicleId())
+                        .setChoferId(domainResponse.getChoferId())
+                        .setFechaInicio(domainResponse.getFechaAsignacion() != null
+                                ? domainResponse.getFechaAsignacion().toString()
+                                : "")
+                        .setFechaFin(domainResponse.getFechaDesasignacion() != null
+                                ? domainResponse.getFechaDesasignacion().toString()
+                                : "")
+                        .setFechaFinReal("")
+                        .setMotivo("")
+                        .setObservaciones(
+                                domainResponse.getObservaciones() != null ? domainResponse.getObservaciones() : "")
+                        .setEstado(mapEstadoToGrpc(domainResponse.getEstado()))
+                        .build();
+
+                responseObserver.onNext(grpcResponse);
+            } else {
+                responseObserver.onError(io.grpc.Status.NOT_FOUND
+                        .withDescription("Asignación no encontrada con ID: " + request.getId())
+                        .asRuntimeException());
+            }
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error al obtener asignación: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    @Override
+    public void obtenerAsignacionesPorVehiculo(
+            com.skt.combustible.vehicles.grpc.AsignacionVehicleIdRequestProto request,
+            StreamObserver<com.skt.combustible.vehicles.grpc.AsignacionResponseProto> responseObserver) {
+        try {
+            List<AsignacionResponse> responses = asignacionService
+                    .obtenerAsignacionesPorVehiculo(Long.parseLong(request.getVehicleId()));
             for (AsignacionResponse response : responses) {
-                responseObserver.onNext(response);
+                // Convertir de dominio a gRPC
+                com.skt.combustible.vehicles.grpc.AsignacionResponseProto grpcResponse = com.skt.combustible.vehicles.grpc.AsignacionResponseProto
+                        .newBuilder()
+                        .setId(response.getId())
+                        .setVehicleId(response.getVehicleId())
+                        .setChoferId(response.getChoferId())
+                        .setFechaInicio(
+                                response.getFechaAsignacion() != null ? response.getFechaAsignacion().toString() : "")
+                        .setFechaFin(
+                                response.getFechaDesasignacion() != null ? response.getFechaDesasignacion().toString()
+                                        : "")
+                        .setFechaFinReal("")
+                        .setMotivo("")
+                        .setObservaciones(response.getObservaciones() != null ? response.getObservaciones() : "")
+                        .setEstado(mapEstadoToGrpc(response.getEstado()))
+                        .build();
+
+                responseObserver.onNext(grpcResponse);
             }
             responseObserver.onCompleted();
         } catch (Exception e) {
             responseObserver.onError(io.grpc.Status.INTERNAL
-                .withDescription("Error al obtener asignaciones por estado: " + e.getMessage())
-                .asRuntimeException());
+                    .withDescription("Error al obtener asignaciones por vehículo: " + e.getMessage())
+                    .asRuntimeException());
         }
     }
-    
-    /**
-     * Obtiene vehículos disponibles para asignación
-     */
-    public void obtenerVehiculosDisponiblesParaAsignacion(StreamObserver<Vehicle> responseObserver) {
+
+    @Override
+    public void obtenerAsignacionesPorChofer(com.skt.combustible.vehicles.grpc.AsignacionChoferIdRequestProto request,
+            StreamObserver<com.skt.combustible.vehicles.grpc.AsignacionResponseProto> responseObserver) {
         try {
-            List<Vehicle> vehicles = asignacionService.obtenerVehiculosDisponiblesParaAsignacion();
-            for (Vehicle vehicle : vehicles) {
-                responseObserver.onNext(vehicle);
+            List<AsignacionResponse> responses = asignacionService
+                    .obtenerAsignacionesActivasPorChofer(request.getChoferId());
+            for (AsignacionResponse response : responses) {
+                // Convertir de dominio a gRPC
+                com.skt.combustible.vehicles.grpc.AsignacionResponseProto grpcResponse = com.skt.combustible.vehicles.grpc.AsignacionResponseProto
+                        .newBuilder()
+                        .setId(response.getId())
+                        .setVehicleId(response.getVehicleId())
+                        .setChoferId(response.getChoferId())
+                        .setFechaInicio(
+                                response.getFechaAsignacion() != null ? response.getFechaAsignacion().toString() : "")
+                        .setFechaFin(
+                                response.getFechaDesasignacion() != null ? response.getFechaDesasignacion().toString()
+                                        : "")
+                        .setFechaFinReal("")
+                        .setMotivo("")
+                        .setObservaciones(response.getObservaciones() != null ? response.getObservaciones() : "")
+                        .setEstado(mapEstadoToGrpc(response.getEstado()))
+                        .build();
+
+                responseObserver.onNext(grpcResponse);
             }
             responseObserver.onCompleted();
         } catch (Exception e) {
             responseObserver.onError(io.grpc.Status.INTERNAL
-                .withDescription("Error al obtener vehículos disponibles: " + e.getMessage())
-                .asRuntimeException());
+                    .withDescription("Error al obtener asignaciones por chofer: " + e.getMessage())
+                    .asRuntimeException());
         }
     }
-    
-    /**
-     * Verifica si un chofer puede recibir más asignaciones
-     */
-    public void puedeAsignarMasVehiculos(Long choferId, StreamObserver<com.google.protobuf.BoolValue> responseObserver) {
-        try {
-            boolean puedeAsignar = asignacionService.puedeAsignarMasVehiculos(choferId);
-            responseObserver.onNext(com.google.protobuf.BoolValue.of(puedeAsignar));
-            responseObserver.onCompleted();
-        } catch (Exception e) {
-            responseObserver.onError(io.grpc.Status.INTERNAL
-                .withDescription("Error al verificar capacidad de asignación: " + e.getMessage())
-                .asRuntimeException());
-        }
-    }
-    
-    /**
-     * Obtiene estadísticas de asignaciones
-     */
-    public void obtenerEstadisticasAsignacion(StreamObserver<AsignacionService.AsignacionStatsDTO> responseObserver) {
+
+    @Override
+    public void obtenerEstadisticasAsignacion(com.google.protobuf.Empty request,
+            StreamObserver<com.skt.combustible.vehicles.grpc.AsignacionStatsResponseProto> responseObserver) {
         try {
             AsignacionService.AsignacionStatsDTO stats = asignacionService.obtenerEstadisticasAsignacion();
-            responseObserver.onNext(stats);
+
+            // Convertir de dominio a gRPC
+            com.skt.combustible.vehicles.grpc.AsignacionStatsResponseProto grpcResponse = com.skt.combustible.vehicles.grpc.AsignacionStatsResponseProto
+                    .newBuilder()
+                    .setTotalAsignaciones(stats.getTotalAsignaciones())
+                    .setAsignacionesActivas(stats.getAsignacionesActivas())
+                    .setAsignacionesCompletadas(0L)
+                    .setAsignacionesCanceladas(0L)
+                    .setChoferesConAsignaciones(0L)
+                    .setVehiculosAsignados(0L)
+                    .setDuracionPromedio(0.0)
+                    .build();
+
+            responseObserver.onNext(grpcResponse);
             responseObserver.onCompleted();
         } catch (Exception e) {
             responseObserver.onError(io.grpc.Status.INTERNAL
-                .withDescription("Error al obtener estadísticas de asignación: " + e.getMessage())
-                .asRuntimeException());
+                    .withDescription("Error al obtener estadísticas de asignación: " + e.getMessage())
+                    .asRuntimeException());
         }
+    }
+
+    /**
+     * Mapea el estado del dominio al estado gRPC
+     */
+    private com.skt.combustible.vehicles.grpc.EstadoAsignacionProto mapEstadoToGrpc(String estado) {
+        if (estado == null) {
+            return com.skt.combustible.vehicles.grpc.EstadoAsignacionProto.ACTIVA;
+        }
+        return switch (estado.toUpperCase()) {
+            case "ACTIVA" -> com.skt.combustible.vehicles.grpc.EstadoAsignacionProto.ACTIVA;
+            case "COMPLETADA" -> com.skt.combustible.vehicles.grpc.EstadoAsignacionProto.COMPLETADA;
+            case "CANCELADA" -> com.skt.combustible.vehicles.grpc.EstadoAsignacionProto.CANCELADA;
+            case "VENCIDA" -> com.skt.combustible.vehicles.grpc.EstadoAsignacionProto.VENCIDA;
+            default -> com.skt.combustible.vehicles.grpc.EstadoAsignacionProto.ACTIVA;
+        };
     }
 }

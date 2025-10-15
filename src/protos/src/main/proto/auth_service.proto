@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package com.skt.combustible.auth;
+
+option java_multiple_files = true;
+option java_package = "com.skt.combustible.auth.grpc";
+option java_outer_classname = "AuthServiceProto";
+
+// Servicio gRPC para autenticación y autorización
+service AuthService {
+  // Autenticar usuario (login)
+  rpc Login(LoginRequest) returns (AuthResponse);
+  
+  // Registrar nuevo usuario
+  rpc Register(RegisterRequest) returns (AuthResponse);
+  
+  // Validar token JWT
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  
+  // Obtener información del usuario por token
+  rpc GetUserByToken(GetUserByTokenRequest) returns (UserResponse);
+  
+  // Refrescar token
+  rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
+  
+  // Logout (invalidar token)
+  rpc Logout(LogoutRequest) returns (Empty);
+}
+
+// Enums
+enum Role {
+  ADMIN = 0;
+  OPERADOR = 1;
+  SUPERVISOR = 2;
+}
+
+// Mensajes de request
+message LoginRequest {
+  string username_or_email = 1;
+  string password = 2;
+}
+
+message RegisterRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+  Role role = 4;
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message GetUserByTokenRequest {
+  string token = 1;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message LogoutRequest {
+  string token = 1;
+}
+
+// Mensajes de response
+message AuthResponse {
+  string token = 1;
+  string refresh_token = 2;
+  string token_type = 3;
+  int64 expires_in = 4;
+  UserResponse user = 5;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string username = 2;
+  Role role = 3;
+  int64 expires_at = 4;
+}
+
+message UserResponse {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  Role role = 4;
+  bool active = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message Empty {
+  // Mensaje vacío para operaciones que no retornan datos
+}

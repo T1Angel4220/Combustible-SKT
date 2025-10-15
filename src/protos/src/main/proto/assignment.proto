@@ -4,7 +4,7 @@ package com.skt.combustible.vehicles.grpc;
 
 option java_multiple_files = true;
 option java_package = "com.skt.combustible.vehicles.grpc";
-option java_outer_classname = "AssignmentProto";
+option java_outer_classname = "AssignmentOuterClass";
 
 // Import Google's messages
 import "google/protobuf/empty.proto";

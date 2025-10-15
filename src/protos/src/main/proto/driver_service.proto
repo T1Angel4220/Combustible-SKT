@@ -47,6 +47,9 @@ service DriverService {
   // Desactivar chofer
   rpc DeactivateDriver(DeactivateDriverRequest) returns (Empty);
   
+  // Reactivar chofer
+  rpc ActivateDriver(ActivateDriverRequest) returns (DriverResponse);
+  
   // Eliminar chofer permanentemente
   rpc DeleteDriver(DeleteDriverRequest) returns (Empty);
   
@@ -157,6 +160,10 @@ message AssignMachineryTypeRequest {
 }
 
 message DeactivateDriverRequest {
+  string id = 1;
+}
+
+message ActivateDriverRequest {
   string id = 1;
 }
 
