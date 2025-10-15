@@ -139,4 +139,12 @@ public interface DriverRepository extends MongoRepository<Driver, String> {
     @Query("{ '$and': [{'$or': [{'estado': ?0}, {'$expr': {'$eq': [?0, null]}}]}, {'$or': [{'tipo_maquinaria_asignada': ?1}, {'$expr': {'$eq': [?1, null]}}]}, {'$or': [{'activo': ?2}, {'$expr': {'$eq': [?2, null]}}]}] }")
     Page<Driver> findByCriterios(EstadoOperativo estado, TipoMaquinaria tipoMaquinaria, Boolean activo,
             Pageable pageable);
+
+    /**
+     * Busca choferes en servicio (activos y con estado ASIGNADO o EN_RUTA)
+     * 
+     * @param estados Lista de estados operativos
+     * @return Lista de choferes en servicio
+     */
+    List<Driver> findByActivoTrueAndEstadoIn(List<EstadoOperativo> estados);
 }

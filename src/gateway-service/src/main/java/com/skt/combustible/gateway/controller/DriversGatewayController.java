@@ -284,6 +284,33 @@ public class DriversGatewayController {
     }
 
     /**
+     * Obtiene choferes en servicio (Asignado y En Ruta)
+     * GET /api/v1/drivers/in-service
+     */
+    @GetMapping("/in-service")
+    public ResponseEntity<List<DriverRestResponse>> getDriversInService(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway gRPC: Obteniendo choferes en servicio");
+
+        try {
+            JwtClientInterceptor.setJwtToken(authHeader);
+            com.skt.combustible.drivers.grpc.GetDriversInServiceResponse grpcResponse = driversGrpcClient
+                    .getDriversInService();
+
+            List<DriverRestResponse> restResponse = grpcResponse.getDriversList().stream()
+                    .map(driverMapper::toRestResponse)
+                    .toList();
+
+            return ResponseEntity.ok(restResponse);
+        } catch (Exception e) {
+            logger.error("Error obteniendo choferes en servicio: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        } finally {
+            JwtClientInterceptor.clearJwtToken();
+        }
+    }
+
+    /**
      * Health check del servicio
      * GET /api/v1/drivers/health
      */

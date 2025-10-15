@@ -56,4 +56,11 @@ public enum EstadoOperativo {
             case ASIGNADO, EN_RUTA, DESCANSANDO, VACACIONES, ENFERMO, LICENCIA -> false;
         };
     }
+
+    /**
+     * Verifica si el chofer está en servicio activo (Asignado o En Ruta)
+     */
+    public boolean isEnServicio() {
+        return this == ASIGNADO || this == EN_RUTA;
+    }
 }

@@ -97,6 +97,7 @@ public class DriversGrpcClient {
                     .setApellido(request.getApellido() != null ? request.getApellido() : "")
                     .setTelefono(request.getTelefono() != null ? request.getTelefono() : "")
                     .setEmail(request.getEmail() != null ? request.getEmail() : "")
+                    .setFechaContratacion(request.getFechaContratacion() != null ? request.getFechaContratacion() : "")
                     .setEstado(mapEstadoToGrpc(request.getEstado()))
                     .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(request.getTipoMaquinariaAsignada()))
                     .setActivo(request.getActivo() != null ? request.getActivo() : true)
@@ -290,6 +291,24 @@ public class DriversGrpcClient {
             return response;
         } catch (Exception e) {
             logger.error("Error reactivando chofer: {}", e.getMessage());
+            throw new RuntimeException("Error comunicándose con Drivers Service", e);
+        }
+    }
+
+    /**
+     * Obtiene choferes en servicio (Asignado y En Ruta)
+     */
+    public com.skt.combustible.drivers.grpc.GetDriversInServiceResponse getDriversInService() {
+        initialize();
+        try {
+            com.skt.combustible.drivers.grpc.GetDriversInServiceRequest request = com.skt.combustible.drivers.grpc.GetDriversInServiceRequest
+                    .newBuilder().build();
+
+            com.skt.combustible.drivers.grpc.GetDriversInServiceResponse response = blockingStub
+                    .getDriversInService(request);
+            return response;
+        } catch (Exception e) {
+            logger.error("Error obteniendo choferes en servicio: {}", e.getMessage());
             throw new RuntimeException("Error comunicándose con Drivers Service", e);
         }
     }

@@ -203,6 +203,90 @@ function showAllDrivers() {
     loadDrivers();
 }
 
+/**
+ * Muestra solo los choferes en servicio (Asignado y En Ruta)
+ */
+async function showDriversInService() {
+    console.log('🚛 showDriversInService() ejecutada');
+    try {
+        hideAllSections();
+        driversSection.classList.add('active');
+        updateNavButtons('drivers');
+        
+        // Limpiar todos los filtros para evitar confusión
+        clearAllFilters();
+
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            showMessage('Por favor inicie sesión', 'error');
+            return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/in-service`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const driversInService = await response.json();
+            console.log(`✅ ${driversInService.length} choferes en servicio encontrados`);
+            
+            // Actualizar el título de la sección
+            const sectionTitle = document.querySelector('.section-header h2');
+            if (sectionTitle) {
+                sectionTitle.textContent = 'Choferes En Servicio';
+            }
+            
+            // Renderizar directamente los choferes sin aplicar filtros
+            renderDriversInService(driversInService);
+            
+            // Mostrar notificación
+            showMessage(`${driversInService.length} chofer(es) en servicio`, 'success');
+        } else {
+            console.error('❌ Error obteniendo choferes en servicio:', response.status);
+            showMessage('Error al cargar choferes en servicio', 'error');
+        }
+    } catch (error) {
+        console.error('❌ Error en showDriversInService:', error);
+        showMessage('Error al cargar choferes en servicio', 'error');
+    }
+}
+
+/**
+ * Renderiza directamente los choferes en servicio sin aplicar filtros
+ */
+function renderDriversInService(driversInService) {
+    const grid = document.getElementById('driversGrid');
+    
+    if (!driversInService || driversInService.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #6c757d;">
+                <i class="fas fa-cogs" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
+                <p style="font-size: 1.2rem;">No hay choferes en servicio</p>
+                <p style="font-size: 1rem; margin-top: 10px; color: #999;">Los choferes aparecerán aquí cuando estén asignados o en ruta</p>
+            </div>
+        `;
+        
+        // Actualizar paginación para mostrar "0 choferes"
+        const paginationInfo = document.getElementById('paginationInfo');
+        if (paginationInfo) {
+            paginationInfo.textContent = `Mostrando 0-0 de 0 choferes`;
+        }
+        return;
+    }
+    
+    grid.innerHTML = driversInService.map(driver => createDriverCard(driver)).join('');
+    
+    // Actualizar información de paginación
+    const paginationInfo = document.getElementById('paginationInfo');
+    if (paginationInfo) {
+        paginationInfo.textContent = `Mostrando 1-${driversInService.length} de ${driversInService.length} choferes`;
+    }
+}
+
 function showAddDriver() {
     hideAllSections();
     driverFormSection.classList.add('active');
@@ -329,13 +413,14 @@ async function loadDrivers(page = 0, size = 12, forceReload = false) {
 
 function updateDashboardStats() {
     const total = drivers.length;
-    const active = drivers.filter(d => d.activo && d.estado === 'DISPONIBLE').length;
+    // "En Servicio" = choferes con estado ASIGNADO o EN_RUTA
+    const inService = drivers.filter(d => d.activo && (d.estado === 'ASIGNADO' || d.estado === 'EN_RUTA')).length;
     const available = drivers.filter(d => d.activo && d.estado === 'DISPONIBLE').length;
     const inactive = drivers.filter(d => !d.activo || d.estado === 'INACTIVO').length;
     
     document.getElementById('totalDrivers').textContent = total;
     document.getElementById('availableDrivers').textContent = available;
-    document.getElementById('activeDrivers').textContent = active;
+    document.getElementById('activeDrivers').textContent = inService;
     document.getElementById('inactiveDrivers').textContent = inactive;
 }
 

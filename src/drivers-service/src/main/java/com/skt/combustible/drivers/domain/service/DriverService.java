@@ -13,12 +13,13 @@ import com.skt.combustible.shared.domain.enums.TipoMaquinaria;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+
+import java.util.Arrays;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Set;
 
 /**
  * Servicio de gestión de choferes con lógica de negocio
@@ -184,6 +185,20 @@ public class DriverService {
         logger.debug("Obteniendo choferes disponibles para tipo de maquinaria: {}", tipoMaquinaria);
 
         List<Driver> drivers = driverRepository.findChoferesDisponiblesPorTipoMaquinaria(tipoMaquinaria);
+        return driverMapper.toResponseList(drivers);
+    }
+
+    /**
+     * Obtiene choferes en servicio (activos y con estado ASIGNADO o EN_RUTA)
+     * 
+     * @return Lista de DriverResponse
+     */
+    @Transactional(readOnly = true)
+    public List<DriverResponse> getDriversInService() {
+        logger.debug("Obteniendo choferes en servicio (Asignado y En Ruta)");
+
+        List<Driver> drivers = driverRepository.findByActivoTrueAndEstadoIn(
+                Arrays.asList(EstadoOperativo.ASIGNADO, EstadoOperativo.EN_RUTA));
         return driverMapper.toResponseList(drivers);
     }
 

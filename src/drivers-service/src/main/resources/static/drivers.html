@@ -84,7 +84,7 @@
               </div>
             </div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card clickable" onclick="showDriversInService()" style="cursor: pointer;" title="Click para ver choferes en servicio">
             <div class="stat-icon">
               <i class="fas fa-cogs"></i>
             </div>
@@ -127,6 +127,13 @@
             </div>
             <h4>Disponibles</h4>
             <p>Choferes listos para asignar</p>
+          </div>
+          <div class="action-card" onclick="showDriversInService()">
+            <div class="card-header">
+              <i class="fas fa-cogs"></i>
+            </div>
+            <h4>En Servicio</h4>
+            <p>Choferes asignados y en ruta</p>
           </div>
           <div class="action-card" onclick="filterByMachinery('CAMION')">
             <div class="card-header">

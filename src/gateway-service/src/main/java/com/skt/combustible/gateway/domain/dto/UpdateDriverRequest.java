@@ -17,6 +17,7 @@ public class UpdateDriverRequest {
     private String licencia;
     private String email;
     private String telefono;
+    private String fechaContratacion;
     private EstadoOperativo estado;
     private TipoMaquinaria tipoMaquinariaAsignada;
     private Boolean activo;
@@ -26,7 +27,7 @@ public class UpdateDriverRequest {
     }
 
     public UpdateDriverRequest(String nombre, String apellido, String dni, String licencia,
-            String email, String telefono, EstadoOperativo estado,
+            String email, String telefono, String fechaContratacion, EstadoOperativo estado,
             TipoMaquinaria tipoMaquinariaAsignada, Boolean activo) {
         this.nombre = nombre;
         this.apellido = apellido;
@@ -34,6 +35,7 @@ public class UpdateDriverRequest {
         this.licencia = licencia;
         this.email = email;
         this.telefono = telefono;
+        this.fechaContratacion = fechaContratacion;
         this.estado = estado;
         this.tipoMaquinariaAsignada = tipoMaquinariaAsignada;
         this.activo = activo;
@@ -86,6 +88,14 @@ public class UpdateDriverRequest {
 
     public void setTelefono(String telefono) {
         this.telefono = telefono;
+    }
+
+    public String getFechaContratacion() {
+        return fechaContratacion;
+    }
+
+    public void setFechaContratacion(String fechaContratacion) {
+        this.fechaContratacion = fechaContratacion;
     }
 
     public EstadoOperativo getEstado() {

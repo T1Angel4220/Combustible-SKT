@@ -171,6 +171,17 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
             if (!request.getEmail().isEmpty()) {
                 domainRequest.setEmail(request.getEmail());
             }
+            if (!request.getFechaContratacion().isEmpty()) {
+                // Convertir String a LocalDate
+                try {
+                    java.time.LocalDate fechaContratacion = java.time.LocalDate.parse(request.getFechaContratacion());
+                    domainRequest.setFechaContratacion(fechaContratacion);
+                } catch (java.time.format.DateTimeParseException e) {
+                    logger.warn("Error parseando fecha de contratación: {}, usando fecha actual",
+                            request.getFechaContratacion());
+                    domainRequest.setFechaContratacion(java.time.LocalDate.now());
+                }
+            }
             if (request.hasEstado()) {
                 domainRequest.setEstado(mapEstadoFromGrpc(request.getEstado()));
             }
@@ -312,6 +323,53 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
                     .asRuntimeException());
         } catch (Exception e) {
             logger.error("Error reactivando chofer: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Obtiene choferes en servicio (Asignado y En Ruta)
+     */
+    @Override
+    public void getDriversInService(GetDriversInServiceRequest request,
+            StreamObserver<GetDriversInServiceResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Obteniendo choferes en servicio");
+
+            // Llamar al servicio de dominio
+            List<com.skt.combustible.drivers.domain.dto.DriverResponse> domainDrivers = driverService
+                    .getDriversInService();
+
+            // Construir respuesta gRPC
+            GetDriversInServiceResponse.Builder responseBuilder = GetDriversInServiceResponse.newBuilder();
+
+            for (com.skt.combustible.drivers.domain.dto.DriverResponse driver : domainDrivers) {
+                com.skt.combustible.drivers.grpc.DriverResponse grpcDriver = com.skt.combustible.drivers.grpc.DriverResponse
+                        .newBuilder()
+                        .setId(driver.getId())
+                        .setNombre(driver.getNombre())
+                        .setApellido(driver.getApellido())
+                        .setDni(driver.getDni())
+                        .setLicencia(driver.getLicencia())
+                        .setEmail(driver.getEmail() != null ? driver.getEmail() : "")
+                        .setTelefono(driver.getTelefono() != null ? driver.getTelefono() : "")
+                        .setEstado(mapEstadoToGrpc(driver.getEstado()))
+                        .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(driver.getTipoMaquinariaAsignada()))
+                        .setActivo(driver.getActivo() != null ? driver.getActivo() : false)
+                        .setCreatedAt(driver.getCreatedAt() != null ? driver.getCreatedAt().toString() : "")
+                        .setUpdatedAt(driver.getUpdatedAt() != null ? driver.getUpdatedAt().toString() : "")
+                        .build();
+
+                responseBuilder.addDrivers(grpcDriver);
+            }
+
+            responseObserver.onNext(responseBuilder.build());
+            responseObserver.onCompleted();
+            logger.info("gRPC: {} choferes en servicio obtenidos exitosamente", domainDrivers.size());
+        } catch (Exception e) {
+            logger.error("Error obteniendo choferes en servicio: {}", e.getMessage(), e);
             responseObserver.onError(io.grpc.Status.INTERNAL
                     .withDescription("Error interno: " + e.getMessage())
                     .asRuntimeException());

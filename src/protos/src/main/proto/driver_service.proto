@@ -61,6 +61,9 @@ service DriverService {
   
   // Verificar disponibilidad de chofer
   rpc IsDriverAvailable(IsDriverAvailableRequest) returns (IsDriverAvailableResponse);
+  
+  // Obtener choferes en servicio (Asignado y En Ruta)
+  rpc GetDriversInService(GetDriversInServiceRequest) returns (GetDriversInServiceResponse);
 }
 
 // Enums
@@ -183,6 +186,10 @@ message IsDriverAvailableRequest {
   string id = 1;
 }
 
+message GetDriversInServiceRequest {
+  // Sin parámetros adicionales
+}
+
 // Mensajes de response
 message DriverResponse {
   string id = 1;
@@ -242,6 +249,11 @@ message CountAvailableDriversByMachineryTypeResponse {
 message IsDriverAvailableResponse {
   bool available = 1;
   string driver_id = 2;
+}
+
+message GetDriversInServiceResponse {
+  repeated DriverResponse drivers = 1;
+  int32 count = 2;
 }
 
 message Empty {
