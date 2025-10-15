@@ -53,9 +53,140 @@ echo OK - MongoDB iniciado en puerto 27017
 echo.
 
 REM ==========================================
-REM PASO 2: Compilar el proyecto (opcional)
+REM PASO 2: Verificar y cargar datos de prueba
 REM ==========================================
-echo [2/5] Compilando proyecto...
+echo [2/6] Verificando datos de prueba...
+echo.
+
+REM Verificar si ya existen datos
+echo Verificando datos existentes...
+docker exec mongodb-local mongosh auth_db --quiet --eval "print('Usuarios:', db.users.countDocuments())" > temp_auth.txt 2>&1
+docker exec mongodb-local mongosh drivers_db --quiet --eval "print('Choferes:', db.drivers.countDocuments())" > temp_drivers.txt 2>&1
+docker exec mongodb-local mongosh vehicles_db --quiet --eval "print('Vehiculos:', db.vehicles.countDocuments())" > temp_vehicles.txt 2>&1
+
+REM Leer los resultados
+set /a auth_count=0
+set /a drivers_count=0
+set /a vehicles_count=0
+
+for /f %%i in (temp_auth.txt) do set auth_count=%%i
+for /f %%i in (temp_drivers.txt) do set drivers_count=%%i
+for /f %%i in (temp_vehicles.txt) do set vehicles_count=%%i
+
+REM Limpiar archivos temporales
+del temp_auth.txt 2>nul
+del temp_drivers.txt 2>nul
+del temp_vehicles.txt 2>nul
+
+echo Estado actual de la base de datos:
+echo   - Usuarios (auth_db): %auth_count%
+echo   - Choferes (drivers_db): %drivers_count%
+echo   - Vehiculos (vehicles_db): %vehicles_count%
+echo.
+
+REM Verificar si hay datos existentes
+set /a total_data=%auth_count%+%drivers_count%+%vehicles_count%
+
+if %total_data% gtr 0 (
+    echo ============================================
+    echo   DATOS EXISTENTES DETECTADOS
+    echo ============================================
+    echo.
+    echo Se encontraron datos en la base de datos.
+    echo.
+    echo Opciones disponibles:
+    echo [1] Mantener datos existentes (recomendado)
+    echo [2] Recargar todos los datos (eliminar y recrear)
+    echo [3] Agregar datos faltantes (solo si faltan)
+    echo.
+    choice /c 123 /n /m "Selecciona una opcion [1-3]: "
+    
+    if errorlevel 3 goto add_missing_data
+    if errorlevel 2 goto reload_all_data
+    if errorlevel 1 goto keep_existing_data
+) else (
+    echo ============================================
+    echo   BASE DE DATOS VACIA
+    echo ============================================
+    echo.
+    echo No se encontraron datos. Se cargaran datos de prueba.
+    goto load_initial_data
+)
+
+:keep_existing_data
+echo Manteniendo datos existentes...
+goto after_data_decision
+
+:reload_all_data
+echo ============================================
+echo   RECARGANDO TODOS LOS DATOS
+echo ============================================
+echo.
+echo ADVERTENCIA: Esto eliminara todos los datos existentes!
+choice /c SN /n /m "¿Estas seguro? [S/N]: "
+if errorlevel 2 goto keep_existing_data
+
+echo Eliminando datos existentes...
+docker exec mongodb-local mongosh auth_db --eval "db.users.deleteMany({})"
+docker exec mongodb-local mongosh drivers_db --eval "db.drivers.deleteMany({})"
+docker exec mongodb-local mongosh vehicles_db --eval "db.vehicles.deleteMany({})"
+echo Datos existentes eliminados.
+goto load_initial_data
+
+:add_missing_data
+echo ============================================
+echo   AGREGANDO DATOS FALTANTES
+echo ============================================
+echo.
+if %auth_count% equ 0 (
+    echo Cargando datos de autenticacion...
+    call add-auth-data.bat >nul 2>&1
+)
+if %drivers_count% equ 0 (
+    echo Cargando datos de choferes...
+    call add-drivers-data.bat >nul 2>&1
+)
+if %vehicles_count% equ 0 (
+    echo Cargando datos de vehiculos...
+    call add-simple-data.bat >nul 2>&1
+)
+echo Datos faltantes agregados.
+goto after_data_decision
+
+:load_initial_data
+echo ============================================
+echo   CARGANDO DATOS INICIALES
+echo ============================================
+echo.
+echo [1/3] Cargando datos de autenticacion...
+call add-auth-data.bat >nul 2>&1
+echo OK - Usuarios de prueba creados
+
+echo [2/3] Cargando datos de choferes...
+call add-drivers-data.bat >nul 2>&1
+echo OK - Choferes de prueba creados
+
+echo [3/3] Cargando datos de vehiculos...
+call add-simple-data.bat >nul 2>&1
+echo OK - Vehiculos de prueba creados
+
+echo.
+echo ============================================
+echo   DATOS DE PRUEBA CARGADOS EXITOSAMENTE
+echo ============================================
+echo.
+echo Credenciales de acceso:
+echo   Usuario: admin
+echo   Password: admin123
+echo.
+
+:after_data_decision
+echo.
+
+REM ==========================================
+REM PASO 3: Compilar el proyecto (opcional)
+REM ==========================================
+echo [3/6] Compilando proyecto...
 echo.
 echo Deseas compilar el proyecto? (Recomendado si hay cambios)
 echo [S] Si   [N] No (usar compilacion anterior)
@@ -83,36 +214,36 @@ echo Saltando compilacion...
 echo.
 
 REM ==========================================
-REM PASO 3: Iniciar Auth Service
+REM PASO 4: Iniciar Auth Service
 REM ==========================================
-echo [3/5] Iniciando Auth Service (puerto 8085)...
+echo [4/6] Iniciando Auth Service (puerto 8085)...
 start "Auth Service - SKT" cmd /k "cd src\auth-service && echo Iniciando Auth Service... && mvn spring-boot:run"
 echo OK - Auth Service iniciado en nueva ventana
 ping 127.0.0.1 -n 5 >nul
 echo.
 
 REM ==========================================
-REM PASO 4: Iniciar Drivers Service
+REM PASO 5: Iniciar Drivers Service
 REM ==========================================
-echo [4/5] Iniciando Drivers Service (puerto 8081)...
+echo [5/6] Iniciando Drivers Service (puerto 8081)...
 start "Drivers Service - SKT" cmd /k "cd src\drivers-service && echo Iniciando Drivers Service... && mvn spring-boot:run"
 echo OK - Drivers Service iniciado en nueva ventana
 ping 127.0.0.1 -n 5 >nul
 echo.
 
 REM ==========================================
-REM PASO 5: Iniciar Vehicles Service
+REM PASO 6: Iniciar Vehicles Service
 REM ==========================================
-echo [5/6] Iniciando Vehicles Service (puerto 8082)...
+echo [6/7] Iniciando Vehicles Service (puerto 8082)...
 start "Vehicles Service - SKT" cmd /k "cd src\vehicles-service && echo Iniciando Vehicles Service... && mvn spring-boot:run"
 echo OK - Vehicles Service iniciado en nueva ventana
 ping 127.0.0.1 -n 5 >nul
 echo.
 
 REM ==========================================
-REM PASO 6: Iniciar Gateway Service
+REM PASO 7: Iniciar Gateway Service
 REM ==========================================
-echo [6/6] Iniciando Gateway Service (puerto 8090)...
+echo [7/7] Iniciando Gateway Service (puerto 8090)...
 start "Gateway Service - SKT" cmd /k "cd src\gateway-service && echo Iniciando Gateway Service... && mvn spring-boot:run"
 echo OK - Gateway Service iniciado en nueva ventana
 echo.
@@ -178,7 +309,7 @@ if %errorlevel% equ 0 (
 
 echo.
 echo ============================================
-echo Sistema Iniciado!
+echo Sistema Iniciado Exitosamente!
 echo ============================================
 echo.
 echo Servicios disponibles:
@@ -186,6 +317,7 @@ echo.
 echo  MongoDB:
 echo    - Puerto: 27017
 echo    - Conexion: mongodb://localhost:27017
+echo    - Bases de datos: auth_db, drivers_db, vehicles_db
 echo.
 echo  Auth Service:
 echo    - Frontend: http://localhost:8085/
@@ -193,6 +325,7 @@ echo    - API: http://localhost:8085/api/auth
 echo    - Health: http://localhost:8085/actuator/health
 echo.
 echo  Drivers Service:
+echo    - Frontend: http://localhost:8081/drivers.html
 echo    - API: http://localhost:8081/api/v1/drivers
 echo    - gRPC: localhost:9091
 echo    - Health: http://localhost:8081/actuator/health
@@ -204,16 +337,20 @@ echo    - gRPC: localhost:9092
 echo    - Health: http://localhost:8082/actuator/health
 echo.
 echo  Gateway Service:
-echo    - API: http://localhost:8090/api/v1/gateway
 echo    - Drivers via Gateway: http://localhost:8090/api/v1/drivers
-echo    - Health: http://localhost:8090/api/v1/gateway/health
-echo    - Info: http://localhost:8090/api/v1/gateway/info
+echo    - Auth via Gateway: http://localhost:8090/api/v1/auth
+echo    - Health: http://localhost:8090/actuator/health
 echo.
 echo ============================================
 echo.
 echo Credenciales de prueba:
 echo   Usuario: admin
 echo   Password: admin123
+echo.
+echo Datos de prueba incluidos:
+echo   - 2 usuarios (admin, user)
+echo   - 5 choferes con diferentes estados
+echo   - 3 vehiculos de prueba
 echo.
 echo ============================================
 echo.
