@@ -52,6 +52,34 @@ public class DriversGrpcClient {
     }
 
     /**
+     * Crea un nuevo chofer
+     */
+    public com.skt.combustible.drivers.grpc.DriverResponse createDriver(
+            com.skt.combustible.gateway.domain.dto.CreateDriverRequest request) {
+        initialize();
+        try {
+            com.skt.combustible.drivers.grpc.CreateDriverRequest grpcRequest = com.skt.combustible.drivers.grpc.CreateDriverRequest
+                    .newBuilder()
+                    .setNombre(request.getNombre())
+                    .setApellido(request.getApellido())
+                    .setDni(request.getDni())
+                    .setLicencia(request.getLicencia())
+                    .setTelefono(request.getTelefono() != null ? request.getTelefono() : "")
+                    .setEmail(request.getEmail() != null ? request.getEmail() : "")
+                    .setFechaContratacion(request.getFechaContratacion() != null ? request.getFechaContratacion() : "")
+                    .setEstado(mapEstadoToGrpc(request.getEstado()))
+                    .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(request.getTipoMaquinariaAsignada()))
+                    .build();
+
+            com.skt.combustible.drivers.grpc.DriverResponse response = blockingStub.createDriver(grpcRequest);
+            return response;
+        } catch (Exception e) {
+            logger.error("Error creando chofer: {}", e.getMessage());
+            throw new RuntimeException("Error comunicándose con Drivers Service", e);
+        }
+    }
+
+    /**
      * Obtiene un chofer por ID
      */
     public DriverResponse getDriverById(String id) {

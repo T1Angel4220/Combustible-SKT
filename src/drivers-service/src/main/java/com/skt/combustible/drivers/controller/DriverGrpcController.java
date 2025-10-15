@@ -31,6 +31,62 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
     private DriverService driverService;
 
     @Override
+    public void createDriver(com.skt.combustible.drivers.grpc.CreateDriverRequest request,
+            StreamObserver<com.skt.combustible.drivers.grpc.DriverResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Creando nuevo chofer: {}", request.getNombre() + " " + request.getApellido());
+
+            // Convertir de gRPC a dominio
+            com.skt.combustible.drivers.domain.dto.CreateDriverRequest domainRequest = new com.skt.combustible.drivers.domain.dto.CreateDriverRequest();
+
+            domainRequest.setNombre(request.getNombre());
+            domainRequest.setApellido(request.getApellido());
+            domainRequest.setDni(request.getDni());
+            domainRequest.setLicencia(request.getLicencia());
+            domainRequest.setTelefono(request.getTelefono());
+            domainRequest.setEmail(request.getEmail());
+            if (!request.getFechaContratacion().isEmpty()) {
+                domainRequest.setFechaContratacion(java.time.LocalDate.parse(request.getFechaContratacion()));
+            }
+            domainRequest.setEstado(mapEstadoFromGrpc(request.getEstado()));
+            domainRequest.setTipoMaquinariaAsignada(mapTipoMaquinariaFromGrpc(request.getTipoMaquinariaAsignada()));
+
+            // Llamar al servicio de dominio
+            com.skt.combustible.drivers.domain.dto.DriverResponse domainResponse = driverService
+                    .createDriver(domainRequest);
+
+            // Convertir de dominio a gRPC
+            com.skt.combustible.drivers.grpc.DriverResponse grpcResponse = com.skt.combustible.drivers.grpc.DriverResponse
+                    .newBuilder()
+                    .setId(domainResponse.getId())
+                    .setNombre(domainResponse.getNombre())
+                    .setApellido(domainResponse.getApellido())
+                    .setDni(domainResponse.getDni())
+                    .setLicencia(domainResponse.getLicencia())
+                    .setEmail(domainResponse.getEmail() != null ? domainResponse.getEmail() : "")
+                    .setTelefono(domainResponse.getTelefono() != null ? domainResponse.getTelefono() : "")
+                    .setFechaContratacion(domainResponse.getFechaContratacion() != null
+                            ? domainResponse.getFechaContratacion().toString()
+                            : "")
+                    .setEstado(mapEstadoToGrpc(domainResponse.getEstado()))
+                    .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(domainResponse.getTipoMaquinariaAsignada()))
+                    .setActivo(domainResponse.getActivo() != null ? domainResponse.getActivo() : false)
+                    .setCreatedAt(domainResponse.getCreatedAt() != null ? domainResponse.getCreatedAt().toString() : "")
+                    .setUpdatedAt(domainResponse.getUpdatedAt() != null ? domainResponse.getUpdatedAt().toString() : "")
+                    .build();
+
+            responseObserver.onNext(grpcResponse);
+            responseObserver.onCompleted();
+            logger.info("gRPC: Chofer creado exitosamente con ID: {}", domainResponse.getId());
+        } catch (Exception e) {
+            logger.error("Error creando chofer: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    @Override
     public void getDriverById(GetDriverByIdRequest request,
             StreamObserver<com.skt.combustible.drivers.grpc.DriverResponse> responseObserver) {
         try {

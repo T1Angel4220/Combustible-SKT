@@ -102,7 +102,8 @@ message CreateDriverRequest {
   optional string telefono = 5;
   optional string email = 6;
   optional string fecha_contratacion = 7; // formato ISO date
-  optional TipoMaquinaria tipo_maquinaria_asignada = 8;
+  optional EstadoOperativo estado = 8;
+  optional TipoMaquinaria tipo_maquinaria_asignada = 9;
 }
 
 message GetDriverByIdRequest {

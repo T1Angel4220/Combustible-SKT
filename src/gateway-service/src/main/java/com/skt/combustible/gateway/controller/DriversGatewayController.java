@@ -14,6 +14,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controlador REST para el Gateway Service
@@ -46,6 +47,35 @@ public class DriversGatewayController {
                 .header("Access-Control-Allow-Headers", "*")
                 .header("Access-Control-Max-Age", "3600")
                 .build();
+    }
+
+    /**
+     * Crea un nuevo chofer
+     * POST /api/v1/drivers
+     */
+    @PostMapping
+    public ResponseEntity<?> createDriver(
+            @RequestBody com.skt.combustible.gateway.domain.dto.CreateDriverRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway gRPC: Creando nuevo chofer: {} {}", request.getNombre(), request.getApellido());
+
+        try {
+            // Establecer el token JWT para la llamada gRPC
+            JwtClientInterceptor.setJwtToken(authHeader);
+
+            // Llamar al servicio gRPC
+            com.skt.combustible.drivers.grpc.DriverResponse grpcResponse = driversGrpcClient.createDriver(request);
+
+            // Convertir a respuesta REST
+            DriverRestResponse restResponse = driverMapper.toRestResponse(grpcResponse);
+
+            return ResponseEntity.status(201).body(restResponse);
+        } catch (Exception e) {
+            logger.error("Error creando chofer: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", "Error creando chofer: " + e.getMessage()));
+        } finally {
+            JwtClientInterceptor.clearJwtToken();
+        }
     }
 
     /**
