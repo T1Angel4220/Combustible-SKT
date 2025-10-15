@@ -445,6 +445,467 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
         }
     }
 
+    /**
+     * Obtiene un chofer por DNI
+     */
+    @Override
+    public void getDriverByDni(GetDriverByDniRequest request,
+            StreamObserver<com.skt.combustible.drivers.grpc.DriverResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Obteniendo chofer por DNI: {}", request.getDni());
+
+            // Llamar al servicio de dominio
+            DriverResponse domainResponse = driverService.getDriverByDni(request.getDni());
+
+            // Convertir a respuesta gRPC
+            com.skt.combustible.drivers.grpc.DriverResponse grpcResponse = com.skt.combustible.drivers.grpc.DriverResponse
+                    .newBuilder()
+                    .setId(domainResponse.getId())
+                    .setNombre(domainResponse.getNombre())
+                    .setApellido(domainResponse.getApellido())
+                    .setDni(domainResponse.getDni())
+                    .setLicencia(domainResponse.getLicencia())
+                    .setEmail(domainResponse.getEmail() != null ? domainResponse.getEmail() : "")
+                    .setTelefono(domainResponse.getTelefono() != null ? domainResponse.getTelefono() : "")
+                    .setFechaContratacion(domainResponse.getFechaContratacion() != null
+                            ? domainResponse.getFechaContratacion().toString()
+                            : "")
+                    .setEstado(mapEstadoToGrpc(domainResponse.getEstado()))
+                    .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(domainResponse.getTipoMaquinariaAsignada()))
+                    .setActivo(domainResponse.getActivo() != null ? domainResponse.getActivo() : false)
+                    .setCreatedAt(domainResponse.getCreatedAt() != null ? domainResponse.getCreatedAt().toString() : "")
+                    .setUpdatedAt(domainResponse.getUpdatedAt() != null ? domainResponse.getUpdatedAt().toString() : "")
+                    .build();
+
+            responseObserver.onNext(grpcResponse);
+            responseObserver.onCompleted();
+
+            logger.info("gRPC: Chofer obtenido por DNI exitosamente: {}", domainResponse.getNombre());
+        } catch (Exception e) {
+            logger.error("Error obteniendo chofer por DNI: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Obtiene un chofer por número de licencia
+     */
+    @Override
+    public void getDriverByLicense(GetDriverByLicenseRequest request,
+            StreamObserver<com.skt.combustible.drivers.grpc.DriverResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Obteniendo chofer por licencia: {}", request.getLicencia());
+
+            // Llamar al servicio de dominio
+            DriverResponse domainResponse = driverService.getDriverByLicencia(request.getLicencia());
+
+            // Convertir a respuesta gRPC
+            com.skt.combustible.drivers.grpc.DriverResponse grpcResponse = com.skt.combustible.drivers.grpc.DriverResponse
+                    .newBuilder()
+                    .setId(domainResponse.getId())
+                    .setNombre(domainResponse.getNombre())
+                    .setApellido(domainResponse.getApellido())
+                    .setDni(domainResponse.getDni())
+                    .setLicencia(domainResponse.getLicencia())
+                    .setEmail(domainResponse.getEmail() != null ? domainResponse.getEmail() : "")
+                    .setTelefono(domainResponse.getTelefono() != null ? domainResponse.getTelefono() : "")
+                    .setFechaContratacion(domainResponse.getFechaContratacion() != null
+                            ? domainResponse.getFechaContratacion().toString()
+                            : "")
+                    .setEstado(mapEstadoToGrpc(domainResponse.getEstado()))
+                    .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(domainResponse.getTipoMaquinariaAsignada()))
+                    .setActivo(domainResponse.getActivo() != null ? domainResponse.getActivo() : false)
+                    .setCreatedAt(domainResponse.getCreatedAt() != null ? domainResponse.getCreatedAt().toString() : "")
+                    .setUpdatedAt(domainResponse.getUpdatedAt() != null ? domainResponse.getUpdatedAt().toString() : "")
+                    .build();
+
+            responseObserver.onNext(grpcResponse);
+            responseObserver.onCompleted();
+
+            logger.info("gRPC: Chofer obtenido por licencia exitosamente: {}", domainResponse.getNombre());
+        } catch (Exception e) {
+            logger.error("Error obteniendo chofer por licencia: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Obtiene choferes disponibles
+     */
+    @Override
+    public void getAvailableDrivers(GetAvailableDriversRequest request,
+            StreamObserver<GetAvailableDriversResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Obteniendo choferes disponibles");
+
+            // Llamar al servicio de dominio
+            List<DriverResponse> domainDrivers = driverService.getAvailableDrivers();
+
+            // Construir respuesta gRPC
+            GetAvailableDriversResponse.Builder responseBuilder = GetAvailableDriversResponse.newBuilder();
+
+            for (DriverResponse driver : domainDrivers) {
+                com.skt.combustible.drivers.grpc.DriverResponse grpcDriver = com.skt.combustible.drivers.grpc.DriverResponse
+                        .newBuilder()
+                        .setId(driver.getId())
+                        .setNombre(driver.getNombre())
+                        .setApellido(driver.getApellido())
+                        .setDni(driver.getDni())
+                        .setLicencia(driver.getLicencia())
+                        .setEmail(driver.getEmail() != null ? driver.getEmail() : "")
+                        .setTelefono(driver.getTelefono() != null ? driver.getTelefono() : "")
+                        .setFechaContratacion(
+                                driver.getFechaContratacion() != null ? driver.getFechaContratacion().toString() : "")
+                        .setEstado(mapEstadoToGrpc(driver.getEstado()))
+                        .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(driver.getTipoMaquinariaAsignada()))
+                        .setActivo(driver.getActivo() != null ? driver.getActivo() : false)
+                        .setCreatedAt(driver.getCreatedAt() != null ? driver.getCreatedAt().toString() : "")
+                        .setUpdatedAt(driver.getUpdatedAt() != null ? driver.getUpdatedAt().toString() : "")
+                        .build();
+
+                responseBuilder.addDrivers(grpcDriver);
+            }
+
+            responseObserver.onNext(responseBuilder.build());
+            responseObserver.onCompleted();
+            logger.info("gRPC: {} choferes disponibles obtenidos exitosamente", domainDrivers.size());
+        } catch (Exception e) {
+            logger.error("Error obteniendo choferes disponibles: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Obtiene choferes disponibles por tipo de maquinaria
+     */
+    @Override
+    public void getAvailableDriversByMachineryType(GetAvailableDriversByMachineryTypeRequest request,
+            StreamObserver<GetAvailableDriversByMachineryTypeResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Obteniendo choferes disponibles por tipo de maquinaria: {}",
+                    request.getTipoMaquinaria());
+
+            // Llamar al servicio de dominio
+            List<DriverResponse> domainDrivers = driverService.getAvailableDriversByMachineryType(
+                    mapTipoMaquinariaFromGrpc(request.getTipoMaquinaria()));
+
+            // Construir respuesta gRPC
+            GetAvailableDriversByMachineryTypeResponse.Builder responseBuilder = GetAvailableDriversByMachineryTypeResponse
+                    .newBuilder();
+
+            for (DriverResponse driver : domainDrivers) {
+                com.skt.combustible.drivers.grpc.DriverResponse grpcDriver = com.skt.combustible.drivers.grpc.DriverResponse
+                        .newBuilder()
+                        .setId(driver.getId())
+                        .setNombre(driver.getNombre())
+                        .setApellido(driver.getApellido())
+                        .setDni(driver.getDni())
+                        .setLicencia(driver.getLicencia())
+                        .setEmail(driver.getEmail() != null ? driver.getEmail() : "")
+                        .setTelefono(driver.getTelefono() != null ? driver.getTelefono() : "")
+                        .setFechaContratacion(
+                                driver.getFechaContratacion() != null ? driver.getFechaContratacion().toString() : "")
+                        .setEstado(mapEstadoToGrpc(driver.getEstado()))
+                        .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(driver.getTipoMaquinariaAsignada()))
+                        .setActivo(driver.getActivo() != null ? driver.getActivo() : false)
+                        .setCreatedAt(driver.getCreatedAt() != null ? driver.getCreatedAt().toString() : "")
+                        .setUpdatedAt(driver.getUpdatedAt() != null ? driver.getUpdatedAt().toString() : "")
+                        .build();
+
+                responseBuilder.addDrivers(grpcDriver);
+            }
+
+            responseObserver.onNext(responseBuilder.build());
+            responseObserver.onCompleted();
+            logger.info("gRPC: {} choferes disponibles para {} obtenidos exitosamente",
+                    domainDrivers.size(), request.getTipoMaquinaria());
+        } catch (Exception e) {
+            logger.error("Error obteniendo choferes disponibles por tipo de maquinaria: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Busca choferes por nombre o apellido
+     */
+    @Override
+    public void searchDriversByName(SearchDriversByNameRequest request,
+            StreamObserver<SearchDriversByNameResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Buscando choferes por nombre: {}", request.getName());
+
+            // Llamar al servicio de dominio
+            List<DriverResponse> domainDrivers = driverService.searchDriversByName(request.getName());
+
+            // Construir respuesta gRPC
+            SearchDriversByNameResponse.Builder responseBuilder = SearchDriversByNameResponse.newBuilder();
+
+            for (DriverResponse driver : domainDrivers) {
+                com.skt.combustible.drivers.grpc.DriverResponse grpcDriver = com.skt.combustible.drivers.grpc.DriverResponse
+                        .newBuilder()
+                        .setId(driver.getId())
+                        .setNombre(driver.getNombre())
+                        .setApellido(driver.getApellido())
+                        .setDni(driver.getDni())
+                        .setLicencia(driver.getLicencia())
+                        .setEmail(driver.getEmail() != null ? driver.getEmail() : "")
+                        .setTelefono(driver.getTelefono() != null ? driver.getTelefono() : "")
+                        .setFechaContratacion(
+                                driver.getFechaContratacion() != null ? driver.getFechaContratacion().toString() : "")
+                        .setEstado(mapEstadoToGrpc(driver.getEstado()))
+                        .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(driver.getTipoMaquinariaAsignada()))
+                        .setActivo(driver.getActivo() != null ? driver.getActivo() : false)
+                        .setCreatedAt(driver.getCreatedAt() != null ? driver.getCreatedAt().toString() : "")
+                        .setUpdatedAt(driver.getUpdatedAt() != null ? driver.getUpdatedAt().toString() : "")
+                        .build();
+
+                responseBuilder.addDrivers(grpcDriver);
+            }
+
+            responseObserver.onNext(responseBuilder.build());
+            responseObserver.onCompleted();
+            logger.info("gRPC: {} choferes encontrados para búsqueda '{}'", domainDrivers.size(), request.getName());
+        } catch (Exception e) {
+            logger.error("Error buscando choferes por nombre: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Cambia el estado de un chofer
+     */
+    @Override
+    public void changeDriverStatus(ChangeDriverStatusRequest request,
+            StreamObserver<com.skt.combustible.drivers.grpc.DriverResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Cambiando estado del chofer {} a {}", request.getId(), request.getNuevoEstado());
+
+            // Llamar al servicio de dominio
+            DriverResponse domainResponse = driverService.changeDriverStatus(request.getId(),
+                    mapEstadoFromGrpc(request.getNuevoEstado()));
+
+            // Convertir a respuesta gRPC
+            com.skt.combustible.drivers.grpc.DriverResponse grpcResponse = com.skt.combustible.drivers.grpc.DriverResponse
+                    .newBuilder()
+                    .setId(domainResponse.getId())
+                    .setNombre(domainResponse.getNombre())
+                    .setApellido(domainResponse.getApellido())
+                    .setDni(domainResponse.getDni())
+                    .setLicencia(domainResponse.getLicencia())
+                    .setEmail(domainResponse.getEmail() != null ? domainResponse.getEmail() : "")
+                    .setTelefono(domainResponse.getTelefono() != null ? domainResponse.getTelefono() : "")
+                    .setFechaContratacion(domainResponse.getFechaContratacion() != null
+                            ? domainResponse.getFechaContratacion().toString()
+                            : "")
+                    .setEstado(mapEstadoToGrpc(domainResponse.getEstado()))
+                    .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(domainResponse.getTipoMaquinariaAsignada()))
+                    .setActivo(domainResponse.getActivo() != null ? domainResponse.getActivo() : false)
+                    .setCreatedAt(domainResponse.getCreatedAt() != null ? domainResponse.getCreatedAt().toString() : "")
+                    .setUpdatedAt(domainResponse.getUpdatedAt() != null ? domainResponse.getUpdatedAt().toString() : "")
+                    .build();
+
+            responseObserver.onNext(grpcResponse);
+            responseObserver.onCompleted();
+            logger.info("gRPC: Estado del chofer {} cambiado exitosamente a {}", request.getId(),
+                    request.getNuevoEstado());
+        } catch (Exception e) {
+            logger.error("Error cambiando estado del chofer: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Asigna tipo de maquinaria a un chofer
+     */
+    @Override
+    public void assignMachineryType(AssignMachineryTypeRequest request,
+            StreamObserver<com.skt.combustible.drivers.grpc.DriverResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Asignando tipo de maquinaria {} al chofer {}", request.getTipoMaquinaria(),
+                    request.getId());
+
+            // Llamar al servicio de dominio
+            DriverResponse domainResponse = driverService.assignMachineryType(request.getId(),
+                    mapTipoMaquinariaFromGrpc(request.getTipoMaquinaria()));
+
+            // Convertir a respuesta gRPC
+            com.skt.combustible.drivers.grpc.DriverResponse grpcResponse = com.skt.combustible.drivers.grpc.DriverResponse
+                    .newBuilder()
+                    .setId(domainResponse.getId())
+                    .setNombre(domainResponse.getNombre())
+                    .setApellido(domainResponse.getApellido())
+                    .setDni(domainResponse.getDni())
+                    .setLicencia(domainResponse.getLicencia())
+                    .setEmail(domainResponse.getEmail() != null ? domainResponse.getEmail() : "")
+                    .setTelefono(domainResponse.getTelefono() != null ? domainResponse.getTelefono() : "")
+                    .setFechaContratacion(domainResponse.getFechaContratacion() != null
+                            ? domainResponse.getFechaContratacion().toString()
+                            : "")
+                    .setEstado(mapEstadoToGrpc(domainResponse.getEstado()))
+                    .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(domainResponse.getTipoMaquinariaAsignada()))
+                    .setActivo(domainResponse.getActivo() != null ? domainResponse.getActivo() : false)
+                    .setCreatedAt(domainResponse.getCreatedAt() != null ? domainResponse.getCreatedAt().toString() : "")
+                    .setUpdatedAt(domainResponse.getUpdatedAt() != null ? domainResponse.getUpdatedAt().toString() : "")
+                    .build();
+
+            responseObserver.onNext(grpcResponse);
+            responseObserver.onCompleted();
+            logger.info("gRPC: Tipo de maquinaria asignado exitosamente al chofer {}", request.getId());
+        } catch (Exception e) {
+            logger.error("Error asignando tipo de maquinaria: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Cuenta choferes disponibles
+     */
+    @Override
+    public void countAvailableDrivers(CountAvailableDriversRequest request,
+            StreamObserver<CountAvailableDriversResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Contando choferes disponibles");
+
+            // Llamar al servicio de dominio
+            Long count = driverService.countAvailableDrivers();
+
+            // Construir respuesta gRPC
+            CountAvailableDriversResponse response = CountAvailableDriversResponse.newBuilder()
+                    .setCount(count)
+                    .build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+            logger.info("gRPC: {} choferes disponibles contados exitosamente", count);
+        } catch (Exception e) {
+            logger.error("Error contando choferes disponibles: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Cuenta choferes disponibles por tipo de maquinaria
+     */
+    @Override
+    public void countAvailableDriversByMachineryType(CountAvailableDriversByMachineryTypeRequest request,
+            StreamObserver<CountAvailableDriversByMachineryTypeResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Contando choferes disponibles para tipo de maquinaria: {}", request.getTipoMaquinaria());
+
+            // Llamar al servicio de dominio
+            Long count = driverService.countAvailableDriversByMachineryType(
+                    mapTipoMaquinariaFromGrpc(request.getTipoMaquinaria()));
+
+            // Construir respuesta gRPC
+            CountAvailableDriversByMachineryTypeResponse response = CountAvailableDriversByMachineryTypeResponse
+                    .newBuilder()
+                    .setCount(count)
+                    .build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+            logger.info("gRPC: {} choferes disponibles para {} contados exitosamente", count,
+                    request.getTipoMaquinaria());
+        } catch (Exception e) {
+            logger.error("Error contando choferes disponibles por tipo de maquinaria: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Verifica si un chofer está disponible
+     */
+    @Override
+    public void isDriverAvailable(IsDriverAvailableRequest request,
+            StreamObserver<IsDriverAvailableResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Verificando disponibilidad del chofer {}", request.getId());
+
+            // Llamar al servicio de dominio
+            Boolean available = driverService.isDriverAvailable(request.getId());
+
+            // Construir respuesta gRPC
+            IsDriverAvailableResponse response = IsDriverAvailableResponse.newBuilder()
+                    .setAvailable(available)
+                    .build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+            logger.info("gRPC: Chofer {} disponibilidad verificada: {}", request.getId(), available);
+        } catch (Exception e) {
+            logger.error("Error verificando disponibilidad del chofer: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Obtiene choferes activos
+     */
+    @Override
+    public void getActiveDrivers(GetActiveDriversRequest request,
+            StreamObserver<GetActiveDriversResponse> responseObserver) {
+        try {
+            logger.info("gRPC: Obteniendo choferes activos");
+
+            // Llamar al servicio de dominio
+            List<DriverResponse> domainDrivers = driverService.getActiveDrivers();
+
+            // Construir respuesta gRPC
+            GetActiveDriversResponse.Builder responseBuilder = GetActiveDriversResponse.newBuilder();
+
+            for (DriverResponse driver : domainDrivers) {
+                com.skt.combustible.drivers.grpc.DriverResponse grpcDriver = com.skt.combustible.drivers.grpc.DriverResponse
+                        .newBuilder()
+                        .setId(driver.getId())
+                        .setNombre(driver.getNombre())
+                        .setApellido(driver.getApellido())
+                        .setDni(driver.getDni())
+                        .setLicencia(driver.getLicencia())
+                        .setEmail(driver.getEmail() != null ? driver.getEmail() : "")
+                        .setTelefono(driver.getTelefono() != null ? driver.getTelefono() : "")
+                        .setFechaContratacion(
+                                driver.getFechaContratacion() != null ? driver.getFechaContratacion().toString() : "")
+                        .setEstado(mapEstadoToGrpc(driver.getEstado()))
+                        .setTipoMaquinariaAsignada(mapTipoMaquinariaToGrpc(driver.getTipoMaquinariaAsignada()))
+                        .setActivo(driver.getActivo() != null ? driver.getActivo() : false)
+                        .setCreatedAt(driver.getCreatedAt() != null ? driver.getCreatedAt().toString() : "")
+                        .setUpdatedAt(driver.getUpdatedAt() != null ? driver.getUpdatedAt().toString() : "")
+                        .build();
+
+                responseBuilder.addDrivers(grpcDriver);
+            }
+
+            responseObserver.onNext(responseBuilder.build());
+            responseObserver.onCompleted();
+            logger.info("gRPC: {} choferes activos obtenidos exitosamente", domainDrivers.size());
+        } catch (Exception e) {
+            logger.error("Error obteniendo choferes activos: {}", e.getMessage(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error interno: " + e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
     // Métodos helper para mapeo de enums desde gRPC
     private com.skt.combustible.shared.domain.enums.EstadoOperativo mapEstadoFromGrpc(
             com.skt.combustible.drivers.grpc.EstadoOperativo estado) {
