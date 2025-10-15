@@ -50,6 +50,33 @@ public class DriversGatewayController {
     }
 
     /**
+     * Obtiene todos los choferes
+     * GET /api/v1/drivers
+     */
+    @GetMapping
+    public ResponseEntity<?> getAllDrivers(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Gateway gRPC: Obteniendo todos los choferes");
+
+        try {
+            JwtClientInterceptor.setJwtToken(authHeader);
+            List<com.skt.combustible.drivers.grpc.DriverResponse> grpcDrivers = driversGrpcClient.getAllDrivers();
+
+            // Convertir cada DriverResponse de gRPC a DriverRestResponse
+            List<DriverRestResponse> restDrivers = grpcDrivers.stream()
+                    .map(driverMapper::toRestResponse)
+                    .toList();
+
+            return ResponseEntity.ok(restDrivers);
+        } catch (Exception e) {
+            logger.error("Error obteniendo choferes: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", "Error obteniendo choferes: " + e.getMessage()));
+        } finally {
+            JwtClientInterceptor.clearJwtToken();
+        }
+    }
+
+    /**
      * Crea un nuevo chofer
      * POST /api/v1/drivers
      */
