@@ -99,6 +99,12 @@ public interface RouteRepository extends MongoRepository<Route, String> {
     long countRutasActivasByChoferId(String choferId);
     
     /**
+     * Verifica si un vehículo tiene rutas activas
+     */
+    @Query(value = "{ 'vehiculo_id': ?0, 'activa': true, 'estado': { $nin: ['COMPLETADA', 'CANCELADA'] } }", count = true)
+    long countRutasActivasByVehiculoId(String vehiculoId);
+    
+    /**
      * Cuenta rutas activas
      */
     @Query(value = "{ 'activa': true }", count = true)

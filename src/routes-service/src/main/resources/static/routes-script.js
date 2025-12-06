@@ -169,6 +169,7 @@ async function loadVehicles() {
     }
 }
 
+// Cargar solo conductores disponibles (sin rutas activas) - para crear nuevas rutas
 async function loadDrivers() {
     try {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
@@ -203,6 +204,43 @@ async function loadDrivers() {
         }
     } catch (error) {
         console.error('Error loading drivers:', error);
+    }
+}
+
+// Cargar TODOS los conductores (incluyendo los que tienen rutas activas) - para editar rutas
+async function loadAllDrivers() {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        // Cargar todos los conductores del drivers-service
+        const response = await fetch(`${DRIVERS_API_URL}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            // Manejar diferentes formatos de respuesta
+            let allDrivers = [];
+            if (Array.isArray(data)) {
+                allDrivers = data;
+            } else if (data && data.drivers && Array.isArray(data.drivers)) {
+                allDrivers = data.drivers;
+            } else if (data && data.content && Array.isArray(data.content)) {
+                allDrivers = data.content;
+            }
+            
+            // Actualizar la lista global de drivers y poblar el select
+            drivers = allDrivers;
+            populateDriverSelect();
+            return allDrivers;
+        } else {
+            console.error('Error loading all drivers:', response.status);
+            return [];
+        }
+    } catch (error) {
+        console.error('Error loading all drivers:', error);
+        return [];
     }
 }
 
@@ -683,11 +721,17 @@ async function handleRouteSubmit(e) {
         origen: document.getElementById('routeOrigen').value,
         destino: document.getElementById('routeDestino').value,
         distanciaKm: parseFloat(document.getElementById('routeDistancia').value),
+        duracionEstimadaHoras: parseFloat(document.getElementById('routeDuracion').value) || null,
         horaInicio: document.getElementById('routeHoraInicio').value || null,
         vehiculoId: document.getElementById('routeVehiculo').value || null,
         choferId: document.getElementById('routeChofer').value || null,
         tipoMaquinaria: document.getElementById('routeTipoMaquinaria').value || null,
-        observaciones: document.getElementById('routeObservaciones').value || null
+        observaciones: document.getElementById('routeObservaciones').value || null,
+        // Coordenadas del mapa (si están disponibles)
+        origenLat: document.getElementById('origenLat')?.value ? parseFloat(document.getElementById('origenLat').value) : null,
+        origenLng: document.getElementById('origenLng')?.value ? parseFloat(document.getElementById('origenLng').value) : null,
+        destinoLat: document.getElementById('destinoLat')?.value ? parseFloat(document.getElementById('destinoLat').value) : null,
+        destinoLng: document.getElementById('destinoLng')?.value ? parseFloat(document.getElementById('destinoLng').value) : null
     };
     
     try {
@@ -735,7 +779,7 @@ async function handleRouteSubmit(e) {
     }
 }
 
-function editRoute(id) {
+async function editRoute(id) {
     const route = routes.find(r => r.id === id);
     if (!route) return;
     
@@ -745,7 +789,23 @@ function editRoute(id) {
     document.getElementById('routeOrigen').value = route.origen || '';
     document.getElementById('routeDestino').value = route.destino || '';
     document.getElementById('routeDistancia').value = route.distanciaKm || '';
+    document.getElementById('routeDuracion').value = route.duracionEstimadaHoras || '';
+    document.getElementById('routeConsumoEstimado').value = route.consumoEstimadoLitros || '';
     document.getElementById('routeHoraInicio').value = route.horaInicio || '';
+    
+    // Cargar coordenadas si están disponibles
+    if (route.origenLat) {
+        document.getElementById('origenLat').value = route.origenLat;
+    }
+    if (route.origenLng) {
+        document.getElementById('origenLng').value = route.origenLng;
+    }
+    if (route.destinoLat) {
+        document.getElementById('destinoLat').value = route.destinoLat;
+    }
+    if (route.destinoLng) {
+        document.getElementById('destinoLng').value = route.destinoLng;
+    }
     
     // Ocultar y deshabilitar el campo de vehículo (se carga automáticamente)
     const vehiculoField = document.getElementById('routeVehiculo');
@@ -755,6 +815,10 @@ function editRoute(id) {
         vehiculoField.parentElement.style.display = 'none';
     }
     
+    // Cargar TODOS los conductores (incluyendo el que tiene esta ruta activa) para que aparezca en el dropdown
+    await loadAllDrivers();
+    
+    // Establecer el conductor después de cargar todos los conductores
     document.getElementById('routeChofer').value = route.choferId || '';
     document.getElementById('routeTipoMaquinaria').value = route.tipoMaquinaria || '';
     document.getElementById('routeTipoMaquinaria').disabled = true; // Bloquear tipo de maquinaria al editar
@@ -762,6 +826,11 @@ function editRoute(id) {
     
     // Bloquear el chofer al editar (no se puede cambiar)
     document.getElementById('routeChofer').disabled = true;
+    
+    // Cargar información del vehículo si está asignado
+    if (route.vehiculoId) {
+        await loadAndDisplayVehicleInfo(route.vehiculoId, route.tipoMaquinaria);
+    }
     
     document.getElementById('routeModal').classList.add('active');
 }

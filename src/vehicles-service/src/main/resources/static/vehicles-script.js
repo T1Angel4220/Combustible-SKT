@@ -99,7 +99,13 @@ async function loadVehicles() {
             updateMetrics();
             // Cargar asignaciones después de cargar vehículos
             await loadVehicleAssignments();
+            // Asegurar que los conductores estén cargados antes de renderizar
+            if (drivers.length === 0) {
+                await loadDrivers();
+            }
             renderVehicles();
+            // Cargar nombres de conductores de forma asíncrona si faltan
+            await loadMissingDriverNames();
         } else {
             console.error('Error loading vehicles');
         }
@@ -108,11 +114,51 @@ async function loadVehicles() {
     }
 }
 
-// Cargar conductores disponibles
+// Cargar nombres de conductores que faltan en la lista
+async function loadMissingDriverNames() {
+    const missingDrivers = [];
+    for (const vehicleId in vehicleAssignments) {
+        const asignacion = vehicleAssignments[vehicleId];
+        if (asignacion && asignacion.choferId) {
+            const driver = drivers.find(d => d.id === asignacion.choferId);
+            if (!driver) {
+                missingDrivers.push(asignacion.choferId);
+            }
+        }
+    }
+    
+    // Cargar conductores faltantes
+    for (const driverId of missingDrivers) {
+        try {
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+            const response = await fetch(`${DRIVERS_API_URL}/${driverId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (response.ok) {
+                const driver = await response.json();
+                if (driver && !drivers.find(d => d.id === driver.id)) {
+                    drivers.push(driver);
+                }
+            }
+        } catch (error) {
+            console.error(`Error cargando conductor ${driverId}:`, error);
+        }
+    }
+    
+    // Re-renderizar si se cargaron conductores
+    if (missingDrivers.length > 0) {
+        renderVehicles();
+    }
+}
+
+// Cargar TODOS los conductores (no solo los disponibles, para mostrar nombres de asignados)
 async function loadDrivers() {
     try {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-        const response = await fetch(`${DRIVERS_API_URL}/disponibles`, {
+        // Cargar todos los conductores, no solo los disponibles
+        const response = await fetch(`${DRIVERS_API_URL}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -120,9 +166,29 @@ async function loadDrivers() {
         
         if (response.ok) {
             const data = await response.json();
-            drivers = Array.isArray(data) ? data : [];
+            // Si la respuesta es un objeto con una lista, extraerla
+            if (data && Array.isArray(data)) {
+                drivers = data;
+            } else if (data && data.drivers && Array.isArray(data.drivers)) {
+                drivers = data.drivers;
+            } else if (data && data.content && Array.isArray(data.content)) {
+                drivers = data.content;
+            } else {
+                drivers = [];
+            }
+            console.log('Conductores cargados:', drivers.length);
         } else {
-            console.error('Error loading drivers');
+            console.error('Error loading drivers:', response.status);
+            // Si falla, intentar con /disponibles como fallback
+            const fallbackResponse = await fetch(`${DRIVERS_API_URL}/disponibles`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (fallbackResponse.ok) {
+                const fallbackData = await fallbackResponse.json();
+                drivers = Array.isArray(fallbackData) ? fallbackData : [];
+            }
         }
     } catch (error) {
         console.error('Error loading drivers:', error);
@@ -161,15 +227,56 @@ async function loadVehicleAssignments() {
 }
 
 // Obtener conductor asignado para un vehículo
-function getAssignedDriver(vehicleId) {
+async function getAssignedDriver(vehicleId) {
     const asignacion = vehicleAssignments[vehicleId];
     if (asignacion && asignacion.choferId) {
         // Buscar el conductor en la lista de drivers
+        let driver = drivers.find(d => d.id === asignacion.choferId);
+        
+        // Si no está en la lista, intentar cargarlo
+        if (!driver) {
+            try {
+                const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+                const response = await fetch(`${DRIVERS_API_URL}/${asignacion.choferId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    driver = await response.json();
+                    // Agregar a la lista para futuras referencias
+                    if (driver && !drivers.find(d => d.id === driver.id)) {
+                        drivers.push(driver);
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando conductor:', error);
+            }
+        }
+        
+        if (driver) {
+            return `${driver.nombre} ${driver.apellido}`;
+        }
+        // Si aún no se encuentra, mostrar el ID del conductor en lugar de "Conductor asignado"
+        return `Conductor ID: ${asignacion.choferId.substring(0, 8)}...`;
+    }
+    return 'Sin asignar';
+}
+
+// Versión síncrona para usar en renderVehicles (mostrará "Cargando..." mientras se obtiene)
+function getAssignedDriverSync(vehicleId) {
+    const asignacion = vehicleAssignments[vehicleId];
+    if (asignacion && asignacion.choferId) {
         const driver = drivers.find(d => d.id === asignacion.choferId);
         if (driver) {
             return `${driver.nombre} ${driver.apellido}`;
         }
-        return 'Conductor asignado';
+        // Si no está en la lista, intentar cargarlo de forma asíncrona
+        getAssignedDriver(vehicleId).then(() => {
+            // Recargar la tabla después de obtener el conductor
+            renderVehicles();
+        });
+        return 'Cargando...';
     }
     return 'Sin asignar';
 }
@@ -178,7 +285,9 @@ function updateMetrics() {
     const total = vehicles.length;
     const light = vehicles.filter(v => isLightMachinery(v.tipoMaquinaria)).length;
     const heavy = vehicles.filter(v => isHeavyMachinery(v.tipoMaquinaria)).length;
-    const active = vehicles.filter(v => v.activo && v.estadoOperativo === 'DISPONIBLE').length;
+    // Contar vehículos activos (activo=true y estado DISPONIBLE o EN_USO)
+    const active = vehicles.filter(v => v.activo && 
+        (v.estadoOperativo === 'DISPONIBLE' || v.estadoOperativo === 'EN_USO' || v.estadoOperativo === 'ASIGNADO')).length;
     
     document.getElementById('totalVehicles').textContent = total;
     document.getElementById('lightMachinery').textContent = light;
@@ -259,7 +368,7 @@ function renderVehicles(vehiclesToRender = vehicles) {
                     <span class="status-badge ${statusClass}">${statusText}</span>
                 </td>
                 <td>
-                    <span class="driver-assigned">${getAssignedDriver(vehicle.id)}</span>
+                    <span class="driver-assigned" id="driver-${vehicle.id}">${getAssignedDriverSync(vehicle.id)}</span>
                 </td>
                 <td>${formatDate(vehicle.fechaActualizacion)}</td>
                 <td>
@@ -267,7 +376,7 @@ function renderVehicles(vehiclesToRender = vehicles) {
                         <button class="action-btn edit" onclick="editVehicle('${vehicle.id}')" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        ${getAssignedDriver(vehicle.id) !== 'Sin asignar' 
+                        ${getAssignedDriverSync(vehicle.id) !== 'Sin asignar' && getAssignedDriverSync(vehicle.id) !== 'Cargando...'
                             ? `<button class="action-btn unassign" onclick="unassignVehicle('${vehicle.id}')" title="Desasignar conductor">
                                 <i class="fas fa-user-minus"></i>
                             </button>`
@@ -286,15 +395,17 @@ function renderVehicles(vehiclesToRender = vehicles) {
 }
 
 function getStatusClass(estado) {
-    if (estado === 'DISPONIBLE' || estado === 'EN_USO') return 'activo';
+    if (estado === 'DISPONIBLE') return 'activo';
+    if (estado === 'EN_USO' || estado === 'ASIGNADO') return 'activo'; // En uso también es activo visualmente
     if (estado === 'MANTENIMIENTO') return 'mantenimiento';
     return 'fuera-servicio';
 }
 
 function getStatusText(estado) {
     const statusMap = {
-        'DISPONIBLE': 'Activo',
-        'EN_USO': 'Activo',
+        'DISPONIBLE': 'Disponible',
+        'EN_USO': 'En Uso',
+        'ASIGNADO': 'Asignado',
         'MANTENIMIENTO': 'Mantenimiento',
         'FUERA_SERVICIO': 'Fuera de Servicio'
     };
@@ -565,6 +676,8 @@ async function handleAssignDriverSubmit(e) {
         
         if (response.ok) {
             closeAssignDriverModal();
+            // Recargar conductores primero para tener los nombres actualizados
+            await loadDrivers();
             await loadVehicleAssignments();
             await loadVehicles();
             showNotification('success', 'Éxito', 'Conductor asignado correctamente');
@@ -611,6 +724,8 @@ async function performUnassign(vehicleId) {
         });
         
         if (response.ok || response.status === 204) {
+            // Recargar conductores primero para tener los nombres actualizados
+            await loadDrivers();
             await loadVehicleAssignments();
             await loadVehicles();
             showNotification('success', 'Éxito', 'Conductor desasignado correctamente');

@@ -130,6 +130,33 @@ public class VehiclesGrpcClient {
     }
 
     /**
+     * Cambia el estado de un vehículo usando REST (más simple que gRPC para esta operación)
+     */
+    public void cambiarEstadoVehiculo(String vehicleId, String estado) {
+        try {
+            String url = String.format("http://localhost:8082/api/v1/vehicles/%s/estado?estado=%s", vehicleId, estado);
+            
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set("Content-Type", "application/json");
+            
+            // Obtener token JWT del ThreadLocal si está disponible
+            String token = com.skt.combustible.routes.infrastructure.security.JwtTokenHolder.getToken();
+            if (token != null && !token.isEmpty()) {
+                headers.set("Authorization", "Bearer " + token);
+            }
+            
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(headers);
+            restTemplate.exchange(url, org.springframework.http.HttpMethod.PATCH, entity, Void.class);
+            
+            logger.info("Estado del vehículo {} actualizado a: {}", vehicleId, estado);
+        } catch (Exception e) {
+            logger.error("Error cambiando estado del vehículo {}: {}", vehicleId, e.getMessage());
+            // No lanzar excepción para no bloquear el flujo principal
+        }
+    }
+
+    /**
      * Cierra la conexión gRPC
      */
     @PreDestroy

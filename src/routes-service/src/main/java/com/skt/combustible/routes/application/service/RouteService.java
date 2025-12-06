@@ -254,7 +254,7 @@ public class RouteService {
         route.setOrigen(request.getOrigen());
         route.setDestino(request.getDestino());
         route.setDistanciaKm(request.getDistanciaKm());
-        route.setDuracionEstimadaHoras(duracionEstimada);
+        route.setDuracionEstimadaHoras(duracionEstimada != null ? duracionEstimada : request.getDuracionEstimadaHoras());
         route.setConsumoEstimadoLitros(consumoEstimado);
         route.setHoraInicio(request.getHoraInicio());
         route.setVehiculoId(request.getVehiculoId());
@@ -262,6 +262,20 @@ public class RouteService {
         route.setTipoMaquinaria(tipoMaquinaria);
         route.setEstado(Route.EstadoRuta.PENDIENTE);
         route.setObservaciones(request.getObservaciones());
+        
+        // Guardar coordenadas si están disponibles
+        if (request.getOrigenLat() != null) {
+            route.setOrigenLat(request.getOrigenLat());
+        }
+        if (request.getOrigenLng() != null) {
+            route.setOrigenLng(request.getOrigenLng());
+        }
+        if (request.getDestinoLat() != null) {
+            route.setDestinoLat(request.getDestinoLat());
+        }
+        if (request.getDestinoLng() != null) {
+            route.setDestinoLng(request.getDestinoLng());
+        }
 
         Route savedRoute = routeRepository.save(route);
         logger.info("Ruta creada exitosamente con código: {}", savedRoute.getCodigo());
@@ -529,6 +543,20 @@ public class RouteService {
         if (request.getObservaciones() != null) {
             route.setObservaciones(request.getObservaciones());
         }
+        
+        // Actualizar coordenadas si están disponibles
+        if (request.getOrigenLat() != null) {
+            route.setOrigenLat(request.getOrigenLat());
+        }
+        if (request.getOrigenLng() != null) {
+            route.setOrigenLng(request.getOrigenLng());
+        }
+        if (request.getDestinoLat() != null) {
+            route.setDestinoLat(request.getDestinoLat());
+        }
+        if (request.getDestinoLng() != null) {
+            route.setDestinoLng(request.getDestinoLng());
+        }
 
         Route updatedRoute = routeRepository.save(route);
         logger.info("Ruta actualizada exitosamente: {}", updatedRoute.getCodigo());
@@ -547,6 +575,27 @@ public class RouteService {
 
         route.iniciarRuta();
         Route updatedRoute = routeRepository.save(route);
+
+        // Actualizar estado del vehículo a EN_USO
+        if (updatedRoute.getVehiculoId() != null) {
+            try {
+                vehiclesGrpcClient.cambiarEstadoVehiculo(updatedRoute.getVehiculoId(), "EN_USO");
+                logger.info("Estado del vehículo {} actualizado a EN_USO", updatedRoute.getVehiculoId());
+            } catch (Exception e) {
+                logger.warn("No se pudo actualizar el estado del vehículo {}: {}", updatedRoute.getVehiculoId(), e.getMessage());
+            }
+        }
+
+        // Actualizar estado del conductor a EN_RUTA
+        if (updatedRoute.getChoferId() != null) {
+            try {
+                driversGrpcClient.changeDriverStatus(updatedRoute.getChoferId(), 
+                    com.skt.combustible.drivers.grpc.EstadoOperativo.EN_RUTA);
+                logger.info("Estado del chofer {} actualizado a EN_RUTA", updatedRoute.getChoferId());
+            } catch (Exception e) {
+                logger.warn("No se pudo actualizar el estado del chofer {}: {}", updatedRoute.getChoferId(), e.getMessage());
+            }
+        }
 
         VehicleResponseProto vehicle = null;
         DriverResponse driver = null;
@@ -579,6 +628,41 @@ public class RouteService {
 
         route.completarRuta();
         Route updatedRoute = routeRepository.save(route);
+
+        // Actualizar estado del vehículo a DISPONIBLE (si no tiene otras rutas activas)
+        if (updatedRoute.getVehiculoId() != null) {
+            try {
+                // Verificar si el vehículo tiene otras rutas activas
+                long rutasActivas = routeRepository.countRutasActivasByVehiculoId(updatedRoute.getVehiculoId());
+                if (rutasActivas == 0) {
+                    vehiclesGrpcClient.cambiarEstadoVehiculo(updatedRoute.getVehiculoId(), "DISPONIBLE");
+                    logger.info("Estado del vehículo {} actualizado a DISPONIBLE", updatedRoute.getVehiculoId());
+                } else {
+                    logger.info("El vehículo {} tiene {} ruta(s) activa(s), manteniendo estado EN_USO", 
+                        updatedRoute.getVehiculoId(), rutasActivas);
+                }
+            } catch (Exception e) {
+                logger.warn("No se pudo actualizar el estado del vehículo {}: {}", updatedRoute.getVehiculoId(), e.getMessage());
+            }
+        }
+
+        // Actualizar estado del conductor a DISPONIBLE (si no tiene otras rutas activas)
+        if (updatedRoute.getChoferId() != null) {
+            try {
+                // Verificar si el chofer tiene otras rutas activas
+                long rutasActivas = routeRepository.countRutasActivasByChoferId(updatedRoute.getChoferId());
+                if (rutasActivas == 0) {
+                    driversGrpcClient.changeDriverStatus(updatedRoute.getChoferId(), 
+                        com.skt.combustible.drivers.grpc.EstadoOperativo.DISPONIBLE);
+                    logger.info("Estado del chofer {} actualizado a DISPONIBLE", updatedRoute.getChoferId());
+                } else {
+                    logger.info("El chofer {} tiene {} ruta(s) activa(s), manteniendo estado EN_RUTA", 
+                        updatedRoute.getChoferId(), rutasActivas);
+                }
+            } catch (Exception e) {
+                logger.warn("No se pudo actualizar el estado del chofer {}: {}", updatedRoute.getChoferId(), e.getMessage());
+            }
+        }
 
         VehicleResponseProto vehicle = null;
         DriverResponse driver = null;

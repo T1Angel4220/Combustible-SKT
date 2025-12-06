@@ -37,6 +37,12 @@ public class RouteUpdateRequest {
     
     private String observaciones;
     
+    // Coordenadas para mapas (opcionales)
+    private Double origenLat;
+    private Double origenLng;
+    private Double destinoLat;
+    private Double destinoLng;
+    
     // Getters y Setters
     public String getNombreRuta() {
         return nombreRuta;
@@ -124,6 +130,38 @@ public class RouteUpdateRequest {
     
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+    
+    public Double getOrigenLat() {
+        return origenLat;
+    }
+    
+    public void setOrigenLat(Double origenLat) {
+        this.origenLat = origenLat;
+    }
+    
+    public Double getOrigenLng() {
+        return origenLng;
+    }
+    
+    public void setOrigenLng(Double origenLng) {
+        this.origenLng = origenLng;
+    }
+    
+    public Double getDestinoLat() {
+        return destinoLat;
+    }
+    
+    public void setDestinoLat(Double destinoLat) {
+        this.destinoLat = destinoLat;
+    }
+    
+    public Double getDestinoLng() {
+        return destinoLng;
+    }
+    
+    public void setDestinoLng(Double destinoLng) {
+        this.destinoLng = destinoLng;
     }
 }
 

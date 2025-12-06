@@ -114,6 +114,26 @@ public class DriversGrpcClient {
     }
 
     /**
+     * Cambia el estado de un chofer
+     */
+    public DriverResponse changeDriverStatus(String driverId, EstadoOperativo nuevoEstado) {
+        initialize();
+        try {
+            ChangeDriverStatusRequest request = ChangeDriverStatusRequest.newBuilder()
+                    .setId(driverId)
+                    .setNuevoEstado(nuevoEstado)
+                    .build();
+
+            DriverResponse response = blockingStub.changeDriverStatus(request);
+            logger.info("Estado del chofer {} actualizado a: {}", driverId, nuevoEstado);
+            return response;
+        } catch (Exception e) {
+            logger.error("Error cambiando estado del chofer {}: {}", driverId, e.getMessage());
+            throw new RuntimeException("Error comunicándose con Drivers Service: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Cierra la conexión gRPC
      */
     @PreDestroy
