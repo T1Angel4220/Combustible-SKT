@@ -555,9 +555,9 @@ body {
   background: var(--dark-card);
   border: 1px solid var(--dark-border);
   border-radius: 12px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 90vh;
+  width: 95%;
+  max-width: 1000px;
+  max-height: 95vh;
   overflow-y: auto;
   animation: slideIn 0.3s ease;
 }
@@ -670,6 +670,49 @@ body {
 .vehicle-info-item span {
   color: var(--text-primary);
   font-weight: 500;
+}
+
+/* Map Selector Buttons */
+.btn-map-selector {
+  padding: 10px 16px;
+  background: var(--dark-card);
+  border: 1px solid var(--dark-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-map-selector:hover {
+  background: var(--primary-red);
+  border-color: var(--primary-red);
+  color: white;
+}
+
+.btn-map-selector i {
+  margin-right: 4px;
+}
+
+.btn-calculate {
+  padding: 10px 16px;
+  background: var(--info-blue);
+  border: 1px solid var(--info-blue);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-calculate:hover {
+  background: #4a9eff;
+  border-color: #4a9eff;
+}
+
+.btn-calculate i {
+  margin-right: 6px;
 }
 
 .observations-textarea {

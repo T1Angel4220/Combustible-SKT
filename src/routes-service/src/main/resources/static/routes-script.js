@@ -9,6 +9,12 @@ let drivers = [];
 let editingRouteId = null;
 let confirmationCallback = null;
 
+// Variables para Leaflet (mapa gratuito)
+let map = null;
+let mapMarker = null;
+let currentLocationField = null; // 'origen' o 'destino'
+let selectedVehicle = null; // Para calcular consumo estimado
+
 document.addEventListener('DOMContentLoaded', function() {
     checkAuth();
     loadRoutes();
@@ -93,6 +99,31 @@ function setupEventListeners() {
             }
         });
     }
+    
+    // Listeners para botones de mapa
+    const btnSelectOrigen = document.getElementById('btnSelectOrigen');
+    const btnSelectDestino = document.getElementById('btnSelectDestino');
+    const btnCalculateDistance = document.getElementById('btnCalculateDistance');
+    const btnConfirmLocation = document.getElementById('btnConfirmLocation');
+    const btnCancelMap = document.getElementById('btnCancelMap');
+    
+    if (btnSelectOrigen) {
+        btnSelectOrigen.addEventListener('click', () => showMapSelector('origen'));
+    }
+    if (btnSelectDestino) {
+        btnSelectDestino.addEventListener('click', () => showMapSelector('destino'));
+    }
+    if (btnCalculateDistance) {
+        btnCalculateDistance.addEventListener('click', calculateDistance);
+    }
+    if (btnConfirmLocation) {
+        btnConfirmLocation.addEventListener('click', confirmMapLocation);
+    }
+    if (btnCancelMap) {
+        btnCancelMap.addEventListener('click', cancelMapSelection);
+    }
+    
+    // Leaflet se inicializa cuando se abre el selector de mapa
 }
 
 async function loadRoutes() {

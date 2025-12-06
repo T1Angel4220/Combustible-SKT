@@ -35,6 +35,12 @@ public class RouteRestController {
     @Autowired
     private RouteService routeService;
 
+    @Autowired(required = false)
+    private com.skt.combustible.routes.infrastructure.client.GoogleMapsClient googleMapsClient;
+
+    @Autowired(required = false)
+    private com.skt.combustible.routes.infrastructure.client.OpenStreetMapClient openStreetMapClient;
+
     @Autowired
     private com.skt.combustible.routes.infrastructure.client.AssignmentsRestClient assignmentsRestClient;
 
@@ -250,6 +256,73 @@ public class RouteRestController {
         } catch (Exception e) {
             logger.error("Error obteniendo asignaciones del conductor: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Calcula la distancia y duración entre origen y destino
+     * Usa OpenStreetMap (gratuito) o Google Maps (si está configurado)
+     */
+    @GetMapping("/calculate-distance")
+    public ResponseEntity<Map<String, Object>> calculateDistance(
+            @RequestParam("origen") String origen,
+            @RequestParam("destino") String destino,
+            @RequestParam(value = "origenLat", required = false) Double origenLat,
+            @RequestParam(value = "origenLng", required = false) Double origenLng,
+            @RequestParam(value = "destinoLat", required = false) Double destinoLat,
+            @RequestParam(value = "destinoLng", required = false) Double destinoLng,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            logger.info("REST: Calculando distancia entre {} y {}", origen, destino);
+            
+            Map<String, Double> resultado = null;
+            
+            // Si tenemos coordenadas, usarlas directamente (más preciso y rápido)
+            if (origenLat != null && origenLng != null && destinoLat != null && destinoLng != null) {
+                logger.info("Usando coordenadas proporcionadas: origen=({}, {}), destino=({}, {})", 
+                    origenLat, origenLng, destinoLat, destinoLng);
+                
+                if (openStreetMapClient != null) {
+                    Map<String, Double> coordsOrigen = new java.util.HashMap<>();
+                    coordsOrigen.put("lat", origenLat);
+                    coordsOrigen.put("lng", origenLng);
+                    
+                    Map<String, Double> coordsDestino = new java.util.HashMap<>();
+                    coordsDestino.put("lat", destinoLat);
+                    coordsDestino.put("lng", destinoLng);
+                    
+                    resultado = openStreetMapClient.calcularDistanciaConCoordenadas(coordsOrigen, coordsDestino);
+                }
+            }
+            
+            // Si no hay coordenadas o falló, intentar geocodificar las direcciones
+            if (resultado == null) {
+                // Intentar primero con Google Maps si está disponible
+                if (googleMapsClient != null) {
+                    resultado = googleMapsClient.calcularDistancia(origen, destino);
+                }
+                
+                // Si Google Maps no está disponible o falló, usar OpenStreetMap (gratuito)
+                if (resultado == null && openStreetMapClient != null) {
+                    logger.info("Usando OpenStreetMap para calcular distancia (geocodificando direcciones)");
+                    resultado = openStreetMapClient.calcularDistancia(origen, destino);
+                }
+            }
+            
+            if (resultado == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(java.util.Map.of("error", "No se pudo calcular la distancia. Verifique las direcciones."));
+            }
+            
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("distanciaKm", resultado.get("distanciaKm"));
+            response.put("duracionHoras", resultado.get("duracionHoras"));
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error calculando distancia: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(java.util.Map.of("error", "Error al calcular distancia: " + e.getMessage()));
         }
     }
 

@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS common_schema.choferes (
     email VARCHAR(100),
     fecha_contratacion DATE,
     estado common_schema.estado_operativo_enum NOT NULL DEFAULT 'DISPONIBLE',
-    tipo_maquinaria_asignada common_schema.tipo_maquinaria_enum,
+    tipo_maquinaria_asignada common_schema.
+    ,
     activo BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

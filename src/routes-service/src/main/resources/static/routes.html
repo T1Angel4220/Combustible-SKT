@@ -6,6 +6,11 @@
   <title>Gestión de Rutas - SKT FUEL SYSTEM</title>
   <link rel="stylesheet" href="routes-styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Leaflet.js - Alternativa gratuita a Google Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Opcional: Google Maps si tienes API key -->
+  <!-- <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&language=es&region=EC" async defer></script> -->
 </head>
 <body>
   <div class="dashboard-container">
@@ -220,18 +225,58 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Origen</label>
-            <input type="text" id="routeOrigen" required placeholder="Ej: Base Central">
+            <label>Origen <span style="color: red;">*</span></label>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input type="text" id="routeOrigen" required placeholder="Ej: Quito, Ecuador" style="flex: 1;">
+              <button type="button" id="btnSelectOrigen" class="btn-map-selector" title="Seleccionar en mapa">
+                <i class="fas fa-map-marker-alt"></i> Mapa
+              </button>
+            </div>
+            <small style="color: #666; font-size: 0.85em;">Escriba una dirección o seleccione en el mapa</small>
           </div>
           <div class="form-group">
-            <label>Destino</label>
-            <input type="text" id="routeDestino" required placeholder="Ej: Zona Norte A">
+            <label>Destino <span style="color: red;">*</span></label>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input type="text" id="routeDestino" required placeholder="Ej: Guayaquil, Ecuador" style="flex: 1;">
+              <button type="button" id="btnSelectDestino" class="btn-map-selector" title="Seleccionar en mapa">
+                <i class="fas fa-map-marker-alt"></i> Mapa
+              </button>
+            </div>
+            <small style="color: #666; font-size: 0.85em;">Escriba una dirección o seleccione en el mapa</small>
+          </div>
+        </div>
+        <!-- Campos ocultos para coordenadas -->
+        <input type="hidden" id="origenLat">
+        <input type="hidden" id="origenLng">
+        <input type="hidden" id="destinoLat">
+        <input type="hidden" id="destinoLng">
+        <!-- Mapa para selección de ubicaciones -->
+        <div class="form-group" id="mapContainer" style="display: none;">
+          <label id="mapLabel">Seleccione la ubicación en el mapa</label>
+          <div id="map" style="height: 400px; width: 100%; border-radius: 8px; border: 1px solid var(--dark-border);"></div>
+          <div style="margin-top: 8px; display: flex; gap: 8px;">
+            <button type="button" id="btnConfirmLocation" class="btn-primary" style="flex: 1;">Confirmar Ubicación</button>
+            <button type="button" id="btnCancelMap" class="btn-secondary" style="flex: 1;">Cancelar</button>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Distancia (km)</label>
-            <input type="number" id="routeDistancia" step="0.01" required placeholder="85">
+            <input type="number" id="routeDistancia" step="0.01" required placeholder="Se calculará automáticamente" readonly>
+            <button type="button" id="btnCalculateDistance" class="btn-calculate" style="margin-top: 8px; width: 100%;">
+              <i class="fas fa-calculator"></i> Calcular Distancia
+            </button>
+          </div>
+          <div class="form-group">
+            <label>Duración Estimada (horas)</label>
+            <input type="number" id="routeDuracion" step="0.01" placeholder="Se calculará automáticamente" readonly>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Consumo Estimado de Combustible (litros)</label>
+            <input type="number" id="routeConsumoEstimado" step="0.01" placeholder="Se calculará automáticamente" readonly style="background-color: var(--dark-card);">
+            <small style="color: #666; font-size: 0.85em;">Basado en el vehículo asignado y la distancia</small>
           </div>
           <div class="form-group">
             <label>Hora de Inicio</label>
@@ -337,6 +382,7 @@
   </div>
 
   <script src="routes-script.js"></script>
+  <script src="routes-map-functions.js"></script>
 </body>
 </html>
 

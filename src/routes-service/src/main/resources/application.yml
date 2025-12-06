@@ -62,3 +62,18 @@ service:
 jwt:
   secret: ${JWT_SECRET:mySecretKey1234567890123456789012345}
   expiration: 86400000 # 24 horas en milisegundos
+
+# Google Maps API Configuration (opcional)
+google:
+  maps:
+    api:
+      key: ${GOOGLE_MAPS_API_KEY:}
+      enabled: ${GOOGLE_MAPS_ENABLED:false}
+
+# OpenStreetMap / OpenRouteService Configuration (gratuito, sin tarjeta)
+openstreetmap:
+  enabled: ${OPENSTREETMAP_ENABLED:true}
+
+openrouteservice:
+  api:
+    key: ${OPENROUTESERVICE_API_KEY:}  # Opcional: obtener gratis en https://openrouteservice.org/

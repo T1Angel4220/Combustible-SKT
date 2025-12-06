@@ -37,9 +37,21 @@ public class Route {
     @Field("origen")
     private String origen;
     
+    @Field("origen_lat")
+    private Double origenLat; // Latitud del origen (opcional)
+    
+    @Field("origen_lng")
+    private Double origenLng; // Longitud del origen (opcional)
+    
     @NotBlank(message = "El destino es obligatorio")
     @Field("destino")
     private String destino;
+    
+    @Field("destino_lat")
+    private Double destinoLat; // Latitud del destino (opcional)
+    
+    @Field("destino_lng")
+    private Double destinoLng; // Longitud del destino (opcional)
     
     @NotNull(message = "La distancia es obligatoria")
     @Positive(message = "La distancia debe ser positiva")
@@ -177,6 +189,38 @@ public class Route {
     
     public void setDestino(String destino) {
         this.destino = destino;
+    }
+    
+    public Double getOrigenLat() {
+        return origenLat;
+    }
+    
+    public void setOrigenLat(Double origenLat) {
+        this.origenLat = origenLat;
+    }
+    
+    public Double getOrigenLng() {
+        return origenLng;
+    }
+    
+    public void setOrigenLng(Double origenLng) {
+        this.origenLng = origenLng;
+    }
+    
+    public Double getDestinoLat() {
+        return destinoLat;
+    }
+    
+    public void setDestinoLat(Double destinoLat) {
+        this.destinoLat = destinoLat;
+    }
+    
+    public Double getDestinoLng() {
+        return destinoLng;
+    }
+    
+    public void setDestinoLng(Double destinoLng) {
+        this.destinoLng = destinoLng;
     }
     
     public Double getDistanciaKm() {
