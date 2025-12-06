@@ -34,21 +34,15 @@ public class VehicleRestController {
      */
     @PostMapping
     public ResponseEntity<VehicleResponse> crearVehiculo(@Valid @RequestBody VehicleCreateRequest request) {
-        try {
-            VehicleResponse response = vehicleService.crearVehiculo(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        VehicleResponse response = vehicleService.crearVehiculo(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
     /**
      * Obtiene un vehículo por ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<VehicleResponse> obtenerVehiculoPorId(@PathVariable String id) {
+    public ResponseEntity<VehicleResponse> obtenerVehiculoPorId(@PathVariable("id") String id) {
         Optional<VehicleResponse> response = vehicleService.obtenerVehiculoPorId(id);
         return response.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -58,7 +52,7 @@ public class VehicleRestController {
      * Obtiene un vehículo por placa
      */
     @GetMapping("/placa/{placa}")
-    public ResponseEntity<VehicleResponse> obtenerVehiculoPorPlaca(@PathVariable String placa) {
+    public ResponseEntity<VehicleResponse> obtenerVehiculoPorPlaca(@PathVariable("placa") String placa) {
         Optional<VehicleResponse> response = vehicleService.obtenerVehiculoPorPlaca(placa);
         return response.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -77,7 +71,7 @@ public class VehicleRestController {
      * Obtiene vehículos por tipo de maquinaria
      */
     @GetMapping("/tipo/{tipoMaquinaria}")
-    public ResponseEntity<List<VehicleResponse>> obtenerVehiculosPorTipo(@PathVariable TipoMaquinaria tipoMaquinaria) {
+    public ResponseEntity<List<VehicleResponse>> obtenerVehiculosPorTipo(@PathVariable("tipoMaquinaria") TipoMaquinaria tipoMaquinaria) {
         List<VehicleResponse> responses = vehicleService.obtenerVehiculosPorTipo(tipoMaquinaria);
         return ResponseEntity.ok(responses);
     }
@@ -86,7 +80,7 @@ public class VehicleRestController {
      * Obtiene vehículos por estado operativo
      */
     @GetMapping("/estado/{estadoOperativo}")
-    public ResponseEntity<List<VehicleResponse>> obtenerVehiculosPorEstado(@PathVariable EstadoOperativo estadoOperativo) {
+    public ResponseEntity<List<VehicleResponse>> obtenerVehiculosPorEstado(@PathVariable("estadoOperativo") EstadoOperativo estadoOperativo) {
         List<VehicleResponse> responses = vehicleService.obtenerVehiculosPorEstado(estadoOperativo);
         return ResponseEntity.ok(responses);
     }
@@ -104,7 +98,7 @@ public class VehicleRestController {
      * Obtiene vehículos disponibles por tipo
      */
     @GetMapping("/disponibles/tipo/{tipoMaquinaria}")
-    public ResponseEntity<List<VehicleResponse>> obtenerVehiculosDisponiblesPorTipo(@PathVariable TipoMaquinaria tipoMaquinaria) {
+    public ResponseEntity<List<VehicleResponse>> obtenerVehiculosDisponiblesPorTipo(@PathVariable("tipoMaquinaria") TipoMaquinaria tipoMaquinaria) {
         List<VehicleResponse> responses = vehicleService.obtenerVehiculosDisponiblesPorTipo(tipoMaquinaria);
         return ResponseEntity.ok(responses);
     }
@@ -113,63 +107,39 @@ public class VehicleRestController {
      * Actualiza un vehículo
      */
     @PutMapping("/{id}")
-    public ResponseEntity<VehicleResponse> actualizarVehiculo(@PathVariable String id, 
+    public ResponseEntity<VehicleResponse> actualizarVehiculo(@PathVariable("id") String id, 
                                                                @Valid @RequestBody VehicleUpdateRequest request) {
-        try {
-            VehicleResponse response = vehicleService.actualizarVehiculo(id, request);
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        VehicleResponse response = vehicleService.actualizarVehiculo(id, request);
+        return ResponseEntity.ok(response);
     }
     
     /**
      * Cambia el estado de un vehículo
      */
     @PatchMapping("/{id}/estado")
-    public ResponseEntity<VehicleResponse> cambiarEstadoVehiculo(@PathVariable String id, 
+    public ResponseEntity<VehicleResponse> cambiarEstadoVehiculo(@PathVariable("id") String id, 
                                                                @RequestParam EstadoOperativo estado) {
-        try {
-            VehicleResponse response = vehicleService.cambiarEstadoVehiculo(id, estado);
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        VehicleResponse response = vehicleService.cambiarEstadoVehiculo(id, estado);
+        return ResponseEntity.ok(response);
     }
     
     /**
      * Actualiza el kilometraje de un vehículo
      */
     @PatchMapping("/{id}/kilometraje")
-    public ResponseEntity<VehicleResponse> actualizarKilometraje(@PathVariable String id, 
+    public ResponseEntity<VehicleResponse> actualizarKilometraje(@PathVariable("id") String id, 
                                                                 @RequestParam Double kilometraje) {
-        try {
-            VehicleResponse response = vehicleService.actualizarKilometraje(id, kilometraje);
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        VehicleResponse response = vehicleService.actualizarKilometraje(id, kilometraje);
+        return ResponseEntity.ok(response);
     }
     
     /**
      * Desactiva un vehículo
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> desactivarVehiculo(@PathVariable String id) {
-        try {
-            vehicleService.desactivarVehiculo(id);
-            return ResponseEntity.noContent().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    public ResponseEntity<Void> desactivarVehiculo(@PathVariable("id") String id) {
+        vehicleService.desactivarVehiculo(id);
+        return ResponseEntity.noContent().build();
     }
     
     /**

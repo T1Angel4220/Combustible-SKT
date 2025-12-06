@@ -95,9 +95,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 requestURI.startsWith("/api/v1/drivers/info") ||
                 requestURI.startsWith("/swagger-ui/") ||
                 requestURI.startsWith("/v3/api-docs/") ||
-                requestURI.startsWith("/drivers.html") ||
-                requestURI.startsWith("/drivers-script.js") ||
-                requestURI.startsWith("/drivers-styles.css");
+                requestURI.equals("/") ||
+                requestURI.endsWith(".html") ||
+                requestURI.endsWith(".css") ||
+                requestURI.endsWith(".js") ||
+                requestURI.endsWith(".ico") ||
+                requestURI.startsWith("/static/");
     }
 
     /**

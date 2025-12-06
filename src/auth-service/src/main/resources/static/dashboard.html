@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - SKT FUEL SYSTEM</title>
+  <link rel="stylesheet" href="dashboard-styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-icon">
+          <i class="fas fa-gas-pump"></i>
+        </div>
+        <h1 class="logo-title">SKT FUEL SYSTEM</h1>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item active">
+          <i class="fas fa-chart-line"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="http://localhost:8081/drivers.html" class="nav-item">
+          <i class="fas fa-users"></i>
+          <span>Choferes</span>
+        </a>
+        <a href="http://localhost:8082/vehicles.html" class="nav-item">
+          <i class="fas fa-truck"></i>
+          <span>Vehículos</span>
+        </a>
+        <a href="#" class="nav-item">
+          <i class="fas fa-route"></i>
+          <span>Rutas</span>
+        </a>
+        <a href="#" class="nav-item">
+          <i class="fas fa-gas-pump"></i>
+          <span>Combustible</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <a href="#" class="nav-item">
+          <i class="fas fa-cog"></i>
+          <span>Configuración</span>
+        </a>
+        <a href="#" class="nav-item" onclick="logout()">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Cerrar Sesión</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="main-header">
+        <div class="header-left">
+          <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Buscar vehículos, conductores, rutas...">
+          </div>
+        </div>
+        <div class="header-right">
+          <button class="header-btn">
+            <i class="fas fa-share-alt"></i>
+            <span>Share</span>
+          </button>
+          <button class="header-btn">
+            <i class="fas fa-bell"></i>
+            <span class="badge">3</span>
+          </button>
+          <div class="user-profile">
+            <div class="avatar">U</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Dashboard Content -->
+      <div class="dashboard-content">
+        <div class="page-header">
+          <h1>Dashboard</h1>
+          <p>Visión general del sistema de gestión de combustible</p>
+        </div>
+
+        <!-- Metrics Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-header">
+              <h3>Total Vehículos</h3>
+              <i class="fas fa-truck"></i>
+            </div>
+            <div class="metric-value" id="totalVehicles">124</div>
+            <div class="metric-footer">
+              <span class="metric-change positive">+12% vs mes anterior</span>
+              <span class="metric-label">Flota activa</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <h3>Choferes Activos</h3>
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="metric-value" id="activeDrivers">87</div>
+            <div class="metric-footer">
+              <span class="metric-change positive">+5% vs mes anterior</span>
+              <span class="metric-label">En servicio hoy</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <h3>Rutas Activas</h3>
+              <i class="fas fa-route"></i>
+            </div>
+            <div class="metric-value" id="activeRoutes">34</div>
+            <div class="metric-footer">
+              <span class="metric-info">3 en progreso</span>
+              <span class="metric-label">Rutas completadas: 156</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <h3>Consumo Mensual</h3>
+              <i class="fas fa-gas-pump"></i>
+            </div>
+            <div class="metric-value" id="monthlyConsumption">45,231 L</div>
+            <div class="metric-footer">
+              <span class="metric-change negative">-8% vs mes anterior</span>
+              <span class="metric-label">Ahorro: $12,450</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-grid">
+          <!-- Fuel Consumption Chart -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <h3>Consumo de Combustible</h3>
+              <p>Últimos 6 meses por tipo de maquinaria</p>
+            </div>
+            <div class="chart-tabs">
+              <button class="tab-btn active" onclick="switchChartView('bar')">Barras</button>
+              <button class="tab-btn" onclick="switchChartView('line')">Líneas</button>
+            </div>
+            <div class="chart-container">
+              <canvas id="fuelConsumptionChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Fleet Distribution Chart -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <h3>Distribución de Flota</h3>
+              <p>Por tipo de maquinaria</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="fleetDistributionChart"></canvas>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item">
+                <span class="legend-color" style="background: var(--primary-red);"></span>
+                <span>Maquinaria Liviana</span>
+                <strong>56 unidades</strong>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color" style="background: var(--text-secondary);"></span>
+                <span>Maquinaria Pesada</span>
+                <strong>68 unidades</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="activity-section">
+          <div class="activity-header">
+            <h3>Actividad Reciente</h3>
+            <p>Últimas asignaciones y rutas completadas</p>
+            <button class="view-all-btn">Ver Todo</button>
+          </div>
+          <div class="activity-list" id="activityList">
+            <!-- Activities will be loaded here -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="dashboard-script.js"></script>
+</body>
+</html>
+

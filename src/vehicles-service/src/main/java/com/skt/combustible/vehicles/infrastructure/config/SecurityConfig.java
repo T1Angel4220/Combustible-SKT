@@ -44,9 +44,9 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/v1/vehicles/health").permitAll()
                         .requestMatchers("/api/v1/vehicles/info").permitAll()
-                        .requestMatchers("/vehicles.html").permitAll()
-                        .requestMatchers("/vehicles-script.js").permitAll()
-                        .requestMatchers("/vehicles-styles.css").permitAll()
+                        // Archivos estáticos (interfaz web)
+                        .requestMatchers("/", "/*.html", "/*.css", "/*.js", "/*.ico").permitAll()
+                        .requestMatchers("/static/**", "/css/**", "/js/**", "/images/**").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
 

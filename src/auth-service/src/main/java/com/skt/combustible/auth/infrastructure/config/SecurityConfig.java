@@ -51,8 +51,9 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 // Archivos estáticos (interfaz web)
-                .requestMatchers("/", "/index.html", "/styles.css", "/script.js", "/favicon.ico").permitAll()
-                .requestMatchers("/static/**", "/css/**", "/js/**", "/images/**").permitAll()
+                .requestMatchers("/", "/index.html", "/dashboard.html", "/styles.css", "/script.js", 
+                                 "/dashboard-styles.css", "/dashboard-script.js", "/favicon.ico").permitAll()
+                .requestMatchers("/*.html", "/*.css", "/*.js", "/static/**", "/css/**", "/js/**", "/images/**").permitAll()
                 // Todos los demás endpoints requieren autenticación
                 .anyRequest().authenticated()
             )

@@ -1,362 +1,96 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SKT Combustible - Sistema de Gestión</title>
+  <title>SKT FUEL SYSTEM - Sistema de Gestión de Combustible</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛽</text></svg>">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
 <body>
-  <div class="container">
-    <!-- Header Profesional -->
-    <header class="header">
-      <div class="logo">
-        <i class="fas fa-gas-pump"></i>
-        <div>
-          <h1>SKT Combustible</h1>
-          <div class="subtitle">Sistema de Gestión Integral</div>
+  <div class="login-container">
+    <!-- Panel Izquierdo - Información -->
+    <div class="login-left-panel">
+      <div class="logo-section">
+        <div class="logo-icon">
+          <i class="fas fa-gas-pump"></i>
         </div>
+        <h1 class="logo-title">SKT FUEL SYSTEM</h1>
       </div>
-      <nav class="nav">
-        <button id="loginBtn" class="active">
-          <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-        </button>
-        <button id="registerBtn">
-          <i class="fas fa-user-plus"></i> Registrarse
-        </button>
-        <button id="dashboardBtn" style="display: none;">
-          <i class="fas fa-tachometer-alt"></i> Dashboard
-        </button>
-        <button id="logoutBtn" style="display: none;">
-          <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-        </button>
-      </nav>
-    </header>
-
-    <!-- Contenido Principal -->
-    <main class="main-content">
-      <!-- Login Form -->
-      <div id="loginSection" class="form-section active">
-        <div class="form-container">
-          <h2><i class="fas fa-sign-in-alt"></i> Acceso al Sistema</h2>
-
-          <!-- Banner de Bienvenida -->
-          <div
-            style="text-align: center; margin-bottom: 30px; padding: 25px; background: linear-gradient(135deg, #ffc107, #fd7e14); border-radius: 15px; color: #1a1a2e;">
-            <h3 style="margin-bottom: 15px; font-size: 1.4rem; font-weight: 700;">
-              <i class="fas fa-shield-alt" style="margin-right: 12px;"></i>
-              Bienvenido a SKT Combustible
-            </h3>
-            <p style="font-size: 1.1rem; font-weight: 500; opacity: 0.9;">
-              Sistema de gestión integral para la industria del combustible
-            </p>
-          </div>
-
-          <form id="loginForm" class="auth-form">
-            <div class="form-group">
-              <label for="loginUsername">
-                <i class="fas fa-user"></i> Usuario o Email
-              </label>
-              <input type="text" id="loginUsername" name="usernameOrEmail" required
-                placeholder="Ingresa tu usuario o email corporativo">
-            </div>
-            <div class="form-group">
-              <label for="loginPassword">
-                <i class="fas fa-lock"></i> Contraseña
-              </label>
-              <input type="password" id="loginPassword" name="password" required
-                placeholder="Ingresa tu contraseña de acceso">
-            </div>
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-sign-in-alt"></i> Acceder al Sistema
-            </button>
-          </form>
-
-          <!-- Características del Sistema -->
-          <div
-            style="margin-top: 30px; padding: 25px; background: white; border-radius: 15px; border: 1px solid #e9ecef; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);">
-            <h4
-              style="color: #1a1a2e; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; font-size: 1.2rem; font-weight: 600;">
-              <i class="fas fa-cogs" style="color: #ffc107;"></i>
-              Características del Sistema
-            </h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-              <div style="display: flex; align-items: center; gap: 12px; color: #6c757d; font-weight: 500;">
-                <i class="fas fa-check-circle" style="color: #28a745; font-size: 1.1rem;"></i>
-                <span>Gestión de Vehículos</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 12px; color: #6c757d; font-weight: 500;">
-                <i class="fas fa-check-circle" style="color: #28a745; font-size: 1.1rem;"></i>
-                <span>Control de Rutas</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 12px; color: #6c757d; font-weight: 500;">
-                <i class="fas fa-check-circle" style="color: #28a745; font-size: 1.1rem;"></i>
-                <span>Inventario de Combustible</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 12px; color: #6c757d; font-weight: 500;">
-                <i class="fas fa-check-circle" style="color: #28a745; font-size: 1.1rem;"></i>
-                <span>Reportes en Tiempo Real</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Información adicional -->
-          <div style="margin-top: 20px; text-align: center;">
-            <p style="color: #6c757d; margin-bottom: 15px;">¿No tienes acceso al sistema?</p>
-            <p style="color: #6c757d; font-size: 0.9rem;">
-              Contacta al administrador del sistema para obtener tus credenciales de acceso
-            </p>
-          </div>
-        </div>
+      
+      <div class="info-section">
+        <h2 class="info-title">Sistema de Gestión de Combustible</h2>
+        <p class="info-description">
+          Control integral de consumo para maquinaria liviana y pesada mediante arquitectura de microservicios
+        </p>
       </div>
 
-      <!-- Register Form -->
-      <div id="registerSection" class="form-section">
-        <div class="form-container">
-          <h2><i class="fas fa-user-plus"></i> Registro de Usuario</h2>
-
-          <!-- Banner de Registro -->
-          <div
-            style="text-align: center; margin-bottom: 30px; padding: 25px; background: linear-gradient(135deg, #17a2b8, #138496); border-radius: 15px; color: white;">
-            <h3 style="margin-bottom: 15px; font-size: 1.4rem; font-weight: 700;">
-              <i class="fas fa-user-plus" style="margin-right: 12px;"></i>
-              Crear Nueva Cuenta
-            </h3>
-            <p style="font-size: 1.1rem; font-weight: 500; opacity: 0.9;">
-              Registra un nuevo usuario en el sistema SKT Combustible
-            </p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-truck"></i>
           </div>
-
-          <form id="registerForm" class="auth-form">
-            <div class="form-group">
-              <label for="registerUsername">
-                <i class="fas fa-user"></i> Nombre de Usuario
-              </label>
-              <input type="text" id="registerUsername" name="username" required
-                placeholder="Ingresa tu nombre de usuario">
-            </div>
-            <div class="form-group">
-              <label for="registerEmail">
-                <i class="fas fa-envelope"></i> Email Corporativo
-              </label>
-              <input type="email" id="registerEmail" name="email" required placeholder="tu.email@empresa.com">
-            </div>
-            <div class="form-group">
-              <label for="registerNombre">
-                <i class="fas fa-id-card"></i> Nombre Completo
-              </label>
-              <input type="text" id="registerNombre" name="nombre" required placeholder="Tu nombre completo">
-            </div>
-            <div class="form-group">
-              <label for="registerApellido">
-                <i class="fas fa-id-card"></i> Apellido
-              </label>
-              <input type="text" id="registerApellido" name="apellido" required placeholder="Tu apellido">
-            </div>
-            <div class="form-group">
-              <label for="registerPassword">
-                <i class="fas fa-lock"></i> Contraseña
-              </label>
-              <input type="password" id="registerPassword" name="password" required placeholder="Contraseña segura">
-            </div>
-            <div class="form-group">
-              <label for="registerRol">
-                <i class="fas fa-user-tag"></i> Rol en el Sistema
-              </label>
-              <select id="registerRol" name="rol" required>
-                <option value="">Selecciona tu rol</option>
-                <option value="ADMINISTRADOR">Administrador</option>
-                <option value="OPERADOR">Operador</option>
-                <option value="SUPERVISOR">Supervisor</option>
-                <option value="CONDUCTOR">Conductor</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-user-plus"></i> Crear Cuenta
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="fillRegisterForm()" style="margin-left: 15px;">
-              <i class="fas fa-magic"></i> Datos de Prueba
-            </button>
-          </form>
+          <h3>Vehículos</h3>
+          <p>Gestión completa de flota</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-route"></i>
+          </div>
+          <h3>Rutas</h3>
+          <p>Planificación y control</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <h3>Choferes</h3>
+          <p>Administración de personal</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-gas-pump"></i>
+          </div>
+          <h3>Combustible</h3>
+          <p>Reportes y análisis</p>
         </div>
       </div>
+    </div>
 
-      <!-- Dashboard -->
-      <div id="dashboardSection" class="form-section">
-        <!-- Header del Dashboard -->
-        <div class="dashboard-header">
-          <div class="welcome-banner">
-            <div class="user-avatar">
-              <i class="fas fa-user"></i>
-            </div>
-            <div class="welcome-text">
-              <h2 id="welcomeMessage">¡Bienvenido al Sistema!</h2>
-              <p id="userDetails">Usuario del Sistema SKT Combustible</p>
-              <p id="userRole">Rol: Administrador</p>
-            </div>
-          </div>
-        </div>
+    <!-- Panel Derecho - Formulario de Login -->
+    <div class="login-right-panel">
+      <div class="login-form-container">
+        <h2 class="login-title">Iniciar Sesión</h2>
+        <p class="login-subtitle">Ingresa tus credenciales para acceder al sistema</p>
 
-        <!-- Grid de Estadísticas -->
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fas fa-truck"></i>
-            </div>
-            <div class="stat-content">
-              <h3>24</h3>
-              <p>Vehículos Activos</p>
-              <div class="stat-status online">
-                <i class="fas fa-circle"></i>
-                <span>Sistema Operativo</span>
-              </div>
+        <form id="loginForm" class="login-form">
+          <div class="form-group">
+            <label for="email">Usuario o Correo Electrónico</label>
+            <div class="input-wrapper">
+              <i class="fas fa-user input-icon"></i>
+              <input type="text" id="email" name="email" placeholder="admin" required>
             </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fas fa-route"></i>
-            </div>
-            <div class="stat-content">
-              <h3>156</h3>
-              <p>Rutas Programadas</p>
-              <div class="stat-status online">
-                <i class="fas fa-circle"></i>
-                <span>En Ejecución</span>
-              </div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fas fa-gas-pump"></i>
-            </div>
-            <div class="stat-content">
-              <h3>2,450</h3>
-              <p>Litros Disponibles</p>
-              <div class="stat-status online">
-                <i class="fas fa-circle"></i>
-                <span>Inventario OK</span>
-              </div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fas fa-users"></i>
-            </div>
-            <div class="stat-content">
-              <h3>18</h3>
-              <p>Conductores Activos</p>
-              <div class="stat-status online">
-                <i class="fas fa-circle"></i>
-                <span>Personal Disponible</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- Grid de Acciones -->
-        <div class="action-grid">
-          <div class="action-card" onclick="goToVehiclesManagement()">
-            <div class="card-header">
-              <i class="fas fa-truck"></i>
+          <div class="form-group">
+            <label for="password">Contraseña</label>
+            <div class="input-wrapper">
+              <i class="fas fa-lock input-icon"></i>
+              <input type="password" id="password" name="password" placeholder="••••••••" required>
             </div>
-            <h4>Gestión de Vehículos</h4>
-            <p>Administra la flota de vehículos y su estado operativo</p>
           </div>
-          <div class="action-card" onclick="showMessage('Control de Rutas', 'info')">
-            <div class="card-header">
-              <i class="fas fa-route"></i>
-            </div>
-            <h4>Control de Rutas</h4>
-            <p>Planifica y monitorea las rutas de distribución</p>
-          </div>
-          <div class="action-card" onclick="showMessage('Inventario de Combustible', 'info')">
-            <div class="card-header">
-              <i class="fas fa-gas-pump"></i>
-            </div>
-            <h4>Inventario</h4>
-            <p>Controla el stock y consumo de combustible</p>
-          </div>
-          <div class="action-card" onclick="showMessage('Reportes del Sistema', 'info')">
-            <div class="card-header">
-              <i class="fas fa-chart-bar"></i>
-            </div>
-            <h4>Reportes</h4>
-            <p>Genera reportes detallados del sistema</p>
-          </div>
-          <div class="action-card" onclick="goToDriversManagement()">
-            <div class="card-header">
-              <i class="fas fa-users"></i>
-            </div>
-            <h4>Gestión de Choferes</h4>
-            <p>Administra el personal conductor</p>
-          </div>
-          <div class="action-card" onclick="validateToken()">
-            <div class="card-header">
-              <i class="fas fa-shield-alt"></i>
-            </div>
-            <h4>Validar Token</h4>
-            <p>Verifica la validez de tu sesión</p>
-          </div>
-        </div>
 
-        <!-- Actividad Reciente -->
-        <div class="recent-activity">
-          <h3><i class="fas fa-history"></i> Actividad Reciente del Sistema</h3>
-          <ul class="activity-list">
-            <li class="activity-item">
-              <div class="activity-icon">
-                <i class="fas fa-truck"></i>
-              </div>
-              <div class="activity-content">
-                <h5>Vehículo ABC-123 asignado a ruta</h5>
-                <p>Conductor: Juan Pérez - Ruta: Centro a Norte</p>
-              </div>
-              <div class="activity-time">Hace 5 min</div>
-            </li>
-            <li class="activity-item">
-              <div class="activity-icon">
-                <i class="fas fa-gas-pump"></i>
-              </div>
-              <div class="activity-content">
-                <h5>Recarga de combustible completada</h5>
-                <p>Vehículo XYZ-789 - 150 litros cargados</p>
-              </div>
-              <div class="activity-time">Hace 15 min</div>
-            </li>
-            <li class="activity-item">
-              <div class="activity-icon">
-                <i class="fas fa-route"></i>
-              </div>
-              <div class="activity-content">
-                <h5>Nueva ruta programada</h5>
-                <p>Ruta: Sur a Este - Distancia: 45 km</p>
-              </div>
-              <div class="activity-time">Hace 1 hora</div>
-            </li>
-            <li class="activity-item">
-              <div class="activity-icon">
-                <i class="fas fa-user"></i>
-              </div>
-              <div class="activity-content">
-                <h5>Nuevo conductor registrado</h5>
-                <p>Carlos Mendoza - Licencia: ABC123456</p>
-              </div>
-              <div class="activity-time">Hace 2 horas</div>
-            </li>
-          </ul>
-        </div>
+          <button type="submit" class="login-button">
+            Ingresar al Sistema
+          </button>
+        </form>
 
-        <!-- Footer del Dashboard -->
-        <div class="dashboard-footer">
-          <p><i class="fas fa-info-circle"></i> Sistema SKT Combustible v1.0 - Todos los derechos reservados</p>
+        <div class="login-footer">
+          <p class="tech-info">Sistema basado en arquitectura de microservicios</p>
+          <p class="tech-stack">gRPC • Spring Boot • MongoDB</p>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 
   <!-- Contenedor de Notificaciones -->
@@ -364,5 +98,4 @@
 
   <script src="script.js"></script>
 </body>
-
 </html>
