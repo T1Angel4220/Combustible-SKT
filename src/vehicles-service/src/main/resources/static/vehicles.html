@@ -132,6 +132,7 @@
                   <th>Capacidad</th>
                   <th>Consumo (L/h)</th>
                   <th>Estado</th>
+                  <th>Conductor</th>
                   <th>Último Mant.</th>
                   <th>Acciones</th>
                 </tr>
@@ -226,6 +227,58 @@
       <h3 id="notificationTitle">Éxito</h3>
       <p id="notificationMessage">Operación completada correctamente</p>
       <button class="notification-btn" onclick="closeNotification()">Aceptar</button>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmationModal" class="notification-modal">
+    <div class="notification-content">
+      <div class="notification-icon" id="confirmationIcon">
+        <i class="fas fa-question-circle"></i>
+      </div>
+      <h3 id="confirmationTitle">Confirmar</h3>
+      <p id="confirmationMessage">¿Estás seguro?</p>
+      <div class="confirmation-actions">
+        <button class="notification-btn btn-secondary" onclick="closeConfirmationModal(false)">Cancelar</button>
+        <button class="notification-btn btn-primary" onclick="closeConfirmationModal(true)">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Driver Modal -->
+  <div id="assignDriverModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="assignDriverModalTitle">Asignar Conductor</h2>
+        <button class="close-btn" onclick="closeAssignDriverModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="assignDriverForm" class="modal-form">
+        <div class="form-group">
+          <label>Vehículo</label>
+          <input type="text" id="assignVehicleInfo" readonly>
+        </div>
+        <div class="form-group">
+          <label>Conductor</label>
+          <select id="assignDriverSelect" required>
+            <option value="">Seleccione un conductor</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Observaciones (opcional)</label>
+          <textarea 
+            id="assignObservations" 
+            rows="4" 
+            placeholder="Notas sobre la asignación..."
+            class="observations-textarea"
+          ></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeAssignDriverModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" id="assignDriverSubmitBtn">Asignar</button>
+        </div>
+      </form>
     </div>
   </div>
 

@@ -26,7 +26,7 @@ public class AsignacionVehiculo {
     
     @NotNull(message = "El ID del chofer es obligatorio")
     @Field("chofer_id")
-    private Long choferId;
+    private String choferId;
     
     @NotNull(message = "La fecha de asignación es obligatoria")
     @Field("fecha_asignacion")
@@ -63,7 +63,7 @@ public class AsignacionVehiculo {
         this.activo = true;
     }
     
-    public AsignacionVehiculo(Vehicle vehicle, Long choferId, LocalDateTime fechaAsignacion) {
+    public AsignacionVehiculo(Vehicle vehicle, String choferId, LocalDateTime fechaAsignacion) {
         this();
         this.vehicle = vehicle;
         this.choferId = choferId;
@@ -96,11 +96,11 @@ public class AsignacionVehiculo {
         this.vehicle = vehicle;
     }
     
-    public Long getChoferId() {
+    public String getChoferId() {
         return choferId;
     }
-    
-    public void setChoferId(Long choferId) {
+
+    public void setChoferId(String choferId) {
         this.choferId = choferId;
     }
     

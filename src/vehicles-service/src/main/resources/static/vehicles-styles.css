@@ -413,9 +413,29 @@ body {
   border-color: var(--info-blue);
 }
 
+.action-btn.assign:hover {
+  color: var(--info-blue);
+  border-color: var(--info-blue);
+}
+
+.action-btn.unassign:hover {
+  color: var(--warning-yellow);
+  border-color: var(--warning-yellow);
+}
+
 .action-btn.delete:hover {
   color: var(--primary-red);
   border-color: var(--primary-red);
+}
+
+.driver-assigned {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.driver-unassigned {
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 /* Modal - Same as drivers */
@@ -507,9 +527,53 @@ body {
 }
 
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: var(--primary-red);
+}
+
+.form-group textarea {
+  padding: 12px;
+  background: var(--dark-bg);
+  border: 1px solid var(--dark-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  transition: all 0.2s ease;
+}
+
+.form-group textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.observations-textarea {
+  background: var(--dark-bg);
+  border: 1px solid var(--dark-border);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 100px;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.observations-textarea:focus {
+  outline: none;
+  border-color: var(--primary-red);
+  box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.1);
+}
+
+.observations-textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
 }
 
 .modal-actions {
@@ -611,6 +675,29 @@ body {
 
 .notification-icon.info {
   color: var(--info-blue);
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.confirmation-actions .notification-btn {
+  min-width: 100px;
+}
+
+.confirmation-actions .btn-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--dark-border);
+}
+
+.confirmation-actions .btn-secondary:hover {
+  background: var(--dark-bg);
+  color: var(--text-primary);
+  border-color: var(--text-primary);
 }
 
 .notification-content h3 {

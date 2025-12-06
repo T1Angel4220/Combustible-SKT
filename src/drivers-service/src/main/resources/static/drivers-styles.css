@@ -442,6 +442,16 @@ body {
   border-color: var(--info-blue);
 }
 
+.action-btn.deactivate:hover {
+  color: var(--warning-yellow);
+  border-color: var(--warning-yellow);
+}
+
+.action-btn.activate:hover {
+  color: var(--success-green);
+  border-color: var(--success-green);
+}
+
 .action-btn.delete:hover {
   color: var(--primary-red);
   border-color: var(--primary-red);
@@ -640,6 +650,17 @@ body {
 
 .notification-icon.info {
   color: var(--info-blue);
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.confirmation-actions .notification-btn {
+  min-width: 100px;
 }
 
 .notification-content h3 {

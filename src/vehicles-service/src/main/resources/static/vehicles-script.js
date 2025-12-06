@@ -1,13 +1,20 @@
 // Vehicles Management Script
 const API_BASE_URL = 'http://localhost:8082/api/v1/vehicles';
+const ASSIGNMENTS_API_URL = 'http://localhost:8082/api/v1/assignments';
+const DRIVERS_API_URL = 'http://localhost:8081/api/v1/drivers';
 
 let vehicles = [];
+let drivers = [];
+let vehicleAssignments = {}; // Mapa de vehicleId -> asignación activa
 let currentFilter = 'all';
 let editingVehicleId = null;
+let assigningVehicleId = null;
+let confirmationCallback = null; // Callback para el modal de confirmación
 
 document.addEventListener('DOMContentLoaded', function() {
     checkAuth();
     loadVehicles();
+    loadDrivers();
     setupEventListeners();
 });
 
@@ -54,6 +61,11 @@ function setupEventListeners() {
     if (vehicleForm) {
         vehicleForm.addEventListener('submit', handleVehicleSubmit);
     }
+    
+    const assignDriverForm = document.getElementById('assignDriverForm');
+    if (assignDriverForm) {
+        assignDriverForm.addEventListener('submit', handleAssignDriverSubmit);
+    }
 }
 
 async function loadVehicles() {
@@ -69,6 +81,8 @@ async function loadVehicles() {
             const data = await response.json();
             vehicles = Array.isArray(data) ? data : [];
             updateMetrics();
+            // Cargar asignaciones después de cargar vehículos
+            await loadVehicleAssignments();
             renderVehicles();
         } else {
             console.error('Error loading vehicles');
@@ -76,6 +90,72 @@ async function loadVehicles() {
     } catch (error) {
         console.error('Error:', error);
     }
+}
+
+// Cargar conductores disponibles
+async function loadDrivers() {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        const response = await fetch(`${DRIVERS_API_URL}/disponibles`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            drivers = Array.isArray(data) ? data : [];
+        } else {
+            console.error('Error loading drivers');
+        }
+    } catch (error) {
+        console.error('Error loading drivers:', error);
+    }
+}
+
+// Cargar asignaciones para todos los vehículos
+async function loadVehicleAssignments() {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        // Cargar asignaciones para cada vehículo
+        for (const vehicle of vehicles) {
+            try {
+                const response = await fetch(`${ASSIGNMENTS_API_URL}/vehiculo/${vehicle.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const asignaciones = await response.json();
+                    // Buscar asignación activa
+                    const asignacionActiva = asignaciones.find(a => a.estado === 'ACTIVA');
+                    vehicleAssignments[vehicle.id] = asignacionActiva || null;
+                } else {
+                    vehicleAssignments[vehicle.id] = null;
+                }
+            } catch (error) {
+                console.error(`Error cargando asignación para vehículo ${vehicle.id}:`, error);
+                vehicleAssignments[vehicle.id] = null;
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando asignaciones:', error);
+    }
+}
+
+// Obtener conductor asignado para un vehículo
+function getAssignedDriver(vehicleId) {
+    const asignacion = vehicleAssignments[vehicleId];
+    if (asignacion && asignacion.choferId) {
+        // Buscar el conductor en la lista de drivers
+        const driver = drivers.find(d => d.id === asignacion.choferId);
+        if (driver) {
+            return `${driver.nombre} ${driver.apellido}`;
+        }
+        return 'Conductor asignado';
+    }
+    return 'Sin asignar';
 }
 
 function updateMetrics() {
@@ -162,13 +242,24 @@ function renderVehicles(vehiclesToRender = vehicles) {
                 <td>
                     <span class="status-badge ${statusClass}">${statusText}</span>
                 </td>
+                <td>
+                    <span class="driver-assigned">${getAssignedDriver(vehicle.id)}</span>
+                </td>
                 <td>${formatDate(vehicle.fechaActualizacion)}</td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn edit" onclick="editVehicle('${vehicle.id}')">
+                        <button class="action-btn edit" onclick="editVehicle('${vehicle.id}')" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="action-btn delete" onclick="deleteVehicle('${vehicle.id}')">
+                        ${getAssignedDriver(vehicle.id) !== 'Sin asignar' 
+                            ? `<button class="action-btn unassign" onclick="unassignVehicle('${vehicle.id}')" title="Desasignar conductor">
+                                <i class="fas fa-user-minus"></i>
+                            </button>`
+                            : `<button class="action-btn assign" onclick="assignDriver('${vehicle.id}')" title="Asignar conductor">
+                                <i class="fas fa-user-plus"></i>
+                            </button>`
+                        }
+                        <button class="action-btn delete" onclick="deleteVehicle('${vehicle.id}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -301,7 +392,16 @@ function editVehicle(id) {
 }
 
 async function deleteVehicle(id) {
-    if (!confirm('¿Estás seguro de eliminar este vehículo?')) return;
+    showConfirmationModal(
+        'Eliminar Vehículo',
+        '¿Estás seguro de eliminar este vehículo? Esta acción no se puede deshacer.',
+        async () => {
+            await performDeleteVehicle(id);
+        }
+    );
+}
+
+async function performDeleteVehicle(id) {
     
     try {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
@@ -374,12 +474,174 @@ function closeNotification() {
     document.getElementById('notificationModal').classList.remove('active');
 }
 
+// Funciones de asignación de conductores
+function assignDriver(vehicleId) {
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (!vehicle) return;
+    
+    assigningVehicleId = vehicleId;
+    
+    // Llenar información del vehículo
+    document.getElementById('assignVehicleInfo').value = `${vehicle.placa} - ${vehicle.marca} ${vehicle.modelo}`;
+    
+    // Llenar select de conductores
+    const select = document.getElementById('assignDriverSelect');
+    select.innerHTML = '<option value="">Seleccione un conductor</option>';
+    
+    // Filtrar conductores disponibles (que no tengan 2 vehículos asignados)
+    drivers.forEach(driver => {
+        const option = document.createElement('option');
+        option.value = driver.id;
+        option.textContent = `${driver.nombre} ${driver.apellido} - ${driver.licencia}`;
+        select.appendChild(option);
+    });
+    
+    // Cambiar texto del botón
+    document.getElementById('assignDriverSubmitBtn').textContent = 'Asignar';
+    document.getElementById('assignDriverModalTitle').textContent = 'Asignar Conductor';
+    
+    // Limpiar formulario
+    document.getElementById('assignObservations').value = '';
+    
+    // Mostrar modal
+    document.getElementById('assignDriverModal').classList.add('active');
+}
+
+function closeAssignDriverModal() {
+    document.getElementById('assignDriverModal').classList.remove('active');
+    document.getElementById('assignDriverForm').reset();
+    assigningVehicleId = null;
+}
+
+async function handleAssignDriverSubmit(e) {
+    e.preventDefault();
+    
+    const choferId = document.getElementById('assignDriverSelect').value;
+    if (!choferId) {
+        showNotification('warning', 'Advertencia', 'Por favor seleccione un conductor');
+        return;
+    }
+    
+    const vehicle = vehicles.find(v => v.id === assigningVehicleId);
+    if (!vehicle) {
+        showNotification('error', 'Error', 'Vehículo no encontrado');
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        
+        const assignmentData = {
+            vehicleId: vehicle.id, // Enviar el ID como String (ObjectId de MongoDB)
+            choferId: choferId,
+            // No enviar fechaAsignacion, el backend usará la fecha actual
+            observaciones: document.getElementById('assignObservations').value.trim() || null
+        };
+        
+        const response = await fetch(ASSIGNMENTS_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(assignmentData)
+        });
+        
+        if (response.ok) {
+            closeAssignDriverModal();
+            await loadVehicleAssignments();
+            await loadVehicles();
+            showNotification('success', 'Éxito', 'Conductor asignado correctamente');
+        } else {
+            const errorText = await response.text();
+            console.error('Error response:', response.status, errorText);
+            let errorMessage = 'Error al asignar conductor';
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.message || errorMessage;
+            } catch (e) {
+                errorMessage = `Error al asignar conductor: ${response.status}`;
+            }
+            showNotification('error', 'Error', errorMessage);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('error', 'Error', 'Error al asignar conductor');
+    }
+}
+
+async function unassignVehicle(vehicleId) {
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (!vehicle) return;
+    
+    showConfirmationModal(
+        'Desasignar Conductor',
+        `¿Estás seguro de desasignar el conductor del vehículo ${vehicle.placa}?`,
+        async () => {
+            await performUnassign(vehicleId);
+        }
+    );
+}
+
+async function performUnassign(vehicleId) {
+    
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        const response = await fetch(`${ASSIGNMENTS_API_URL}/vehiculo/${vehicleId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok || response.status === 204) {
+            await loadVehicleAssignments();
+            await loadVehicles();
+            showNotification('success', 'Éxito', 'Conductor desasignado correctamente');
+        } else {
+            const errorText = await response.text();
+            console.error('Error response:', response.status, errorText);
+            let errorMessage = 'Error al desasignar conductor';
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.message || errorMessage;
+            } catch (e) {
+                errorMessage = `Error al desasignar conductor: ${response.status}`;
+            }
+            showNotification('error', 'Error', errorMessage);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('error', 'Error', 'Error al desasignar conductor');
+    }
+}
+
 function logout() {
-    if (confirm('¿Estás seguro de cerrar sesión?')) {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('currentUser');
-        sessionStorage.removeItem('authToken');
-        sessionStorage.removeItem('currentUser');
-        window.location.href = 'http://localhost:8085/';
+    showConfirmationModal(
+        'Cerrar Sesión',
+        '¿Estás seguro de cerrar sesión?',
+        () => {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            sessionStorage.removeItem('authToken');
+            sessionStorage.removeItem('currentUser');
+            window.location.href = 'http://localhost:8085/';
+        }
+    );
+}
+
+// Funciones para el modal de confirmación
+function showConfirmationModal(title, message, callback) {
+    confirmationCallback = callback;
+    document.getElementById('confirmationTitle').textContent = title;
+    document.getElementById('confirmationMessage').textContent = message;
+    document.getElementById('confirmationModal').classList.add('active');
+}
+
+function closeConfirmationModal(confirmed) {
+    document.getElementById('confirmationModal').classList.remove('active');
+    if (confirmed && confirmationCallback) {
+        confirmationCallback();
+        confirmationCallback = null;
     }
 }

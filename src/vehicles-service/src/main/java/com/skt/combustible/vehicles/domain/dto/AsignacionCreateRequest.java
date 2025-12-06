@@ -13,12 +13,12 @@ import jakarta.validation.constraints.NotNull;
 public class AsignacionCreateRequest {
     
     @NotNull(message = "El ID del vehículo es obligatorio")
-    private Long vehicleId;
+    private String vehicleId;
     
     @NotNull(message = "El ID del chofer es obligatorio")
-    private Long choferId;
+    private String choferId;
     
-    @NotNull(message = "La fecha de asignación es obligatoria")
+    // La fecha es opcional, si no se proporciona se usa la fecha actual
     private LocalDateTime fechaAsignacion;
     
     private String observaciones;
@@ -26,26 +26,26 @@ public class AsignacionCreateRequest {
     // Constructores
     public AsignacionCreateRequest() {}
     
-    public AsignacionCreateRequest(Long vehicleId, Long choferId, LocalDateTime fechaAsignacion) {
+    public AsignacionCreateRequest(String vehicleId, String choferId, LocalDateTime fechaAsignacion) {
         this.vehicleId = vehicleId;
         this.choferId = choferId;
         this.fechaAsignacion = fechaAsignacion;
     }
     
     // Getters y Setters
-    public Long getVehicleId() {
+    public String getVehicleId() {
         return vehicleId;
     }
-    
-    public void setVehicleId(Long vehicleId) {
+
+    public void setVehicleId(String vehicleId) {
         this.vehicleId = vehicleId;
     }
     
-    public Long getChoferId() {
+    public String getChoferId() {
         return choferId;
     }
-    
-    public void setChoferId(Long choferId) {
+
+    public void setChoferId(String choferId) {
         this.choferId = choferId;
     }
     

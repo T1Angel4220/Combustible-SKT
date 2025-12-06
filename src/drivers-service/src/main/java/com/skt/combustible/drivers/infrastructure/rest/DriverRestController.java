@@ -117,7 +117,49 @@ public class DriverRestController {
     }
 
     /**
-     * Elimina un chofer (desactivación lógica)
+     * Desactiva un chofer (soft delete)
+     * 
+     * @param id ID del chofer a desactivar
+     * @return Respuesta vacía
+     */
+    @PatchMapping("/{id}/deactivate")
+    public ResponseEntity<Void> deactivateDriver(@PathVariable("id") String id) {
+        try {
+            logger.info("REST: Desactivando chofer con ID: {}", id);
+            driverService.deactivateDriver(id);
+            return ResponseEntity.noContent().build();
+        } catch (DriverNotFoundException e) {
+            logger.warn("Chofer no encontrado con ID: {}", id);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            logger.error("Error desactivando chofer: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Reactiva un chofer
+     * 
+     * @param id ID del chofer a reactivar
+     * @return Chofer reactivado
+     */
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<DriverResponse> activateDriver(@PathVariable("id") String id) {
+        try {
+            logger.info("REST: Reactivando chofer con ID: {}", id);
+            DriverResponse driver = driverService.activateDriver(id);
+            return ResponseEntity.ok(driver);
+        } catch (DriverNotFoundException e) {
+            logger.warn("Chofer no encontrado con ID: {}", id);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            logger.error("Error reactivando chofer: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Elimina permanentemente un chofer (hard delete)
      * 
      * @param id ID del chofer a eliminar
      * @return Respuesta vacía
@@ -125,7 +167,7 @@ public class DriverRestController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDriver(@PathVariable("id") String id) {
         try {
-            logger.info("REST: Eliminando chofer con ID: {}", id);
+            logger.info("REST: Eliminando permanentemente chofer con ID: {}", id);
             driverService.deleteDriver(id);
             return ResponseEntity.noContent().build();
         } catch (DriverNotFoundException e) {

@@ -32,8 +32,9 @@ public class AsignacionGrpcController extends AsignacionServiceProtoGrpc.Asignac
         try {
             // Convertir de gRPC a dominio
             AsignacionCreateRequest domainRequest = new AsignacionCreateRequest();
-            domainRequest.setVehicleId(Long.parseLong(request.getVehicleId()));
-            domainRequest.setChoferId(request.getChoferId());
+            domainRequest.setVehicleId(request.getVehicleId()); // Ya es String en el proto
+            // Convertir Long choferId del proto a String
+            domainRequest.setChoferId(String.valueOf(request.getChoferId()));
             domainRequest.setFechaAsignacion(java.time.LocalDateTime.now());
             domainRequest.setObservaciones(request.getObservaciones());
 
@@ -44,7 +45,7 @@ public class AsignacionGrpcController extends AsignacionServiceProtoGrpc.Asignac
                     .newBuilder()
                     .setId(domainResponse.getId())
                     .setVehicleId(domainResponse.getVehicleId())
-                    .setChoferId(domainResponse.getChoferId())
+                    .setChoferId(Long.parseLong(domainResponse.getChoferId()))
                     .setFechaInicio(
                             domainResponse.getFechaAsignacion() != null ? domainResponse.getFechaAsignacion().toString()
                                     : "")
@@ -78,7 +79,7 @@ public class AsignacionGrpcController extends AsignacionServiceProtoGrpc.Asignac
                         .newBuilder()
                         .setId(response.getId())
                         .setVehicleId(response.getVehicleId())
-                        .setChoferId(response.getChoferId())
+                        .setChoferId(Long.parseLong(response.getChoferId()))
                         .setFechaInicio(
                                 response.getFechaAsignacion() != null ? response.getFechaAsignacion().toString() : "")
                         .setFechaFin(
@@ -112,7 +113,7 @@ public class AsignacionGrpcController extends AsignacionServiceProtoGrpc.Asignac
                         .newBuilder()
                         .setId(domainResponse.getId())
                         .setVehicleId(domainResponse.getVehicleId())
-                        .setChoferId(domainResponse.getChoferId())
+                        .setChoferId(Long.parseLong(domainResponse.getChoferId()))
                         .setFechaInicio(domainResponse.getFechaAsignacion() != null
                                 ? domainResponse.getFechaAsignacion().toString()
                                 : "")
@@ -146,14 +147,14 @@ public class AsignacionGrpcController extends AsignacionServiceProtoGrpc.Asignac
             StreamObserver<com.skt.combustible.vehicles.grpc.AsignacionResponseProto> responseObserver) {
         try {
             List<AsignacionResponse> responses = asignacionService
-                    .obtenerAsignacionesPorVehiculo(Long.parseLong(request.getVehicleId()));
+                    .obtenerAsignacionesPorVehiculo(request.getVehicleId());
             for (AsignacionResponse response : responses) {
                 // Convertir de dominio a gRPC
                 com.skt.combustible.vehicles.grpc.AsignacionResponseProto grpcResponse = com.skt.combustible.vehicles.grpc.AsignacionResponseProto
                         .newBuilder()
                         .setId(response.getId())
                         .setVehicleId(response.getVehicleId())
-                        .setChoferId(response.getChoferId())
+                        .setChoferId(Long.parseLong(response.getChoferId()))
                         .setFechaInicio(
                                 response.getFechaAsignacion() != null ? response.getFechaAsignacion().toString() : "")
                         .setFechaFin(
@@ -179,15 +180,16 @@ public class AsignacionGrpcController extends AsignacionServiceProtoGrpc.Asignac
     public void obtenerAsignacionesPorChofer(com.skt.combustible.vehicles.grpc.AsignacionChoferIdRequestProto request,
             StreamObserver<com.skt.combustible.vehicles.grpc.AsignacionResponseProto> responseObserver) {
         try {
+            // Convertir Long choferId del proto a String
             List<AsignacionResponse> responses = asignacionService
-                    .obtenerAsignacionesActivasPorChofer(request.getChoferId());
+                    .obtenerAsignacionesActivasPorChofer(String.valueOf(request.getChoferId()));
             for (AsignacionResponse response : responses) {
                 // Convertir de dominio a gRPC
                 com.skt.combustible.vehicles.grpc.AsignacionResponseProto grpcResponse = com.skt.combustible.vehicles.grpc.AsignacionResponseProto
                         .newBuilder()
                         .setId(response.getId())
                         .setVehicleId(response.getVehicleId())
-                        .setChoferId(response.getChoferId())
+                        .setChoferId(Long.parseLong(response.getChoferId()))
                         .setFechaInicio(
                                 response.getFechaAsignacion() != null ? response.getFechaAsignacion().toString() : "")
                         .setFechaFin(

@@ -1,14 +1,51 @@
 // Drivers Management Script
 const API_BASE_URL = 'http://localhost:8081/api/v1/drivers';
+const ASSIGNMENTS_API_URL = 'http://localhost:8082/api/v1/assignments';
 
 let drivers = [];
 let editingDriverId = null;
+let driverAssignments = {}; // Mapa de driverId -> asignaciones activas
+let confirmationCallback = null; // Callback para el modal de confirmación
 
 document.addEventListener('DOMContentLoaded', function() {
     checkAuth();
     loadDrivers();
     setupEventListeners();
 });
+
+// Cargar asignaciones para todos los choferes
+async function loadDriverAssignments() {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        // Cargar asignaciones para cada chofer
+        for (const driver of drivers) {
+            try {
+                const choferId = driver.id;
+                if (!choferId) continue;
+                
+                const response = await fetch(`${ASSIGNMENTS_API_URL}/chofer/${choferId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const asignaciones = await response.json();
+                    driverAssignments[driver.id] = asignaciones || [];
+                } else {
+                    driverAssignments[driver.id] = [];
+                }
+            } catch (error) {
+                console.error(`Error cargando asignaciones para chofer ${driver.id}:`, error);
+                driverAssignments[driver.id] = [];
+            }
+        }
+        // Re-renderizar después de cargar asignaciones
+        renderDrivers();
+    } catch (error) {
+        console.error('Error cargando asignaciones:', error);
+    }
+}
 
 function checkAuth() {
     // Primero verificar si hay token en la URL (viene del dashboard)
@@ -74,7 +111,8 @@ async function loadDrivers() {
             const data = await response.json();
             drivers = Array.isArray(data) ? data : (data.drivers || []);
             updateMetrics();
-            renderDrivers();
+            // Cargar asignaciones después de cargar drivers
+            await loadDriverAssignments();
         } else {
             console.error('Error loading drivers');
         }
@@ -125,8 +163,10 @@ function renderDrivers(driversToRender = drivers) {
         const fullName = `${driver.nombre || ''} ${driver.apellido || ''}`.trim();
         
         const licenseType = getLicenseType(driver.tipoMaquinariaAsignada);
-        const statusClass = getStatusClass(driver.estado);
-    const statusText = getStatusText(driver.estado);
+        // Si el conductor está desactivado, mostrar estado como "Deshabilitado"
+        const estado = driver.activo === false ? 'DESHABILITADO' : driver.estado;
+        const statusClass = getStatusClass(estado, driver.activo);
+        const statusText = getStatusText(estado, driver.activo);
     
     return `
             <tr>
@@ -150,17 +190,25 @@ function renderDrivers(driversToRender = drivers) {
                     <span class="status-badge ${statusClass}">${statusText}</span>
                 </td>
                 <td>
-                    <span class="vehicle-assigned">CAM-001</span>
+                    <span class="vehicle-assigned">${getAssignedVehicle(driver.id)}</span>
                 </td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn edit" onclick="editDriver('${driver.id}')">
+                        <button class="action-btn edit" onclick="editDriver('${driver.id}')" title="Editar">
                             <i class="fas fa-edit"></i>
-                </button>
-                        <button class="action-btn delete" onclick="deleteDriver('${driver.id}')">
+                        </button>
+                        ${driver.activo !== false 
+                            ? `<button class="action-btn deactivate" onclick="deactivateDriver('${driver.id}')" title="Desactivar">
+                                <i class="fas fa-ban"></i>
+                            </button>`
+                            : `<button class="action-btn activate" onclick="activateDriver('${driver.id}')" title="Reactivar">
+                                <i class="fas fa-check-circle"></i>
+                            </button>`
+                        }
+                        <button class="action-btn delete" onclick="deleteDriverPermanently('${driver.id}')" title="Eliminar permanentemente">
                             <i class="fas fa-trash"></i>
-                </button>
-            </div>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -174,13 +222,15 @@ function getLicenseType(tipo) {
     return { class: 'liviana', text: 'Liviana' };
 }
 
-function getStatusClass(estado) {
+function getStatusClass(estado, activo) {
+    if (activo === false) return 'fuera-servicio';
     if (estado === 'EN_RUTA') return 'en-ruta';
     if (estado === 'DISPONIBLE') return 'disponible';
     return 'fuera-servicio';
 }
 
-function getStatusText(estado) {
+function getStatusText(estado, activo) {
+    if (activo === false) return 'Deshabilitado';
     const statusMap = {
         'DISPONIBLE': 'Disponible',
         'ASIGNADO': 'Asignado',
@@ -188,9 +238,44 @@ function getStatusText(estado) {
         'DESCANSANDO': 'Descansando',
         'VACACIONES': 'En Vacaciones',
         'ENFERMO': 'Enfermo',
-        'LICENCIA': 'En Licencia'
+        'LICENCIA': 'En Licencia',
+        'DESHABILITADO': 'Deshabilitado'
     };
     return statusMap[estado] || estado;
+}
+
+// Obtener vehículo asignado para un chofer
+function getAssignedVehicle(driverId) {
+    const asignaciones = driverAssignments[driverId] || [];
+    if (asignaciones.length > 0) {
+        // Tomar la primera asignación activa
+        const asignacion = asignaciones.find(a => a.estado === 'ACTIVA') || asignaciones[0];
+        return asignacion.placaVehiculo || 'N/A';
+    }
+    return 'Sin asignar';
+}
+
+// Verificar si un chofer tiene asignaciones activas
+async function hasActiveAssignments(driverId) {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        if (!driverId) return false;
+        
+        const response = await fetch(`${ASSIGNMENTS_API_URL}/chofer/${driverId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const asignaciones = await response.json();
+            return asignaciones && asignaciones.length > 0 && asignaciones.some(a => a.estado === 'ACTIVA');
+        }
+        return false;
+    } catch (error) {
+        console.error('Error verificando asignaciones:', error);
+        return false;
+    }
 }
 
 function showAddDriverModal() {
@@ -267,7 +352,7 @@ async function handleDriverSubmit(e) {
         }
     } catch (error) {
         console.error('Error:', error);
-        alert(editingDriverId ? 'Error al actualizar chofer' : 'Error al agregar chofer');
+        showNotification('error', 'Error', editingDriverId ? 'Error al actualizar chofer' : 'Error al agregar chofer');
     }
 }
 
@@ -294,8 +379,75 @@ function editDriver(id) {
     showAddDriverModal();
 }
 
-async function deleteDriver(id) {
-    if (!confirm('¿Estás seguro de eliminar este chofer?')) return;
+async function deactivateDriver(id) {
+    // Verificar si tiene asignaciones activas
+    const hasAssignments = await hasActiveAssignments(id);
+    if (hasAssignments) {
+        showNotification('warning', 'Advertencia', 'No se puede desactivar el chofer porque tiene vehículos asignados. Por favor, desasigne los vehículos primero.');
+        return;
+    }
+    
+    // Mostrar modal de confirmación
+    showConfirmationModal(
+        'Desactivar Chofer',
+        '¿Estás seguro de desactivar este chofer? El chofer quedará inactivo pero no se eliminará.',
+        async () => {
+            await performDeactivate(id);
+        }
+    );
+}
+
+async function performDeactivate(id) {
+    
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        const response = await fetch(`${API_BASE_URL}/${id}/deactivate`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok || response.status === 204) {
+            loadDrivers();
+            showNotification('success', 'Éxito', 'Chofer desactivado correctamente');
+        } else {
+            const errorText = await response.text();
+            console.error('Error response:', response.status, errorText);
+            let errorMessage = 'Error al desactivar chofer';
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.message || errorMessage;
+            } catch (e) {
+                errorMessage = `Error al desactivar chofer: ${response.status}`;
+            }
+            showNotification('error', 'Error', errorMessage);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('error', 'Error', 'Error al desactivar chofer');
+    }
+}
+
+async function deleteDriverPermanently(id) {
+    // Verificar si tiene asignaciones activas
+    const hasAssignments = await hasActiveAssignments(id);
+    if (hasAssignments) {
+        showNotification('warning', 'Advertencia', 'No se puede eliminar el chofer porque tiene vehículos asignados. Por favor, desasigne los vehículos primero.');
+        return;
+    }
+    
+    // Mostrar modal de confirmación
+    showConfirmationModal(
+        'Eliminar Permanentemente',
+        '¿Estás seguro de ELIMINAR PERMANENTEMENTE este chofer? Esta acción no se puede deshacer.',
+        async () => {
+            await performDelete(id);
+        }
+    );
+}
+
+async function performDelete(id) {
     
     try {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
@@ -308,7 +460,7 @@ async function deleteDriver(id) {
         
         if (response.ok || response.status === 204) {
             loadDrivers();
-            showNotification('success', 'Éxito', 'Chofer eliminado correctamente');
+            showNotification('success', 'Éxito', 'Chofer eliminado permanentemente');
         } else {
             const errorText = await response.text();
             console.error('Error response:', response.status, errorText);
@@ -323,7 +475,49 @@ async function deleteDriver(id) {
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error al eliminar chofer');
+        showNotification('error', 'Error', 'Error al eliminar chofer');
+    }
+}
+
+async function activateDriver(id) {
+    // Mostrar modal de confirmación
+    showConfirmationModal(
+        'Reactivar Chofer',
+        '¿Estás seguro de reactivar este chofer? El chofer volverá a estar disponible.',
+        async () => {
+            await performActivate(id);
+        }
+    );
+}
+
+async function performActivate(id) {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        const response = await fetch(`${API_BASE_URL}/${id}/activate`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            loadDrivers();
+            showNotification('success', 'Éxito', 'Chofer reactivado correctamente');
+        } else {
+            const errorText = await response.text();
+            console.error('Error response:', response.status, errorText);
+            let errorMessage = 'Error al reactivar chofer';
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.message || errorMessage;
+            } catch (e) {
+                errorMessage = `Error al reactivar chofer: ${response.status}`;
+            }
+            showNotification('error', 'Error', errorMessage);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('error', 'Error', 'Error al reactivar chofer');
     }
 }
 
@@ -369,11 +563,31 @@ function closeNotification() {
 }
 
 function logout() {
-    if (confirm('¿Estás seguro de cerrar sesión?')) {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('currentUser');
-        sessionStorage.removeItem('authToken');
-        sessionStorage.removeItem('currentUser');
-        window.location.href = 'http://localhost:8085/';
+    showConfirmationModal(
+        'Cerrar Sesión',
+        '¿Estás seguro de cerrar sesión?',
+        () => {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            sessionStorage.removeItem('authToken');
+            sessionStorage.removeItem('currentUser');
+            window.location.href = 'http://localhost:8085/';
+        }
+    );
+}
+
+// Funciones para el modal de confirmación
+function showConfirmationModal(title, message, callback) {
+    confirmationCallback = callback;
+    document.getElementById('confirmationTitle').textContent = title;
+    document.getElementById('confirmationMessage').textContent = message;
+    document.getElementById('confirmationModal').classList.add('active');
+}
+
+function closeConfirmationModal(confirmed) {
+    document.getElementById('confirmationModal').classList.remove('active');
+    if (confirmed && confirmationCallback) {
+        confirmationCallback();
+        confirmationCallback = null;
     }
 }

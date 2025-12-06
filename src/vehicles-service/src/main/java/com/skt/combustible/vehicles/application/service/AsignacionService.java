@@ -38,7 +38,7 @@ public class AsignacionService {
      */
     public AsignacionResponse asignarVehiculoAChofer(AsignacionCreateRequest request) {
         // Validar que el vehículo existe
-        Vehicle vehicle = vehicleRepository.findById(request.getVehicleId().toString())
+        Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado con ID: " + request.getVehicleId()));
         
         // Validar que el vehículo esté activo
@@ -58,7 +58,7 @@ public class AsignacionService {
         
         // Validar regla de negocio: máximo 2 vehículos por chofer
         Long asignacionesActivas = asignacionRepository.countAsignacionesActivasPorChofer(request.getChoferId());
-        if (asignacionesActivas >= 2) {
+        if (asignacionesActivas != null && asignacionesActivas >= 2) {
             throw new IllegalArgumentException("Un chofer no puede tener más de 2 vehículos asignados");
         }
         
@@ -85,11 +85,16 @@ public class AsignacionService {
     /**
      * Desasigna un vehículo de un chofer
      */
-    public AsignacionResponse desasignarVehiculo(Long vehicleId) {
-        Vehicle vehicle = vehicleRepository.findById(vehicleId.toString())
+    public AsignacionResponse desasignarVehiculo(String vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado con ID: " + vehicleId));
         
-        AsignacionVehiculo asignacionActiva = asignacionRepository.findAsignacionActivaPorVehiculo(vehicle)
+        // Buscar asignación activa filtrando por ID del vehículo
+        // Como DBRef almacena el vehículo como referencia, buscamos todas las activas y filtramos
+        AsignacionVehiculo asignacionActiva = asignacionRepository.findAsignacionesActivas()
+                .stream()
+                .filter(a -> a.getVehicle() != null && vehicleId.equals(a.getVehicle().getId()))
+                .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("No hay asignación activa para este vehículo"));
         
         // Finalizar la asignación
@@ -118,8 +123,13 @@ public class AsignacionService {
      * Obtiene asignaciones por vehículo
      */
     @Transactional(readOnly = true)
-    public List<AsignacionResponse> obtenerAsignacionesPorVehiculo(Long vehicleId) {
-        return asignacionRepository.findByVehicleIdAndActivoTrue(vehicleId)
+    public List<AsignacionResponse> obtenerAsignacionesPorVehiculo(String vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElse(null);
+        if (vehicle == null) {
+            return java.util.Collections.emptyList();
+        }
+        return asignacionRepository.findByVehicleAndActivoTrue(vehicle)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -129,7 +139,7 @@ public class AsignacionService {
      * Obtiene asignaciones activas por chofer
      */
     @Transactional(readOnly = true)
-    public List<AsignacionResponse> obtenerAsignacionesActivasPorChofer(Long choferId) {
+    public List<AsignacionResponse> obtenerAsignacionesActivasPorChofer(String choferId) {
         return asignacionRepository.findAsignacionesActivasPorChofer(choferId)
                 .stream()
                 .map(this::mapToResponse)
@@ -171,9 +181,9 @@ public class AsignacionService {
      * Verifica si un chofer puede recibir más asignaciones
      */
     @Transactional(readOnly = true)
-    public boolean puedeAsignarMasVehiculos(Long choferId) {
+    public boolean puedeAsignarMasVehiculos(String choferId) {
         Long asignacionesActivas = asignacionRepository.countAsignacionesActivasPorChofer(choferId);
-        return asignacionesActivas < 2;
+        return asignacionesActivas == null || asignacionesActivas < 2;
     }
     
     /**

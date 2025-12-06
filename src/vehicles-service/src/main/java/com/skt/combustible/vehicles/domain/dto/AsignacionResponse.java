@@ -15,7 +15,7 @@ public class AsignacionResponse {
     private String placaVehiculo;
     private String marcaVehiculo;
     private String modeloVehiculo;
-    private Long choferId;
+    private String choferId;
     private LocalDateTime fechaAsignacion;
     private LocalDateTime fechaDesasignacion;
     private String estado;
@@ -27,7 +27,7 @@ public class AsignacionResponse {
     // Constructores
     public AsignacionResponse() {}
     
-    public AsignacionResponse(String id, String vehicleId, Long choferId, 
+    public AsignacionResponse(String id, String vehicleId, String choferId, 
                             LocalDateTime fechaAsignacion, String estado) {
         this.id = id;
         this.vehicleId = vehicleId;
@@ -77,11 +77,11 @@ public class AsignacionResponse {
         this.modeloVehiculo = modeloVehiculo;
     }
     
-    public Long getChoferId() {
+    public String getChoferId() {
         return choferId;
     }
-    
-    public void setChoferId(Long choferId) {
+
+    public void setChoferId(String choferId) {
         this.choferId = choferId;
     }
     

@@ -222,6 +222,21 @@
     </div>
   </div>
 
+  <!-- Confirmation Modal -->
+  <div id="confirmationModal" class="notification-modal">
+    <div class="notification-content">
+      <div class="notification-icon" id="confirmationIcon">
+        <i class="fas fa-question-circle"></i>
+      </div>
+      <h3 id="confirmationTitle">Confirmar</h3>
+      <p id="confirmationMessage">¿Estás seguro?</p>
+      <div class="confirmation-actions">
+        <button class="notification-btn btn-secondary" onclick="closeConfirmationModal(false)">Cancelar</button>
+        <button class="notification-btn btn-primary" onclick="closeConfirmationModal(true)">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="drivers-script.js"></script>
 </body>
 </html>

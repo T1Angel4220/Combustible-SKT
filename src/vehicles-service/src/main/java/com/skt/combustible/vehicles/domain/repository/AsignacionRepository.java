@@ -33,13 +33,13 @@ public interface AsignacionRepository extends MongoRepository<AsignacionVehiculo
     /**
      * Busca asignaciones por chofer
      */
-    List<AsignacionVehiculo> findByChoferIdAndActivoTrue(Long choferId);
+    List<AsignacionVehiculo> findByChoferIdAndActivoTrue(String choferId);
     
     /**
      * Busca asignaciones activas por chofer
      */
     @Query("{ 'choferId': ?0, 'estado': 'ACTIVA', 'activo': true }")
-    List<AsignacionVehiculo> findAsignacionesActivasPorChofer(Long choferId);
+    List<AsignacionVehiculo> findAsignacionesActivasPorChofer(String choferId);
     
     /**
      * Busca la asignación activa de un vehículo
@@ -48,10 +48,16 @@ public interface AsignacionRepository extends MongoRepository<AsignacionVehiculo
     Optional<AsignacionVehiculo> findAsignacionActivaPorVehiculo(Vehicle vehicle);
     
     /**
+     * Busca asignaciones activas por vehículo (todas las activas)
+     */
+    @Query("{ 'estado': 'ACTIVA', 'activo': true }")
+    List<AsignacionVehiculo> findAsignacionesActivas();
+    
+    /**
      * Cuenta asignaciones activas por chofer
      */
     @Query(value = "{ 'choferId': ?0, 'estado': 'ACTIVA', 'activo': true }", count = true)
-    Long countAsignacionesActivasPorChofer(Long choferId);
+    Long countAsignacionesActivasPorChofer(String choferId);
     
     /**
      * Busca asignaciones por estado

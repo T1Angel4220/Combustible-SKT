@@ -174,7 +174,7 @@ public class VehicleReportService {
             ));
         
         // Asignaciones activas por chofer
-        Map<Long, Long> asignacionesPorChofer = asignaciones.stream()
+        Map<String, Long> asignacionesPorChofer = asignaciones.stream()
             .filter(a -> a.getEstado() == AsignacionVehiculo.EstadoAsignacion.ACTIVA)
             .collect(Collectors.groupingBy(
                 AsignacionVehiculo::getChoferId,
