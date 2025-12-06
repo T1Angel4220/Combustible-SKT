@@ -5,17 +5,21 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.skt.combustible.shared.domain.enums.EstadoOperativo;
+import com.skt.combustible.shared.domain.enums.TipoMaquinaria;
 import com.skt.combustible.vehicles.domain.dto.AsignacionCreateRequest;
 import com.skt.combustible.vehicles.domain.dto.AsignacionResponse;
 import com.skt.combustible.vehicles.domain.entity.AsignacionVehiculo;
 import com.skt.combustible.vehicles.domain.entity.Vehicle;
 import com.skt.combustible.vehicles.domain.repository.AsignacionRepository;
 import com.skt.combustible.vehicles.domain.repository.VehicleRepository;
+import com.skt.combustible.vehicles.infrastructure.client.DriversGrpcClient;
 
 /**
  * Servicio de aplicación para la gestión de asignaciones de vehículos
@@ -27,16 +31,24 @@ import com.skt.combustible.vehicles.domain.repository.VehicleRepository;
 @Transactional
 public class AsignacionService {
     
+    private static final Logger logger = LoggerFactory.getLogger(AsignacionService.class);
+    
     @Autowired
     private AsignacionRepository asignacionRepository;
     
     @Autowired
     private VehicleRepository vehicleRepository;
     
+    @Autowired
+    private DriversGrpcClient driversGrpcClient;
+    
     /**
      * Asigna un vehículo a un chofer
+     * Implementa lógica diferenciada por tipo de maquinaria (liviana/pesada)
      */
     public AsignacionResponse asignarVehiculoAChofer(AsignacionCreateRequest request) {
+        logger.info("Iniciando asignación de vehículo {} a chofer {}", request.getVehicleId(), request.getChoferId());
+        
         // Validar que el vehículo existe
         Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado con ID: " + request.getVehicleId()));
@@ -56,11 +68,36 @@ public class AsignacionService {
             throw new IllegalArgumentException("El vehículo ya está asignado a otro chofer");
         }
         
-        // Validar regla de negocio: máximo 2 vehículos por chofer
-        Long asignacionesActivas = asignacionRepository.countAsignacionesActivasPorChofer(request.getChoferId());
-        if (asignacionesActivas != null && asignacionesActivas >= 2) {
-            throw new IllegalArgumentException("Un chofer no puede tener más de 2 vehículos asignados");
+        // Validar disponibilidad del chofer vía gRPC
+        try {
+            boolean driverAvailable = driversGrpcClient.isDriverAvailable(request.getChoferId());
+            if (!driverAvailable) {
+                throw new IllegalArgumentException("El chofer no está disponible para asignación");
+            }
+            logger.debug("Chofer {} verificado como disponible vía gRPC", request.getChoferId());
+        } catch (RuntimeException e) {
+            logger.error("Error verificando disponibilidad del chofer vía gRPC: {}", e.getMessage());
+            throw new IllegalArgumentException("No se pudo verificar la disponibilidad del chofer: " + e.getMessage());
         }
+        
+        // Validar compatibilidad del chofer con el tipo de maquinaria
+        TipoMaquinaria tipoMaquinaria = vehicle.getTipoMaquinaria();
+        try {
+            boolean canHandle = driversGrpcClient.canDriverHandleMachineryType(request.getChoferId(), tipoMaquinaria);
+            if (!canHandle) {
+                throw new IllegalArgumentException(
+                    String.format("El chofer no está autorizado para manejar maquinaria tipo %s. " +
+                                  "Solo puede manejar el tipo asignado en su perfil.", tipoMaquinaria));
+            }
+            logger.debug("Chofer {} verificado como compatible con tipo de maquinaria {}", 
+                        request.getChoferId(), tipoMaquinaria);
+        } catch (RuntimeException e) {
+            logger.error("Error verificando compatibilidad chofer-maquinaria: {}", e.getMessage());
+            throw new IllegalArgumentException("No se pudo verificar la compatibilidad del chofer: " + e.getMessage());
+        }
+        
+        // Aplicar lógica diferenciada por tipo de maquinaria
+        aplicarReglasPorTipoMaquinaria(vehicle, request.getChoferId());
         
         // Crear la asignación
         AsignacionVehiculo asignacion = new AsignacionVehiculo(
@@ -75,11 +112,117 @@ public class AsignacionService {
         
         AsignacionVehiculo savedAsignacion = asignacionRepository.save(asignacion);
         
-        // Cambiar el estado del vehículo a EN_USO (temporalmente hasta que se resuelva el enum)
+        // Cambiar el estado del vehículo a EN_USO
         vehicle.setEstadoOperativo(EstadoOperativo.EN_USO);
         vehicleRepository.save(vehicle);
         
+        logger.info("Asignación completada exitosamente: vehículo {} asignado a chofer {}", 
+                   vehicle.getPlaca(), request.getChoferId());
+        
         return mapToResponse(savedAsignacion);
+    }
+    
+    /**
+     * Aplica reglas de negocio diferenciadas según el tipo de maquinaria
+     */
+    private void aplicarReglasPorTipoMaquinaria(Vehicle vehicle, String choferId) {
+        TipoMaquinaria tipo = vehicle.getTipoMaquinaria();
+        
+        if (vehicle.esLiviano()) {
+            // Reglas para maquinaria liviana (CAMION, VOLQUETE)
+            aplicarReglasMaquinariaLiviana(vehicle, choferId);
+        } else if (vehicle.esPesado()) {
+            // Reglas para maquinaria pesada (EXCAVADORA, CARGADOR, GRUA, MOTONIVELADORA)
+            aplicarReglasMaquinariaPesada(vehicle, choferId);
+        } else {
+            logger.warn("Tipo de maquinaria no reconocido: {}", tipo);
+        }
+    }
+    
+    /**
+     * Reglas específicas para maquinaria liviana
+     */
+    private void aplicarReglasMaquinariaLiviana(Vehicle vehicle, String choferId) {
+        logger.debug("Aplicando reglas para maquinaria liviana: {}", vehicle.getTipoMaquinaria());
+        
+        // Regla 1: Máximo 2 vehículos livianos por chofer
+        Long asignacionesActivas = asignacionRepository.countAsignacionesActivasPorChofer(choferId);
+        if (asignacionesActivas != null && asignacionesActivas >= 2) {
+            throw new IllegalArgumentException(
+                "Un chofer no puede tener más de 2 vehículos asignados simultáneamente");
+        }
+        
+        // Regla 2: Verificar que no tenga vehículos pesados asignados
+        List<AsignacionVehiculo> asignacionesActivasList = 
+            asignacionRepository.findAsignacionesActivasPorChofer(choferId);
+        
+        boolean tienePesado = asignacionesActivasList.stream()
+            .anyMatch(a -> a.getVehicle() != null && a.getVehicle().esPesado());
+        
+        if (tienePesado) {
+            throw new IllegalArgumentException(
+                "Un chofer no puede tener asignados simultáneamente vehículos livianos y pesados. " +
+                "Debe desasignar primero los vehículos pesados.");
+        }
+        
+        // Regla 3: Validar capacidad del tanque (maquinaria liviana generalmente tiene tanques más pequeños)
+        if (vehicle.getCapacidadTanque() != null && vehicle.getCapacidadTanque() > 200) {
+            logger.warn("Vehículo liviano con capacidad de tanque inusualmente grande: {} L", 
+                       vehicle.getCapacidadTanque());
+        }
+    }
+    
+    /**
+     * Reglas específicas para maquinaria pesada
+     */
+    private void aplicarReglasMaquinariaPesada(Vehicle vehicle, String choferId) {
+        logger.debug("Aplicando reglas para maquinaria pesada: {}", vehicle.getTipoMaquinaria());
+        
+        // Regla 1: Máximo 1 vehículo pesado por chofer (más restrictivo que liviana)
+        Long asignacionesActivas = asignacionRepository.countAsignacionesActivasPorChofer(choferId);
+        if (asignacionesActivas != null && asignacionesActivas >= 1) {
+            // Verificar si tiene vehículos livianos asignados
+            List<AsignacionVehiculo> asignacionesActivasList = 
+                asignacionRepository.findAsignacionesActivasPorChofer(choferId);
+            
+            boolean tieneLiviano = asignacionesActivasList.stream()
+                .anyMatch(a -> a.getVehicle() != null && a.getVehicle().esLiviano());
+            
+            if (tieneLiviano) {
+                throw new IllegalArgumentException(
+                    "Un chofer no puede tener asignados simultáneamente vehículos livianos y pesados. " +
+                    "Debe desasignar primero los vehículos livianos.");
+            }
+            
+            // Si ya tiene un pesado, no puede tener otro
+            boolean tienePesado = asignacionesActivasList.stream()
+                .anyMatch(a -> a.getVehicle() != null && a.getVehicle().esPesado());
+            
+            if (tienePesado) {
+                throw new IllegalArgumentException(
+                    "Un chofer solo puede tener 1 vehículo pesado asignado a la vez. " +
+                    "Debe desasignar el vehículo pesado actual antes de asignar uno nuevo.");
+            }
+        }
+        
+        // Regla 2: Validar estado de mantenimiento (maquinaria pesada requiere más mantenimiento)
+        if (vehicle.getEstadoOperativo() == EstadoOperativo.MANTENIMIENTO) {
+            throw new IllegalArgumentException(
+                "No se puede asignar maquinaria pesada que está en mantenimiento. " +
+                "Debe completar el mantenimiento primero.");
+        }
+        
+        // Regla 3: Validar capacidad del tanque (maquinaria pesada generalmente tiene tanques más grandes)
+        if (vehicle.getCapacidadTanque() != null && vehicle.getCapacidadTanque() < 100) {
+            logger.warn("Vehículo pesado con capacidad de tanque inusualmente pequeña: {} L", 
+                       vehicle.getCapacidadTanque());
+        }
+        
+        // Regla 4: Validar consumo promedio (maquinaria pesada consume más)
+        if (vehicle.getConsumoPromedio() != null && vehicle.getConsumoPromedio() < 15) {
+            logger.warn("Vehículo pesado con consumo promedio inusualmente bajo: {} L/100km", 
+                       vehicle.getConsumoPromedio());
+        }
     }
     
     /**

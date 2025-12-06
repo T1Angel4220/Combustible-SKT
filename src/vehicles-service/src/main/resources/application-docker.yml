@@ -34,6 +34,10 @@ logging:
 grpc:
   server:
     port: 9092
+  client:
+    drivers-service:
+      host: ${GRPC_DRIVERS_HOST:drivers-service}
+      port: ${GRPC_DRIVERS_PORT:9091}
     
 # Service Discovery (para comunicación entre microservicios)
 service:

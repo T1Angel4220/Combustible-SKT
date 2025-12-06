@@ -1,4 +1,4 @@
-package com.skt.combustible.vehicles.infrastructure.security;
+package com.skt.combustible.routes.infrastructure.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,7 +18,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Filtro JWT para autenticación en Vehicles Service
+ * Filtro JWT para autenticación en Routes Service
  * 
  * @author Sistema SKT
  * @version 1.0.0
@@ -79,6 +79,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
         } else {
+            // Si no hay token pero el endpoint requiere autenticación, verificar si es una solicitud de navegador
+            // Para archivos HTML, CSS, JS, permitir el acceso (el frontend manejará la autenticación)
+            if (requestURI.endsWith(".html") || requestURI.endsWith(".css") || requestURI.endsWith(".js") || requestURI.endsWith(".ico")) {
+                logger.debug("Permitiendo acceso a archivo estático sin token: {}", requestURI);
+                filterChain.doFilter(request, response);
+                return;
+            }
+            
             logger.debug("No se encontró token JWT en request a: {}", requestURI);
             sendUnauthorizedResponse(response);
             return;
@@ -94,14 +102,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * Verifica si el endpoint es público (no requiere autenticación)
-     * 
-     * @param requestURI la URI de la request
-     * @return true si es público, false en caso contrario
      */
     private boolean isPublicEndpoint(String requestURI) {
         return requestURI.startsWith("/actuator/") ||
-                requestURI.startsWith("/api/v1/vehicles/health") ||
-                requestURI.startsWith("/api/v1/vehicles/info") ||
+                requestURI.startsWith("/api/v1/routes/health") ||
+                requestURI.startsWith("/api/v1/routes/info") ||
                 requestURI.startsWith("/swagger-ui/") ||
                 requestURI.startsWith("/v3/api-docs/") ||
                 requestURI.equals("/") ||
@@ -120,7 +125,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        String jsonResponse = "{\"error\": \"Debes iniciar sesión para acceder a la gestión de vehículos\", \"status\": 401}";
+        String jsonResponse = "{\"error\": \"Debes iniciar sesión para acceder a la gestión de rutas\", \"status\": 401}";
         response.getWriter().write(jsonResponse);
     }
 }
+

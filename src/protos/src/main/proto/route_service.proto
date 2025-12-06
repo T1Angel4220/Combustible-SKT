@@ -1,0 +1,225 @@
+syntax = "proto3";
+
+package com.skt.combustible.routes;
+
+option java_multiple_files = true;
+option java_package = "com.skt.combustible.routes.grpc";
+option java_outer_classname = "RouteServiceProto";
+
+// Servicio gRPC para gestión de rutas
+service RouteService {
+  // Crear una nueva ruta
+  rpc CreateRoute(CreateRouteRequest) returns (RouteResponse);
+  
+  // Obtener ruta por ID
+  rpc GetRouteById(GetRouteByIdRequest) returns (RouteResponse);
+  
+  // Obtener ruta por código
+  rpc GetRouteByCode(GetRouteByCodeRequest) returns (RouteResponse);
+  
+  // Obtener todas las rutas
+  rpc GetAllRoutes(GetAllRoutesRequest) returns (GetAllRoutesResponse);
+  
+  // Obtener rutas por estado
+  rpc GetRoutesByEstado(GetRoutesByEstadoRequest) returns (GetRoutesByEstadoResponse);
+  
+  // Obtener rutas activas
+  rpc GetActiveRoutes(GetActiveRoutesRequest) returns (GetActiveRoutesResponse);
+  
+  // Obtener rutas en curso
+  rpc GetRoutesInProgress(GetRoutesInProgressRequest) returns (GetRoutesInProgressResponse);
+  
+  // Obtener rutas por vehículo
+  rpc GetRoutesByVehicle(GetRoutesByVehicleRequest) returns (GetRoutesByVehicleResponse);
+  
+  // Obtener rutas por chofer
+  rpc GetRoutesByDriver(GetRoutesByDriverRequest) returns (GetRoutesByDriverResponse);
+  
+  // Actualizar ruta
+  rpc UpdateRoute(UpdateRouteRequest) returns (RouteResponse);
+  
+  // Iniciar ruta
+  rpc StartRoute(StartRouteRequest) returns (RouteResponse);
+  
+  // Completar ruta
+  rpc CompleteRoute(CompleteRouteRequest) returns (RouteResponse);
+  
+  // Cancelar ruta
+  rpc CancelRoute(CancelRouteRequest) returns (RouteResponse);
+  
+  // Eliminar ruta
+  rpc DeleteRoute(DeleteRouteRequest) returns (Empty);
+  
+  // Obtener estadísticas de rutas
+  rpc GetRouteStats(GetRouteStatsRequest) returns (RouteStatsResponse);
+}
+
+// Enums
+enum EstadoRuta {
+  PENDIENTE = 0;
+  EN_CURSO = 1;
+  COMPLETADA = 2;
+  CANCELADA = 3;
+}
+
+enum TipoMaquinariaRuta {
+  CAMION = 0;
+  VOLQUETE = 1;
+  EXCAVADORA = 2;
+  CARGADOR = 3;
+  GRUA = 4;
+  MOTONIVELADORA = 5;
+}
+
+// Mensajes de request
+message CreateRouteRequest {
+  string nombre_ruta = 1;
+  string origen = 2;
+  string destino = 3;
+  double distancia_km = 4;
+  double duracion_estimada_horas = 5;
+  string vehiculo_id = 6;
+  string chofer_id = 7;
+  TipoMaquinariaRuta tipo_maquinaria = 8;
+  string hora_inicio = 9; // Formato HH:mm
+  string observaciones = 10;
+}
+
+message UpdateRouteRequest {
+  string id = 1;
+  string nombre_ruta = 2;
+  string origen = 3;
+  string destino = 4;
+  double distancia_km = 5;
+  double duracion_estimada_horas = 6;
+  string vehiculo_id = 7;
+  string chofer_id = 8;
+  TipoMaquinariaRuta tipo_maquinaria = 9;
+  string hora_inicio = 10;
+  EstadoRuta estado = 11;
+  string observaciones = 12;
+}
+
+message GetRouteByIdRequest {
+  string id = 1;
+}
+
+message GetRouteByCodeRequest {
+  string codigo = 1;
+}
+
+message GetAllRoutesRequest {
+  // Vacío - obtiene todas las rutas activas
+}
+
+message GetRoutesByEstadoRequest {
+  EstadoRuta estado = 1;
+}
+
+message GetActiveRoutesRequest {
+  // Vacío - obtiene todas las rutas activas
+}
+
+message GetRoutesInProgressRequest {
+  // Vacío - obtiene todas las rutas en curso
+}
+
+message GetRoutesByVehicleRequest {
+  string vehiculo_id = 1;
+}
+
+message GetRoutesByDriverRequest {
+  string chofer_id = 1;
+}
+
+message StartRouteRequest {
+  string id = 1;
+}
+
+message CompleteRouteRequest {
+  string id = 1;
+}
+
+message CancelRouteRequest {
+  string id = 1;
+}
+
+message DeleteRouteRequest {
+  string id = 1;
+}
+
+message GetRouteStatsRequest {
+  // Vacío - obtiene estadísticas generales
+}
+
+// Mensajes de response
+message RouteResponse {
+  string id = 1;
+  string codigo = 2;
+  string nombre_ruta = 3;
+  string origen = 4;
+  string destino = 5;
+  double distancia_km = 6;
+  double duracion_estimada_horas = 7;
+  double consumo_estimado_litros = 8;
+  string hora_inicio = 9;
+  string vehiculo_id = 10;
+  string placa_vehiculo = 11;
+  string marca_vehiculo = 12;
+  string modelo_vehiculo = 13;
+  string chofer_id = 14;
+  string nombre_chofer = 15;
+  string apellido_chofer = 16;
+  TipoMaquinariaRuta tipo_maquinaria = 17;
+  EstadoRuta estado = 18;
+  bool activa = 19;
+  string fecha_inicio = 20;
+  string fecha_fin = 21;
+  string observaciones = 22;
+  string created_at = 23;
+  string updated_at = 24;
+}
+
+message GetAllRoutesResponse {
+  repeated RouteResponse routes = 1;
+  int32 count = 2;
+}
+
+message GetRoutesByEstadoResponse {
+  repeated RouteResponse routes = 1;
+  int32 count = 2;
+}
+
+message GetActiveRoutesResponse {
+  repeated RouteResponse routes = 1;
+  int32 count = 2;
+}
+
+message GetRoutesInProgressResponse {
+  repeated RouteResponse routes = 1;
+  int32 count = 2;
+}
+
+message GetRoutesByVehicleResponse {
+  repeated RouteResponse routes = 1;
+  int32 count = 2;
+}
+
+message GetRoutesByDriverResponse {
+  repeated RouteResponse routes = 1;
+  int32 count = 2;
+}
+
+message RouteStatsResponse {
+  int64 total_rutas = 1;
+  int64 rutas_en_curso = 2;
+  int64 rutas_completadas = 3;
+  int64 rutas_completadas_hoy = 4;
+  double distancia_total = 5;
+  double consumo_total_estimado = 6;
+}
+
+// Mensaje vacío
+message Empty {
+}
+

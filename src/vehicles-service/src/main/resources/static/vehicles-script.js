@@ -66,6 +66,22 @@ function setupEventListeners() {
     if (assignDriverForm) {
         assignDriverForm.addEventListener('submit', handleAssignDriverSubmit);
     }
+    
+    // Interceptar clics en enlaces externos para compartir token
+    document.querySelectorAll('a[href^="http://localhost:8083"], a[href^="http://localhost:8081"], a[href^="http://localhost:8085"]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            const url = new URL(this.href);
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+            if (token) {
+                url.searchParams.set('token', token);
+                const user = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser');
+                if (user) {
+                    url.searchParams.set('user', user);
+                }
+                this.href = url.toString();
+            }
+        });
+    });
 }
 
 async function loadVehicles() {

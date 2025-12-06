@@ -9,9 +9,60 @@ let confirmationCallback = null; // Callback para el modal de confirmación
 
 document.addEventListener('DOMContentLoaded', function() {
     checkAuth();
+    populateEnumSelects(); // Cargar enums primero
     loadDrivers();
     setupEventListeners();
 });
+
+// Función para poblar los selects con todos los valores de los enums
+function populateEnumSelects() {
+    // Poblar Tipo de Maquinaria
+    const tipoMaquinariaSelect = document.getElementById('driverTipoMaquinaria');
+    if (tipoMaquinariaSelect) {
+        const tipoMaquinariaOptions = [
+            { value: '', text: 'Sin asignar' },
+            { value: 'CAMION', text: 'Camión (Liviana)' },
+            { value: 'VOLQUETE', text: 'Volquete (Liviana)' },
+            { value: 'EXCAVADORA', text: 'Excavadora (Pesada)' },
+            { value: 'CARGADOR', text: 'Cargador (Pesada)' },
+            { value: 'GRUA', text: 'Grúa (Pesada)' },
+            { value: 'MOTONIVELADORA', text: 'Motoniveladora (Pesada)' }
+        ];
+        
+        tipoMaquinariaSelect.innerHTML = '';
+        tipoMaquinariaOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.value;
+            optionElement.textContent = option.text;
+            tipoMaquinariaSelect.appendChild(optionElement);
+        });
+    }
+    
+    // Poblar Estado Operativo (solo estados para choferes)
+    const estadoSelect = document.getElementById('driverEstado');
+    if (estadoSelect) {
+        const estadoOptions = [
+            { value: 'DISPONIBLE', text: 'Disponible' },
+            { value: 'ASIGNADO', text: 'Asignado' },
+            { value: 'EN_RUTA', text: 'En Ruta' },
+            { value: 'DESCANSANDO', text: 'Descansando' },
+            { value: 'VACACIONES', text: 'En Vacaciones' },
+            { value: 'ENFERMO', text: 'Enfermo' },
+            { value: 'LICENCIA', text: 'En Licencia' }
+        ];
+        
+        estadoSelect.innerHTML = '';
+        estadoOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.value;
+            optionElement.textContent = option.text;
+            estadoSelect.appendChild(optionElement);
+        });
+        
+        // Establecer DISPONIBLE como valor por defecto
+        estadoSelect.value = 'DISPONIBLE';
+    }
+}
 
 // Cargar asignaciones para todos los choferes
 async function loadDriverAssignments() {
@@ -96,6 +147,22 @@ function setupEventListeners() {
     if (driverForm) {
         driverForm.addEventListener('submit', handleDriverSubmit);
     }
+    
+    // Interceptar clics en enlaces externos para compartir token
+    document.querySelectorAll('a[href^="http://localhost:8083"], a[href^="http://localhost:8082"], a[href^="http://localhost:8085"]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            const url = new URL(this.href);
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+            if (token) {
+                url.searchParams.set('token', token);
+                const user = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser');
+                if (user) {
+                    url.searchParams.set('user', user);
+                }
+                this.href = url.toString();
+            }
+        });
+    });
 }
 
 async function loadDrivers() {
@@ -279,6 +346,12 @@ async function hasActiveAssignments(driverId) {
 }
 
 function showAddDriverModal() {
+    // Asegurar que los selects estén poblados
+    populateEnumSelects();
+    // Resetear el formulario
+    document.getElementById('driverForm').reset();
+    // Establecer estado por defecto
+    document.getElementById('driverEstado').value = 'DISPONIBLE';
     document.getElementById('addDriverModal').classList.add('active');
 }
 
@@ -363,6 +436,9 @@ function editDriver(id) {
     // Establecer el ID del chofer que se está editando
     editingDriverId = id;
     
+    // Asegurar que los selects estén poblados antes de establecer valores
+    populateEnumSelects();
+    
     // Cambiar el título del modal
     document.querySelector('#addDriverModal .modal-header h2').textContent = 'Editar Chofer';
     
@@ -376,7 +452,7 @@ function editDriver(id) {
     document.getElementById('driverTipoMaquinaria').value = driver.tipoMaquinariaAsignada || '';
     document.getElementById('driverEstado').value = driver.estado || 'DISPONIBLE';
     
-    showAddDriverModal();
+    document.getElementById('addDriverModal').classList.add('active');
 }
 
 async function deactivateDriver(id) {
