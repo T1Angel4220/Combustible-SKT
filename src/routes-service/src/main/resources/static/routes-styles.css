@@ -764,6 +764,28 @@ body {
   background: var(--accent-red);
 }
 
+.add-route-btn {
+  background: var(--primary-red);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.add-route-btn:hover {
+  background: var(--accent-red);
+}
+
+.add-route-btn i {
+  font-size: 14px;
+}
+
 .btn-secondary {
   background: transparent;
   color: var(--text-secondary);

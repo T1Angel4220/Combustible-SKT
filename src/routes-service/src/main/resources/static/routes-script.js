@@ -25,6 +25,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     await applyRoleBasedUI();
     loadDrivers();
     setupEventListeners();
+    
+    // Agregar listener para el formulario de filtros de reportes
+    const reportFiltersForm = document.getElementById('reportFiltersForm');
+    if (reportFiltersForm) {
+        reportFiltersForm.addEventListener('submit', handleReportFiltersSubmit);
+    }
 });
 
 async function checkAuth() {
@@ -1481,17 +1487,99 @@ function logout() {
     );
 }
 
+// Funciones para el modal de filtros de reportes
+function showReportFiltersModal() {
+    // Cargar conductores y vehículos para los selects
+    populateReportFilters();
+    document.getElementById('reportFiltersModal').classList.add('active');
+}
+
+function closeReportFiltersModal() {
+    document.getElementById('reportFiltersModal').classList.remove('active');
+    document.getElementById('reportFiltersForm').reset();
+}
+
+function populateReportFilters() {
+    const conductorSelect = document.getElementById('reportFilterConductor');
+    const vehiculoSelect = document.getElementById('reportFilterVehiculo');
+    
+    if (conductorSelect) {
+        conductorSelect.innerHTML = '<option value="">Todos los conductores</option>';
+        drivers.forEach(driver => {
+            const option = document.createElement('option');
+            option.value = driver.id;
+            option.textContent = `${driver.nombre || ''} ${driver.apellido || ''}`.trim() || driver.dni;
+            conductorSelect.appendChild(option);
+        });
+    }
+    
+    if (vehiculoSelect) {
+        vehiculoSelect.innerHTML = '<option value="">Todos los vehículos</option>';
+        vehicles.forEach(vehicle => {
+            const option = document.createElement('option');
+            option.value = vehicle.id;
+            option.textContent = vehicle.placa || vehicle.id;
+            vehiculoSelect.appendChild(option);
+        });
+    }
+}
+
+function handleReportFiltersSubmit(e) {
+    e.preventDefault();
+    const filters = {
+        estado: document.getElementById('reportFilterEstado').value,
+        fechaInicio: document.getElementById('reportFilterFechaInicio').value,
+        fechaFin: document.getElementById('reportFilterFechaFin').value,
+        conductor: document.getElementById('reportFilterConductor').value,
+        vehiculo: document.getElementById('reportFilterVehiculo').value
+    };
+    closeReportFiltersModal();
+    generateReport(filters);
+}
+
 // Función para generar el reporte en PDF
-async function generateReport() {
-    if (routes.length === 0) {
-        showNotification('warning', 'Advertencia', 'No hay rutas para generar el reporte');
+async function generateReport(filters = {}) {
+    // Filtrar rutas según los filtros
+    let filteredRoutes = [...routes];
+    
+    if (filters.estado) {
+        filteredRoutes = filteredRoutes.filter(r => r.estado === filters.estado);
+    }
+    
+    if (filters.conductor) {
+        filteredRoutes = filteredRoutes.filter(r => r.choferId === filters.conductor);
+    }
+    
+    if (filters.vehiculo) {
+        filteredRoutes = filteredRoutes.filter(r => r.vehiculoId === filters.vehiculo);
+    }
+    
+    if (filters.fechaInicio) {
+        const fechaInicio = new Date(filters.fechaInicio);
+        filteredRoutes = filteredRoutes.filter(r => {
+            if (!r.fechaCreacion) return false;
+            return new Date(r.fechaCreacion) >= fechaInicio;
+        });
+    }
+    
+    if (filters.fechaFin) {
+        const fechaFin = new Date(filters.fechaFin);
+        fechaFin.setHours(23, 59, 59, 999);
+        filteredRoutes = filteredRoutes.filter(r => {
+            if (!r.fechaCreacion) return false;
+            return new Date(r.fechaCreacion) <= fechaFin;
+        });
+    }
+    
+    if (filteredRoutes.length === 0) {
+        showNotification('warning', 'Advertencia', 'No hay rutas que coincidan con los filtros seleccionados');
         return;
     }
     
     try {
         // Usar jsPDF desde window.jspdf
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF('landscape'); // Usar orientación horizontal para más espacio
         
         // Configuración de colores
         const primaryColor = [220, 53, 69]; // Rojo principal
@@ -1500,7 +1588,7 @@ async function generateReport() {
         
         let yPosition = 20;
         const pageWidth = doc.internal.pageSize.width;
-        const margin = 20;
+        const margin = 15;
         const contentWidth = pageWidth - (margin * 2);
         
         // Encabezado del reporte
@@ -1539,13 +1627,13 @@ async function generateReport() {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         
-        const totalRoutes = routes.length;
-        const activeRoutes = routes.filter(r => r.estado === 'EN_CURSO').length;
-        const completedRoutes = routes.filter(r => r.estado === 'COMPLETADA').length;
-        const pendingRoutes = routes.filter(r => r.estado === 'PENDIENTE').length;
-        const cancelledRoutes = routes.filter(r => r.estado === 'CANCELADA').length;
-        const totalDistance = routes.reduce((sum, r) => sum + (r.distanciaKm || 0), 0);
-        const totalFuel = routes.reduce((sum, r) => sum + (r.consumoEstimadoLitros || 0), 0);
+        const totalRoutes = filteredRoutes.length;
+        const activeRoutes = filteredRoutes.filter(r => r.estado === 'EN_CURSO').length;
+        const completedRoutes = filteredRoutes.filter(r => r.estado === 'COMPLETADA').length;
+        const pendingRoutes = filteredRoutes.filter(r => r.estado === 'PENDIENTE').length;
+        const cancelledRoutes = filteredRoutes.filter(r => r.estado === 'CANCELADA').length;
+        const totalDistance = filteredRoutes.reduce((sum, r) => sum + (r.distanciaKm || 0), 0);
+        const totalFuel = filteredRoutes.reduce((sum, r) => sum + (r.consumoEstimadoLitros || 0), 0);
         
         const stats = [
             `Total de Rutas: ${totalRoutes}`,
@@ -1583,11 +1671,11 @@ async function generateReport() {
         doc.setFillColor(...lightGray);
         doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
         
-        doc.setFontSize(8);
+        doc.setFontSize(7);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...darkColor);
         
-        const colWidths = [20, 35, 50, 20, 25, 30, 25, 20, 20];
+        const colWidths = [25, 40, 55, 22, 28, 35, 28, 25, 22];
         const headers = ['Código', 'Ruta', 'Origen-Destino', 'Distancia', 'Tiempo Est.', 'Conductor', 'Vehículo', 'Combust.', 'Estado'];
         let xPos = margin + 2;
         
@@ -1600,27 +1688,27 @@ async function generateReport() {
         
         // Datos de rutas
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
+        doc.setFontSize(6);
         
-        routes.forEach((route, index) => {
+        filteredRoutes.forEach((route, index) => {
             // Verificar si necesita nueva página
-            if (yPosition > 270) {
+            if (yPosition > 180) {
                 doc.addPage();
                 yPosition = 20;
                 
                 // Reimprimir encabezados
                 doc.setFillColor(...lightGray);
-                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                doc.rect(margin, yPosition - 5, contentWidth, 7, 'F');
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8);
+                doc.setFontSize(7);
                 xPos = margin + 2;
                 headers.forEach((header, idx) => {
                     doc.text(header, xPos, yPosition);
                     xPos += colWidths[idx];
                 });
-                yPosition += 8;
+                yPosition += 7;
                 doc.setFont('helvetica', 'normal');
-                doc.setFontSize(7);
+                doc.setFontSize(6);
             }
             
             // Fila de datos
@@ -1640,15 +1728,15 @@ async function generateReport() {
             
             xPos = margin + 2;
             const rowData = [
-                codigo.substring(0, 10),
-                nombreRuta.substring(0, 18),
-                origenDestino.substring(0, 25),
-                distancia.substring(0, 12),
-                tiempoEst.substring(0, 12),
-                conductor.substring(0, 15),
-                vehiculo.substring(0, 12),
-                combustible.substring(0, 10),
-                estado.substring(0, 12)
+                codigo.substring(0, 15),
+                nombreRuta.substring(0, 22),
+                origenDestino.substring(0, 30),
+                distancia.substring(0, 15),
+                tiempoEst.substring(0, 18),
+                conductor.substring(0, 20),
+                vehiculo.substring(0, 15),
+                combustible.substring(0, 15),
+                estado.substring(0, 15)
             ];
             
             // Alternar color de fondo

@@ -61,7 +61,7 @@
           </div>
         </div>
         <div class="header-right">
-          <button class="add-driver-btn" onclick="generateReport()" style="background-color: #17a2b8; margin-right: 10px;">
+          <button class="add-driver-btn" onclick="showReportFiltersModal()" style="background-color: #17a2b8; margin-right: 10px;">
             <i class="fas fa-file-pdf"></i>
             Generar Reportes
           </button>
@@ -282,6 +282,53 @@
         <div class="modal-actions">
           <button type="button" class="btn-secondary" onclick="closeCreateUserModal()">Cancelar</button>
           <button type="submit" class="btn-primary">Crear Usuario</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Report Filters Modal -->
+  <div id="reportFiltersModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Filtros para Generar Reporte</h2>
+        <button class="close-btn" onclick="closeReportFiltersModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="reportFiltersForm" class="modal-form">
+        <div class="form-group">
+          <label>Estado del Conductor</label>
+          <select id="reportFilterEstado">
+            <option value="">Todos los estados</option>
+            <option value="DISPONIBLE">Disponible</option>
+            <option value="ASIGNADO">Asignado</option>
+            <option value="EN_RUTA">En Ruta</option>
+            <option value="DESCANSANDO">Descansando</option>
+            <option value="VACACIONES">En Vacaciones</option>
+            <option value="ENFERMO">Enfermo</option>
+            <option value="LICENCIA">En Licencia</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Maquinaria</label>
+          <select id="reportFilterTipoMaquinaria">
+            <option value="">Todos los tipos</option>
+            <option value="CAMION">Camión (Liviana)</option>
+            <option value="VOLQUETE">Volquete (Liviana)</option>
+            <option value="EXCAVADORA">Excavadora (Pesada)</option>
+            <option value="CARGADOR">Cargador (Pesada)</option>
+            <option value="GRUA">Grúa (Pesada)</option>
+            <option value="MOTONIVELADORA">Motoniveladora (Pesada)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Mostrar solo conductores activos</label>
+          <input type="checkbox" id="reportFilterSoloActivos" checked>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeReportFiltersModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Generar Reporte</button>
         </div>
       </form>
     </div>

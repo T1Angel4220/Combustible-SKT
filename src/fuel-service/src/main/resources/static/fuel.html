@@ -61,7 +61,7 @@
           </div>
         </div>
         <div class="header-right">
-          <button class="add-fuel-btn" onclick="generateReport()" style="background-color: #17a2b8; margin-right: 10px;">
+          <button class="add-fuel-btn" onclick="showReportFiltersModal()" style="background-color: #17a2b8; margin-right: 10px;">
             <i class="fas fa-file-pdf"></i>
             Generar Reportes
           </button>
@@ -337,6 +337,68 @@
         <button class="notification-btn btn-secondary" onclick="closeConfirmationModal(false)">Cancelar</button>
         <button class="notification-btn btn-primary" onclick="closeConfirmationModal(true)">Confirmar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Report Filters Modal -->
+  <div id="reportFiltersModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Filtros para Generar Reporte</h2>
+        <button class="close-btn" onclick="closeReportFiltersModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="reportFiltersForm" class="modal-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha Inicio</label>
+            <input type="date" id="reportFilterFechaInicio">
+          </div>
+          <div class="form-group">
+            <label>Fecha Fin</label>
+            <input type="date" id="reportFilterFechaFin">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Combustible</label>
+          <select id="reportFilterTipoCombustible">
+            <option value="">Todos los tipos</option>
+            <option value="DIESEL">Diesel</option>
+            <option value="GASOLINA">Gasolina</option>
+            <option value="GAS">Gas</option>
+            <option value="ELECTRICO">Eléctrico</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Maquinaria</label>
+          <select id="reportFilterTipoMaquinaria">
+            <option value="">Todos los tipos</option>
+            <option value="CAMION">Camión (Liviana)</option>
+            <option value="VOLQUETE">Volquete (Liviana)</option>
+            <option value="EXCAVADORA">Excavadora (Pesada)</option>
+            <option value="CARGADOR">Cargador (Pesada)</option>
+            <option value="GRUA">Grúa (Pesada)</option>
+            <option value="MOTONIVELADORA">Motoniveladora (Pesada)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Vehículo</label>
+          <select id="reportFilterVehiculo">
+            <option value="">Todos los vehículos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Conductor</label>
+          <select id="reportFilterConductor">
+            <option value="">Todos los conductores</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeReportFiltersModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Generar Reporte</button>
+        </div>
+      </form>
     </div>
   </div>
 

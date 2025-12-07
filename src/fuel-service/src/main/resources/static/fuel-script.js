@@ -30,6 +30,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     setupEventListeners();
     
+    // Agregar listener para el formulario de filtros de reportes
+    const reportFiltersForm = document.getElementById('reportFiltersForm');
+    if (reportFiltersForm) {
+        reportFiltersForm.addEventListener('submit', handleReportFiltersSubmit);
+    }
+    
     // Establecer fecha actual por defecto
     const now = new Date();
     const fechaHoraInput = document.getElementById('fuelFechaHora');
@@ -1665,17 +1671,101 @@ function logout() {
     );
 }
 
+// Funciones para el modal de filtros de reportes
+function showReportFiltersModal() {
+    // Cargar vehículos y conductores para los selects
+    const vehiculoSelect = document.getElementById('reportFilterVehiculo');
+    const conductorSelect = document.getElementById('reportFilterConductor');
+    
+    if (vehiculoSelect) {
+        vehiculoSelect.innerHTML = '<option value="">Todos los vehículos</option>';
+        vehicles.forEach(vehicle => {
+            const option = document.createElement('option');
+            option.value = vehicle.id;
+            option.textContent = vehicle.placa || vehicle.id;
+            vehiculoSelect.appendChild(option);
+        });
+    }
+    
+    if (conductorSelect) {
+        conductorSelect.innerHTML = '<option value="">Todos los conductores</option>';
+        drivers.forEach(driver => {
+            const option = document.createElement('option');
+            option.value = driver.id;
+            option.textContent = `${driver.nombre || ''} ${driver.apellido || ''}`.trim() || driver.dni;
+            conductorSelect.appendChild(option);
+        });
+    }
+    
+    document.getElementById('reportFiltersModal').classList.add('active');
+}
+
+function closeReportFiltersModal() {
+    document.getElementById('reportFiltersModal').classList.remove('active');
+    document.getElementById('reportFiltersForm').reset();
+}
+
+function handleReportFiltersSubmit(e) {
+    e.preventDefault();
+    const filters = {
+        fechaInicio: document.getElementById('reportFilterFechaInicio').value,
+        fechaFin: document.getElementById('reportFilterFechaFin').value,
+        tipoCombustible: document.getElementById('reportFilterTipoCombustible').value,
+        tipoMaquinaria: document.getElementById('reportFilterTipoMaquinaria').value,
+        vehiculo: document.getElementById('reportFilterVehiculo').value,
+        conductor: document.getElementById('reportFilterConductor').value
+    };
+    closeReportFiltersModal();
+    generateReport(filters);
+}
+
 // Función para generar el reporte en PDF
-async function generateReport() {
-    if (fuelConsumptions.length === 0) {
-        showNotification('warning', 'Advertencia', 'No hay registros de combustible para generar el reporte');
+async function generateReport(filters = {}) {
+    // Filtrar consumos según los filtros
+    let filteredConsumptions = [...fuelConsumptions];
+    
+    if (filters.tipoCombustible) {
+        filteredConsumptions = filteredConsumptions.filter(f => f.tipoCombustible === filters.tipoCombustible);
+    }
+    
+    if (filters.tipoMaquinaria) {
+        filteredConsumptions = filteredConsumptions.filter(f => f.tipoMaquinaria === filters.tipoMaquinaria);
+    }
+    
+    if (filters.vehiculo) {
+        filteredConsumptions = filteredConsumptions.filter(f => f.vehiculoId === filters.vehiculo);
+    }
+    
+    if (filters.conductor) {
+        filteredConsumptions = filteredConsumptions.filter(f => f.choferId === filters.conductor);
+    }
+    
+    if (filters.fechaInicio) {
+        const fechaInicio = new Date(filters.fechaInicio);
+        filteredConsumptions = filteredConsumptions.filter(f => {
+            if (!f.fechaHora) return false;
+            return new Date(f.fechaHora) >= fechaInicio;
+        });
+    }
+    
+    if (filters.fechaFin) {
+        const fechaFin = new Date(filters.fechaFin);
+        fechaFin.setHours(23, 59, 59, 999);
+        filteredConsumptions = filteredConsumptions.filter(f => {
+            if (!f.fechaHora) return false;
+            return new Date(f.fechaHora) <= fechaFin;
+        });
+    }
+    
+    if (filteredConsumptions.length === 0) {
+        showNotification('warning', 'Advertencia', 'No hay registros que coincidan con los filtros seleccionados');
         return;
     }
     
     try {
         // Usar jsPDF desde window.jspdf
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF('landscape');
         
         // Configuración de colores
         const primaryColor = [220, 53, 69]; // Rojo principal
@@ -1684,7 +1774,7 @@ async function generateReport() {
         
         let yPosition = 20;
         const pageWidth = doc.internal.pageSize.width;
-        const margin = 20;
+        const margin = 15;
         const contentWidth = pageWidth - (margin * 2);
         
         // Encabezado del reporte
@@ -1723,15 +1813,15 @@ async function generateReport() {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         
-        const totalRegistros = fuelConsumptions.length;
-        const totalLitros = fuelConsumptions.reduce((sum, f) => sum + (f.cantidadLitros || 0), 0);
-        const costoTotal = fuelConsumptions.reduce((sum, f) => sum + (f.costoTotal || 0), 0);
+        const totalRegistros = filteredConsumptions.length;
+        const totalLitros = filteredConsumptions.reduce((sum, f) => sum + (f.cantidadLitros || 0), 0);
+        const costoTotal = filteredConsumptions.reduce((sum, f) => sum + (f.costoTotal || 0), 0);
         const promedioLitros = totalRegistros > 0 ? totalLitros / totalRegistros : 0;
         const promedioCosto = totalRegistros > 0 ? costoTotal / totalRegistros : 0;
         
         // Agrupar por tipo de combustible
         const porTipoCombustible = {};
-        fuelConsumptions.forEach(f => {
+        filteredConsumptions.forEach(f => {
             const tipo = f.tipoCombustible || 'N/A';
             if (!porTipoCombustible[tipo]) {
                 porTipoCombustible[tipo] = { litros: 0, costo: 0, registros: 0 };
@@ -1743,7 +1833,7 @@ async function generateReport() {
         
         // Agrupar por tipo de maquinaria
         const porTipoMaquinaria = {};
-        fuelConsumptions.forEach(f => {
+        filteredConsumptions.forEach(f => {
             const tipo = f.tipoMaquinaria || 'N/A';
             if (!porTipoMaquinaria[tipo]) {
                 porTipoMaquinaria[tipo] = { litros: 0, costo: 0, registros: 0 };
@@ -1840,11 +1930,11 @@ async function generateReport() {
         doc.setFillColor(...lightGray);
         doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
         
-        doc.setFontSize(8);
+        doc.setFontSize(7);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...darkColor);
         
-        const colWidths = [35, 40, 30, 30, 20, 20, 25, 25, 25];
+        const colWidths = [40, 35, 32, 35, 22, 22, 28, 28, 30];
         const headers = ['Fecha/Hora', 'Vehículo', 'Conductor', 'Ruta', 'Cantidad', 'Tipo', 'Precio/L', 'Costo', 'Maquinaria'];
         let xPos = margin + 2;
         
@@ -1857,27 +1947,27 @@ async function generateReport() {
         
         // Datos de consumos
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
+        doc.setFontSize(6);
         
-        fuelConsumptions.forEach((consumption, index) => {
+        filteredConsumptions.forEach((consumption, index) => {
             // Verificar si necesita nueva página
-            if (yPosition > 270) {
+            if (yPosition > 180) {
                 doc.addPage();
                 yPosition = 20;
                 
                 // Reimprimir encabezados
                 doc.setFillColor(...lightGray);
-                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                doc.rect(margin, yPosition - 5, contentWidth, 7, 'F');
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8);
+                doc.setFontSize(7);
                 xPos = margin + 2;
                 headers.forEach((header, idx) => {
                     doc.text(header, xPos, yPosition);
                     xPos += colWidths[idx];
                 });
-                yPosition += 8;
+                yPosition += 7;
                 doc.setFont('helvetica', 'normal');
-                doc.setFontSize(7);
+                doc.setFontSize(6);
             }
             
             // Buscar datos relacionados
@@ -1915,15 +2005,15 @@ async function generateReport() {
             
             xPos = margin + 2;
             const rowData = [
-                fechaHoraText.substring(0, 18),
-                vehiculoText.substring(0, 15),
-                conductorText.substring(0, 15),
-                rutaText.substring(0, 15),
+                fechaHoraText.substring(0, 22),
+                vehiculoText.substring(0, 18),
+                conductorText.substring(0, 18),
+                rutaText.substring(0, 20),
                 cantidad,
-                tipoCombustible.substring(0, 12),
-                precioLitro.substring(0, 12),
-                costo.substring(0, 12),
-                tipoMaquinaria.substring(0, 15)
+                tipoCombustible.substring(0, 15),
+                precioLitro.substring(0, 15),
+                costo.substring(0, 15),
+                tipoMaquinaria.substring(0, 18)
             ];
             
             // Alternar color de fondo

@@ -17,6 +17,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadVehicles();
     loadDrivers();
     setupEventListeners();
+    
+    // Agregar listener para el formulario de filtros de reportes
+    const reportFiltersForm = document.getElementById('reportFiltersForm');
+    if (reportFiltersForm) {
+        reportFiltersForm.addEventListener('submit', handleReportFiltersSubmit);
+    }
 });
 
 async function checkAuth() {
@@ -822,17 +828,53 @@ function closeConfirmationModal(confirmed) {
     }
 }
 
+// Funciones para el modal de filtros de reportes
+function showReportFiltersModal() {
+    document.getElementById('reportFiltersModal').classList.add('active');
+}
+
+function closeReportFiltersModal() {
+    document.getElementById('reportFiltersModal').classList.remove('active');
+    document.getElementById('reportFiltersForm').reset();
+}
+
+function handleReportFiltersSubmit(e) {
+    e.preventDefault();
+    const filters = {
+        tipoMaquinaria: document.getElementById('reportFilterTipoMaquinaria').value,
+        estado: document.getElementById('reportFilterEstado').value,
+        soloActivos: document.getElementById('reportFilterSoloActivos').checked
+    };
+    closeReportFiltersModal();
+    generateReport(filters);
+}
+
 // Función para generar el reporte en PDF
-async function generateReport() {
-    if (vehicles.length === 0) {
-        showNotification('warning', 'Advertencia', 'No hay vehículos para generar el reporte');
+async function generateReport(filters = {}) {
+    // Filtrar vehículos según los filtros
+    let filteredVehicles = [...vehicles];
+    
+    if (filters.tipoMaquinaria) {
+        filteredVehicles = filteredVehicles.filter(v => v.tipoMaquinaria === filters.tipoMaquinaria);
+    }
+    
+    if (filters.estado) {
+        filteredVehicles = filteredVehicles.filter(v => v.estadoOperativo === filters.estado);
+    }
+    
+    if (filters.soloActivos !== false) {
+        filteredVehicles = filteredVehicles.filter(v => v.activo);
+    }
+    
+    if (filteredVehicles.length === 0) {
+        showNotification('warning', 'Advertencia', 'No hay vehículos que coincidan con los filtros seleccionados');
         return;
     }
     
     try {
         // Usar jsPDF desde window.jspdf
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF('landscape');
         
         // Configuración de colores
         const primaryColor = [220, 53, 69]; // Rojo principal
@@ -841,7 +883,7 @@ async function generateReport() {
         
         let yPosition = 20;
         const pageWidth = doc.internal.pageSize.width;
-        const margin = 20;
+        const margin = 15;
         const contentWidth = pageWidth - (margin * 2);
         
         // Encabezado del reporte
@@ -880,13 +922,13 @@ async function generateReport() {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         
-        const total = vehicles.length;
-        const light = vehicles.filter(v => isLightMachinery(v.tipoMaquinaria)).length;
-        const heavy = vehicles.filter(v => isHeavyMachinery(v.tipoMaquinaria)).length;
-        const activos = vehicles.filter(v => v.activo && v.estadoOperativo !== 'FUERA_SERVICIO').length;
-        const enMantenimiento = vehicles.filter(v => v.estadoOperativo === 'MANTENIMIENTO').length;
-        const enUso = vehicles.filter(v => v.estadoOperativo === 'EN_USO' || v.estadoOperativo === 'ASIGNADO').length;
-        const disponibles = vehicles.filter(v => v.estadoOperativo === 'DISPONIBLE').length;
+        const total = filteredVehicles.length;
+        const light = filteredVehicles.filter(v => isLightMachinery(v.tipoMaquinaria)).length;
+        const heavy = filteredVehicles.filter(v => isHeavyMachinery(v.tipoMaquinaria)).length;
+        const activos = filteredVehicles.filter(v => v.activo && v.estadoOperativo !== 'FUERA_SERVICIO').length;
+        const enMantenimiento = filteredVehicles.filter(v => v.estadoOperativo === 'MANTENIMIENTO').length;
+        const enUso = filteredVehicles.filter(v => v.estadoOperativo === 'EN_USO' || v.estadoOperativo === 'ASIGNADO').length;
+        const disponibles = filteredVehicles.filter(v => v.estadoOperativo === 'DISPONIBLE').length;
         
         const stats = [
             `Total de Vehículos: ${total}`,
@@ -924,11 +966,11 @@ async function generateReport() {
         doc.setFillColor(...lightGray);
         doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
         
-        doc.setFontSize(8);
+        doc.setFontSize(7);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...darkColor);
         
-        const colWidths = [25, 20, 40, 15, 30, 25, 25, 30];
+        const colWidths = [30, 25, 50, 18, 35, 30, 30, 35];
         const headers = ['Placa', 'Tipo', 'Marca/Modelo', 'Año', 'Capacidad', 'Consumo', 'Estado', 'Conductor'];
         let xPos = margin + 2;
         
@@ -941,27 +983,27 @@ async function generateReport() {
         
         // Datos de vehículos
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
+        doc.setFontSize(6);
         
-        vehicles.forEach((vehicle, index) => {
+        filteredVehicles.forEach((vehicle, index) => {
             // Verificar si necesita nueva página
-            if (yPosition > 270) {
+            if (yPosition > 180) {
                 doc.addPage();
                 yPosition = 20;
                 
                 // Reimprimir encabezados
                 doc.setFillColor(...lightGray);
-                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                doc.rect(margin, yPosition - 5, contentWidth, 7, 'F');
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8);
+                doc.setFontSize(7);
                 xPos = margin + 2;
                 headers.forEach((header, idx) => {
                     doc.text(header, xPos, yPosition);
                     xPos += colWidths[idx];
                 });
-                yPosition += 8;
+                yPosition += 7;
                 doc.setFont('helvetica', 'normal');
-                doc.setFontSize(7);
+                doc.setFontSize(6);
             }
             
             // Fila de datos
@@ -976,14 +1018,14 @@ async function generateReport() {
             
             xPos = margin + 2;
             const rowData = [
-                placa.substring(0, 12),
-                tipo.substring(0, 10),
-                marcaModelo.substring(0, 18),
-                anio.toString().substring(0, 4),
-                capacidad.substring(0, 12),
-                consumo.substring(0, 12),
-                estado.substring(0, 12),
-                conductor.substring(0, 15)
+                placa.substring(0, 18),
+                tipo.substring(0, 15),
+                marcaModelo.substring(0, 28),
+                anio.toString().substring(0, 6),
+                capacidad.substring(0, 18),
+                consumo.substring(0, 18),
+                estado.substring(0, 18),
+                conductor.substring(0, 20)
             ];
             
             // Alternar color de fondo

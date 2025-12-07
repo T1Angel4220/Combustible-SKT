@@ -19,6 +19,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (createUserForm) {
         createUserForm.addEventListener('submit', handleCreateUserSubmit);
     }
+    
+    // Agregar listener para el formulario de filtros de reportes
+    const reportFiltersForm = document.getElementById('reportFiltersForm');
+    if (reportFiltersForm) {
+        reportFiltersForm.addEventListener('submit', handleReportFiltersSubmit);
+    }
 });
 
 // Función para poblar los selects con todos los valores de los enums
@@ -975,10 +981,46 @@ async function handleCreateUserSubmit(e) {
     }
 }
 
+// Funciones para el modal de filtros de reportes
+function showReportFiltersModal() {
+    document.getElementById('reportFiltersModal').classList.add('active');
+}
+
+function closeReportFiltersModal() {
+    document.getElementById('reportFiltersModal').classList.remove('active');
+    document.getElementById('reportFiltersForm').reset();
+}
+
+function handleReportFiltersSubmit(e) {
+    e.preventDefault();
+    const filters = {
+        estado: document.getElementById('reportFilterEstado').value,
+        tipoMaquinaria: document.getElementById('reportFilterTipoMaquinaria').value,
+        soloActivos: document.getElementById('reportFilterSoloActivos').checked
+    };
+    closeReportFiltersModal();
+    generateReport(filters);
+}
+
 // Función para generar el reporte en PDF
-async function generateReport() {
-    if (drivers.length === 0) {
-        showNotification('warning', 'Advertencia', 'No hay conductores para generar el reporte');
+async function generateReport(filters = {}) {
+    // Filtrar conductores según los filtros
+    let filteredDrivers = [...drivers];
+    
+    if (filters.estado) {
+        filteredDrivers = filteredDrivers.filter(d => d.estado === filters.estado);
+    }
+    
+    if (filters.tipoMaquinaria) {
+        filteredDrivers = filteredDrivers.filter(d => d.tipoMaquinariaAsignada === filters.tipoMaquinaria);
+    }
+    
+    if (filters.soloActivos !== false) {
+        filteredDrivers = filteredDrivers.filter(d => d.activo !== false);
+    }
+    
+    if (filteredDrivers.length === 0) {
+        showNotification('warning', 'Advertencia', 'No hay conductores que coincidan con los filtros seleccionados');
         return;
     }
     
@@ -988,7 +1030,7 @@ async function generateReport() {
         
         // Usar jsPDF desde window.jspdf
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF('landscape'); // Usar orientación horizontal para más espacio
         
         // Configuración de colores
         const primaryColor = [220, 53, 69]; // Rojo principal
@@ -997,7 +1039,7 @@ async function generateReport() {
         
         let yPosition = 20;
         const pageWidth = doc.internal.pageSize.width;
-        const margin = 20;
+        const margin = 15;
         const contentWidth = pageWidth - (margin * 2);
         
         // Encabezado del reporte
@@ -1044,12 +1086,12 @@ async function generateReport() {
         const inactivos = drivers.filter(d => d.activo === false).length;
         
         const stats = [
-            `Total de Conductores: ${total}`,
-            `Conductores Disponibles: ${disponibles}`,
-            `Conductores en Ruta: ${enRuta}`,
-            `Fuera de Servicio: ${fueraServicio}`,
-            `Activos: ${activos}`,
-            `Inactivos: ${inactivos}`
+            `Total de Conductores: ${filteredDrivers.length}`,
+            `Conductores Disponibles: ${filteredDrivers.filter(d => d.estado === 'DISPONIBLE' && d.activo !== false).length}`,
+            `Conductores en Ruta: ${filteredDrivers.filter(d => d.estado === 'EN_RUTA' && d.activo !== false).length}`,
+            `Fuera de Servicio: ${filteredDrivers.filter(d => !d.activo || d.estado === 'LICENCIA' || d.estado === 'VACACIONES' || d.estado === 'ENFERMO').length}`,
+            `Activos: ${filteredDrivers.filter(d => d.activo !== false).length}`,
+            `Inactivos: ${filteredDrivers.filter(d => d.activo === false).length}`
         ];
         
         stats.forEach((stat, index) => {
@@ -1078,11 +1120,11 @@ async function generateReport() {
         doc.setFillColor(...lightGray);
         doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
         
-        doc.setFontSize(8);
+        doc.setFontSize(7);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...darkColor);
         
-        const colWidths = [40, 30, 25, 25, 30, 25, 30];
+        const colWidths = [45, 25, 25, 30, 35, 35, 35];
         const headers = ['Nombre', 'DNI', 'Licencia', 'Estado', 'Maquinaria', 'Contacto', 'Experiencia'];
         let xPos = margin + 2;
         
@@ -1095,27 +1137,27 @@ async function generateReport() {
         
         // Datos de conductores
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
+        doc.setFontSize(6);
         
-        drivers.forEach((driver, index) => {
+        filteredDrivers.forEach((driver, index) => {
             // Verificar si necesita nueva página
-            if (yPosition > 270) {
+            if (yPosition > 180) {
                 doc.addPage();
                 yPosition = 20;
                 
                 // Reimprimir encabezados
                 doc.setFillColor(...lightGray);
-                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                doc.rect(margin, yPosition - 5, contentWidth, 7, 'F');
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8);
+                doc.setFontSize(7);
                 xPos = margin + 2;
                 headers.forEach((header, idx) => {
                     doc.text(header, xPos, yPosition);
                     xPos += colWidths[idx];
                 });
-                yPosition += 8;
+                yPosition += 7;
                 doc.setFont('helvetica', 'normal');
-                doc.setFontSize(7);
+                doc.setFontSize(6);
             }
             
             // Fila de datos
@@ -1133,13 +1175,13 @@ async function generateReport() {
             
             xPos = margin + 2;
             const rowData = [
-                nombreCompleto.substring(0, 18),
+                nombreCompleto.substring(0, 25),
                 dni,
-                licencia.substring(0, 10),
-                estado.substring(0, 12),
-                maquinaria.substring(0, 12),
-                contacto.substring(0, 18),
-                experiencia.substring(0, 15)
+                licencia.substring(0, 15),
+                estado.substring(0, 18),
+                maquinaria.substring(0, 20),
+                contacto.substring(0, 25),
+                experiencia.substring(0, 20)
             ];
             
             // Alternar color de fondo
