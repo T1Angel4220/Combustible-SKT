@@ -84,18 +84,80 @@ function setupEventListeners() {
         routeForm.addEventListener('submit', handleRouteSubmit);
     }
     
-    // Listener para cuando se seleccione un conductor (auto-completar vehículo y tipo de maquinaria)
+    // Listener para cuando se seleccione un conductor (cargar vehículos disponibles)
     if (routeChoferSelect) {
         routeChoferSelect.addEventListener('change', async function() {
             const choferId = this.value;
+            const vehiculoField = document.getElementById('routeVehiculo');
+            
             if (choferId) {
+                // Habilitar el campo de vehículo
+                if (vehiculoField) {
+                    vehiculoField.disabled = false;
+                    vehiculoField.innerHTML = '<option value="">Cargando vehículos...</option>';
+                }
+                
+                // Cargar vehículos asociados al conductor
                 await loadDriverAssignments(choferId);
             } else {
                 // Limpiar campos si no hay conductor seleccionado
-                document.getElementById('routeVehiculo').value = '';
+                if (vehiculoField) {
+                    vehiculoField.disabled = true;
+                    vehiculoField.innerHTML = '<option value="">Primero seleccione un conductor</option>';
+                    vehiculoField.value = '';
+                }
                 document.getElementById('routeTipoMaquinaria').value = '';
                 document.getElementById('routeTipoMaquinaria').disabled = true;
                 hideVehicleInfo();
+            }
+        });
+    }
+    
+    // Listener para cuando se seleccione un vehículo (cargar información del vehículo)
+    const routeVehiculoSelect = document.getElementById('routeVehiculo');
+    if (routeVehiculoSelect) {
+        routeVehiculoSelect.addEventListener('change', async function() {
+            const vehiculoId = this.value;
+            if (vehiculoId) {
+                // Buscar el vehículo en la lista global
+                let vehiculo = vehicles.find(v => v.id === vehiculoId || v.id === String(vehiculoId));
+                
+                if (vehiculo) {
+                    // Cargar y mostrar información del vehículo
+                    await loadAndDisplayVehicleInfo(vehiculo.id, vehiculo.tipoMaquinaria);
+                } else {
+                    // Si no está en la lista, cargarlo desde la API
+                    try {
+                        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+                        const response = await fetch(`${VEHICLES_API_URL}/${vehiculoId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            vehiculo = await response.json();
+                            // Agregar a la lista global si no está
+                            if (!vehicles.find(v => v.id === vehiculo.id)) {
+                                vehicles.push(vehiculo);
+                            }
+                            // Cargar y mostrar información del vehículo
+                            await loadAndDisplayVehicleInfo(vehiculo.id, vehiculo.tipoMaquinaria);
+                        } else {
+                            hideVehicleInfo();
+                            showNotification('error', 'Error', 'No se pudo cargar la información del vehículo');
+                        }
+                    } catch (error) {
+                        console.error('Error cargando vehículo:', error);
+                        hideVehicleInfo();
+                        showNotification('error', 'Error', 'Error al cargar información del vehículo');
+                    }
+                }
+            } else {
+                // Si no hay vehículo seleccionado, ocultar información
+                hideVehicleInfo();
+                document.getElementById('routeTipoMaquinaria').value = '';
+                document.getElementById('routeTipoMaquinaria').disabled = true;
             }
         });
     }
@@ -279,59 +341,167 @@ async function loadDriverAssignments(choferId) {
             }
         });
         
+        const vehiculoField = document.getElementById('routeVehiculo');
+        
         if (response.ok) {
             const asignaciones = await response.json();
+            console.log('Asignaciones recibidas para conductor', choferId, ':', asignaciones);
+            console.log('Estructura de asignaciones:', JSON.stringify(asignaciones, null, 2));
+            
+            // Limpiar el select
+            if (vehiculoField) {
+                vehiculoField.innerHTML = '<option value="">Seleccione un vehículo</option>';
+            }
+            
             if (asignaciones && asignaciones.length > 0) {
-                // Tomar la primera asignación activa
-                const asignacion = asignaciones[0];
-                const vehiculoId = asignacion.vehicleId;
-                const tipoMaquinariaVehiculo = asignacion.tipoMaquinariaVehiculo;
+                console.log('Procesando', asignaciones.length, 'asignaciones');
                 
-                if (vehiculoId) {
-                    // Establecer el vehículo (aunque esté oculto)
-                    const vehiculoField = document.getElementById('routeVehiculo');
-                    vehiculoField.value = vehiculoId;
-                    vehiculoField.disabled = true;
+                // Crear un mapa para evitar duplicados por vehicleId
+                const vehiculosMap = new Map();
+                
+                for (const asignacion of asignaciones) {
+                    console.log('Procesando asignación:', asignacion);
                     
-                    // Cargar información completa del vehículo
-                    await loadAndDisplayVehicleInfo(vehiculoId, tipoMaquinariaVehiculo);
-                } else {
-                    // Ocultar información del vehículo
-                    hideVehicleInfo();
-                    showNotification('warning', 'Advertencia', 
-                        'El conductor seleccionado no tiene un vehículo asignado activo');
-                    // Limpiar campos
-                    document.getElementById('routeVehiculo').value = '';
-                    document.getElementById('routeTipoMaquinaria').value = '';
-                    document.getElementById('routeTipoMaquinaria').disabled = false;
+                    // Intentar diferentes formas de obtener el ID del vehículo
+                    let vid = asignacion.vehicleId;
+                    if (!vid && asignacion.vehicle) {
+                        vid = asignacion.vehicle.id || asignacion.vehicle.$id || (typeof asignacion.vehicle === 'string' ? asignacion.vehicle : null);
+                    }
+                    
+                    console.log('vehicleId extraído de asignación:', vid);
+                    
+                    if (vid) {
+                        const vehiculoIdStr = String(vid);
+                        
+                        // Si ya tenemos este vehículo, saltarlo
+                        if (vehiculosMap.has(vehiculoIdStr)) {
+                            continue;
+                        }
+                        
+                        // Crear objeto vehículo con la información disponible en la asignación
+                        const vehiculoInfo = {
+                            id: vehiculoIdStr,
+                            placa: asignacion.placaVehiculo || null,
+                            marca: asignacion.marcaVehiculo || null,
+                            modelo: asignacion.modeloVehiculo || null
+                        };
+                        
+                        // Si tenemos información básica, usarla directamente
+                        if (vehiculoInfo.placa || vehiculoInfo.marca || vehiculoInfo.modelo) {
+                            vehiculosMap.set(vehiculoIdStr, vehiculoInfo);
+                            console.log('Vehículo agregado desde asignación:', vehiculoInfo);
+                        } else {
+                            // Si no tenemos información, intentar cargarlo desde la API
+                            try {
+                                console.log('Cargando vehículo completo desde API para ID:', vehiculoIdStr);
+                                const vehiculoResponse = await fetch(`${VEHICLES_API_URL}/${vehiculoIdStr}`, {
+                                    headers: {
+                                        'Authorization': `Bearer ${token}`
+                                    }
+                                });
+                                
+                                if (vehiculoResponse.ok) {
+                                    const vehiculo = await vehiculoResponse.json();
+                                    console.log('Vehículo cargado desde API:', vehiculo);
+                                    vehiculosMap.set(vehiculoIdStr, vehiculo);
+                                    // Agregar a la lista global si no está
+                                    if (!vehicles.find(v => String(v.id) === String(vehiculo.id))) {
+                                        vehicles.push(vehiculo);
+                                    }
+                                } else {
+                                    console.error(`Error cargando vehículo ${vehiculoIdStr}:`, vehiculoResponse.status);
+                                    // Agregar con información mínima
+                                    vehiculosMap.set(vehiculoIdStr, { id: vehiculoIdStr, placa: vehiculoIdStr });
+                                }
+                            } catch (error) {
+                                console.error(`Error cargando vehículo ${vehiculoIdStr}:`, error);
+                                // Agregar con información mínima
+                                vehiculosMap.set(vehiculoIdStr, { id: vehiculoIdStr, placa: vehiculoIdStr });
+                            }
+                        }
+                    }
                 }
+                
+                console.log('Vehículos únicos procesados:', Array.from(vehiculosMap.values()));
+                
+                // Agregar todos los vehículos al select
+                let vehiculosAgregados = 0;
+                for (const vehiculo of vehiculosMap.values()) {
+                    if (vehiculoField) {
+                        const option = document.createElement('option');
+                        option.value = vehiculo.id;
+                        const texto = `${vehiculo.placa || vehiculo.id} - ${vehiculo.marca || ''} ${vehiculo.modelo || ''}`.trim();
+                        option.textContent = texto || vehiculo.id;
+                        vehiculoField.appendChild(option);
+                        vehiculosAgregados++;
+                        console.log('Vehículo agregado al select:', texto);
+                    }
+                }
+                
+                console.log('Total de vehículos agregados al select:', vehiculosAgregados);
+                
+                // Habilitar el campo para que el usuario pueda seleccionar
+                if (vehiculoField) {
+                    vehiculoField.disabled = false;
+                    console.log('Campo de vehículo habilitado. Estado disabled:', vehiculoField.disabled);
+                    console.log('Número de opciones en el select:', vehiculoField.options.length);
+                    
+                    // Forzar visibilidad del campo y su contenedor
+                    vehiculoField.style.display = 'block';
+                    vehiculoField.style.visibility = 'visible';
+                    vehiculoField.style.opacity = '1';
+                    
+                    const parentGroup = vehiculoField.closest('.form-group');
+                    if (parentGroup) {
+                        parentGroup.style.display = 'block';
+                        parentGroup.style.visibility = 'visible';
+                        parentGroup.style.opacity = '1';
+                        console.log('Grupo de vehículo forzado a visible. Display:', parentGroup.style.display);
+                    }
+                    
+                    // También verificar el contenedor padre (form-row)
+                    const formRow = vehiculoField.closest('.form-row');
+                    if (formRow) {
+                        formRow.style.display = 'flex';
+                        formRow.style.visibility = 'visible';
+                        console.log('Form-row forzado a visible');
+                    }
+                } else {
+                    console.error('No se encontró el campo routeVehiculo en el DOM');
+                }
+                
+                // Ocultar información del vehículo hasta que se seleccione uno
+                hideVehicleInfo();
+                
+                // NO seleccionar automáticamente - dejar que el usuario elija
             } else {
-                // Ocultar información del vehículo
+                // Si no hay asignaciones, mostrar mensaje
+                if (vehiculoField) {
+                    vehiculoField.innerHTML = '<option value="">El conductor no tiene vehículos asignados</option>';
+                    vehiculoField.disabled = true;
+                }
                 hideVehicleInfo();
                 showNotification('warning', 'Advertencia', 
                     'El conductor seleccionado no tiene vehículos asignados activos. Debe asignar un vehículo al conductor primero.');
-                // Limpiar campos
-                document.getElementById('routeVehiculo').value = '';
-                document.getElementById('routeTipoMaquinaria').value = '';
-                document.getElementById('routeTipoMaquinaria').disabled = false;
             }
         } else {
-            console.error('Error cargando asignaciones del conductor:', response.status);
+            console.error('Error cargando asignaciones del conductor:', response.status, response.statusText);
+            if (vehiculoField) {
+                vehiculoField.innerHTML = '<option value="">Error al cargar vehículos</option>';
+                vehiculoField.disabled = true;
+            }
             hideVehicleInfo();
             showNotification('error', 'Error', 'No se pudieron cargar las asignaciones del conductor');
-            // Limpiar campos
-            document.getElementById('routeVehiculo').value = '';
-            document.getElementById('routeTipoMaquinaria').value = '';
-            document.getElementById('routeTipoMaquinaria').disabled = false;
         }
     } catch (error) {
         console.error('Error cargando asignaciones:', error);
+        const vehiculoField = document.getElementById('routeVehiculo');
+        if (vehiculoField) {
+            vehiculoField.innerHTML = '<option value="">Error al cargar vehículos</option>';
+            vehiculoField.disabled = true;
+        }
         hideVehicleInfo();
         showNotification('error', 'Error', 'Error de red al obtener asignaciones del conductor');
-        // Limpiar campos
-        document.getElementById('routeVehiculo').value = '';
-        document.getElementById('routeTipoMaquinaria').value = '';
-        document.getElementById('routeTipoMaquinaria').disabled = false;
     }
 }
 
@@ -671,19 +841,29 @@ function showAddRouteModal() {
     document.getElementById('routeModalTitle').textContent = 'Nueva Ruta';
     document.getElementById('routeForm').reset();
     
-    // Ocultar y deshabilitar el campo de vehículo (se carga automáticamente)
+    // Limpiar y configurar el campo de vehículo (debe ser visible)
     const vehiculoField = document.getElementById('routeVehiculo');
     if (vehiculoField) {
         vehiculoField.value = '';
         vehiculoField.disabled = true;
-        vehiculoField.parentElement.style.display = 'none';
+        vehiculoField.innerHTML = '<option value="">Primero seleccione un conductor</option>';
+        // Asegurar que el campo sea visible
+        vehiculoField.style.display = 'block';
+        const parentGroup = vehiculoField.closest('.form-group');
+        if (parentGroup) {
+            parentGroup.style.display = 'block';
+            parentGroup.style.visibility = 'visible';
+        }
     }
     
     // Limpiar y habilitar campos
     document.getElementById('routeTipoMaquinaria').value = '';
     document.getElementById('routeTipoMaquinaria').disabled = true;
-    document.getElementById('routeChofer').value = '';
-    document.getElementById('routeChofer').disabled = false;
+    const choferSelect = document.getElementById('routeChofer');
+    if (choferSelect) {
+        choferSelect.value = '';
+        choferSelect.disabled = false;
+    }
     
     // Ocultar información del vehículo
     hideVehicleInfo();
@@ -701,12 +881,16 @@ function closeRouteModal() {
     if (vehiculoField) {
         vehiculoField.value = '';
         vehiculoField.disabled = true;
-        vehiculoField.parentElement.style.display = 'none';
+        vehiculoField.innerHTML = '<option value="">Primero seleccione un conductor</option>';
     }
     document.getElementById('routeTipoMaquinaria').value = '';
     document.getElementById('routeTipoMaquinaria').disabled = true;
-    document.getElementById('routeChofer').value = '';
-    document.getElementById('routeChofer').disabled = false;
+    
+    // Asegurar que el campo de conductor esté habilitado
+    const routeChoferSelect = document.getElementById('routeChofer');
+    if (routeChoferSelect) {
+        routeChoferSelect.disabled = false;
+    }
     
     // Ocultar información del vehículo
     hideVehicleInfo();
@@ -808,24 +992,40 @@ async function editRoute(id) {
     }
     
     // Ocultar y deshabilitar el campo de vehículo (se carga automáticamente)
-    const vehiculoField = document.getElementById('routeVehiculo');
-    if (vehiculoField) {
-        vehiculoField.value = route.vehiculoId || '';
-        vehiculoField.disabled = true;
-        vehiculoField.parentElement.style.display = 'none';
-    }
-    
     // Cargar TODOS los conductores (incluyendo el que tiene esta ruta activa) para que aparezca en el dropdown
     await loadAllDrivers();
     
     // Establecer el conductor después de cargar todos los conductores
-    document.getElementById('routeChofer').value = route.choferId || '';
+    const choferSelect = document.getElementById('routeChofer');
+    if (choferSelect) {
+        choferSelect.value = route.choferId || '';
+        choferSelect.disabled = false; // Permitir cambiar el conductor al editar
+    }
+    
+    // Cargar vehículos del conductor seleccionado
+    if (route.choferId) {
+        await loadDriverAssignments(route.choferId);
+    }
+    
+    // Establecer el vehículo después de cargar los vehículos
+    const vehiculoField = document.getElementById('routeVehiculo');
+    if (vehiculoField && route.vehiculoId) {
+        // Esperar un momento para que se carguen las opciones
+        setTimeout(() => {
+            vehiculoField.value = route.vehiculoId || '';
+            vehiculoField.disabled = false; // Permitir cambiar el vehículo al editar
+            // Forzar visibilidad
+            vehiculoField.style.display = 'block';
+            const parentGroup = vehiculoField.closest('.form-group');
+            if (parentGroup) {
+                parentGroup.style.display = 'block';
+            }
+        }, 500);
+    }
+    
     document.getElementById('routeTipoMaquinaria').value = route.tipoMaquinaria || '';
     document.getElementById('routeTipoMaquinaria').disabled = true; // Bloquear tipo de maquinaria al editar
     document.getElementById('routeObservaciones').value = route.observaciones || '';
-    
-    // Bloquear el chofer al editar (no se puede cambiar)
-    document.getElementById('routeChofer').disabled = true;
     
     // Cargar información del vehículo si está asignado
     if (route.vehiculoId) {

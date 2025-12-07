@@ -284,18 +284,19 @@
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group" style="display: none;">
-            <label>Vehículo</label>
-            <select id="routeVehiculo" disabled>
-              <option value="">Se cargará automáticamente</option>
-            </select>
-          </div>
           <div class="form-group">
             <label>Conductor <span style="color: red;">*</span></label>
             <select id="routeChofer" required>
               <option value="">Seleccione un conductor</option>
             </select>
-            <small style="color: #666; font-size: 0.85em;">El vehículo se cargará automáticamente según la asignación del conductor</small>
+            <small style="color: #666; font-size: 0.85em;">Seleccione un conductor para cargar sus vehículos disponibles</small>
+          </div>
+          <div class="form-group">
+            <label>Vehículo <span style="color: red;">*</span></label>
+            <select id="routeVehiculo" required disabled>
+              <option value="">Primero seleccione un conductor</option>
+            </select>
+            <small style="color: #666; font-size: 0.85em;">Se cargarán los vehículos asociados al conductor seleccionado</small>
           </div>
         </div>
         <!-- Información del Vehículo Asignado -->

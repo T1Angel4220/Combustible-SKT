@@ -278,16 +278,18 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Vehículo <span style="color: red;">*</span></label>
-            <select id="fuelVehiculo" required>
-              <option value="">Seleccione un vehículo</option>
-            </select>
-          </div>
-          <div class="form-group">
             <label>Conductor <span style="color: red;">*</span></label>
             <select id="fuelChofer" required>
               <option value="">Seleccione un conductor</option>
             </select>
+            <small style="color: #666; font-size: 0.85em;">Seleccione un conductor para habilitar el campo de vehículo</small>
+          </div>
+          <div class="form-group">
+            <label>Vehículo <span style="color: red;">*</span></label>
+            <select id="fuelVehiculo" required disabled>
+              <option value="">Primero seleccione un conductor</option>
+            </select>
+            <small style="color: #666; font-size: 0.85em;">Se cargarán los vehículos asociados al conductor seleccionado</small>
           </div>
         </div>
         <div class="form-group">

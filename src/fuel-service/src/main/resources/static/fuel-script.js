@@ -1,6 +1,7 @@
 // Fuel Management Script
 const API_BASE_URL = 'http://localhost:8084/api/v1/fuel';
 const VEHICLES_API_URL = 'http://localhost:8082/api/v1/vehicles';
+const ASSIGNMENTS_API_URL = 'http://localhost:8082/api/v1/assignments';
 const DRIVERS_API_URL = 'http://localhost:8081/api/v1/drivers';
 const ROUTES_API_URL = 'http://localhost:8083/api/v1/routes';
 
@@ -87,6 +88,63 @@ function setupEventListeners() {
     
     if (fuelForm) {
         fuelForm.addEventListener('submit', handleFuelSubmit);
+    }
+    
+    // Listener para cuando se seleccione un conductor (auto-completar vehículo y rutas)
+    const fuelChoferSelect = document.getElementById('fuelChofer');
+    if (fuelChoferSelect) {
+        fuelChoferSelect.addEventListener('change', async function() {
+            const choferId = this.value;
+            const fuelVehiculoSelect = document.getElementById('fuelVehiculo');
+            const fuelRutaSelect = document.getElementById('fuelRuta');
+            
+            if (choferId) {
+                // Habilitar el campo de vehículo
+                if (fuelVehiculoSelect) {
+                    fuelVehiculoSelect.disabled = false;
+                    fuelVehiculoSelect.innerHTML = '<option value="">Cargando vehículos...</option>';
+                }
+                
+                // Cargar vehículos asociados al conductor
+                await loadDriverAssignmentsForFuel(choferId);
+                
+                // Limpiar rutas (se cargarán cuando se seleccione un vehículo)
+                if (fuelRutaSelect) {
+                    fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
+                }
+            } else {
+                // Si no hay conductor seleccionado, bloquear y limpiar vehículo
+                if (fuelVehiculoSelect) {
+                    fuelVehiculoSelect.disabled = true;
+                    fuelVehiculoSelect.innerHTML = '<option value="">Primero seleccione un conductor</option>';
+                    fuelVehiculoSelect.value = '';
+                }
+                
+                // Limpiar rutas
+                if (fuelRutaSelect) {
+                    fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
+                }
+            }
+        });
+    }
+    
+    // Listener para cuando se seleccione un vehículo (filtrar rutas)
+    const fuelVehiculoSelect = document.getElementById('fuelVehiculo');
+    if (fuelVehiculoSelect) {
+        fuelVehiculoSelect.addEventListener('change', async function() {
+            const vehiculoId = this.value;
+            const fuelRutaSelect = document.getElementById('fuelRuta');
+            
+            if (vehiculoId) {
+                // Cargar rutas del vehículo seleccionado
+                await loadRoutesByVehicle(vehiculoId);
+            } else {
+                // Si no hay vehículo seleccionado, limpiar rutas
+                if (fuelRutaSelect) {
+                    fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
+                }
+            }
+        });
     }
     
     // Calcular costo total automáticamente
@@ -214,6 +272,347 @@ async function loadRoutes() {
         }
     } catch (error) {
         console.error('Error de red al cargar rutas:', error);
+    }
+}
+
+// Cargar asignaciones del conductor para poblar vehículos disponibles
+async function loadDriverAssignmentsForFuel(choferId) {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = 'http://localhost:8085/';
+            return;
+        }
+        
+        const fuelVehiculoSelect = document.getElementById('fuelVehiculo');
+        
+        if (!fuelVehiculoSelect) {
+            console.error('No se encontró el select de vehículos');
+            return;
+        }
+        
+        // Obtener asignaciones del conductor desde vehicles-service
+        const response = await fetch(`${ASSIGNMENTS_API_URL}/chofer/${choferId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const asignaciones = await response.json();
+            console.log('Asignaciones recibidas para conductor', choferId, ':', asignaciones);
+            
+            // Limpiar el select
+            fuelVehiculoSelect.innerHTML = '<option value="">Seleccione un vehículo</option>';
+            
+            if (asignaciones && asignaciones.length > 0) {
+                // Extraer todos los vehículos únicos de las asignaciones
+                const vehiculosIds = [...new Set(asignaciones.map(a => a.vehicleId).filter(id => id))];
+                console.log('Vehículos IDs extraídos:', vehiculosIds);
+                
+                // Cargar información de cada vehículo y agregarlo al select
+                for (const vehiculoId of vehiculosIds) {
+                    try {
+                        // Verificar si el vehículo ya está en la lista
+                        let vehiculo = vehicles.find(v => v.id === vehiculoId || v.id === String(vehiculoId));
+                        
+                        if (!vehiculo) {
+                            // Cargar el vehículo desde la API
+                            const vehiculoResponse = await fetch(`${VEHICLES_API_URL}/${vehiculoId}`, {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            
+                            if (vehiculoResponse.ok) {
+                                vehiculo = await vehiculoResponse.json();
+                                // Agregar a la lista de vehículos si no está
+                                if (!vehicles.find(v => v.id === vehiculo.id)) {
+                                    vehicles.push(vehiculo);
+                                }
+                            } else {
+                                console.error(`Error cargando vehículo ${vehiculoId}:`, vehiculoResponse.status);
+                            }
+                        }
+                        
+                        // Agregar al select
+                        if (vehiculo) {
+                            const option = document.createElement('option');
+                            option.value = vehiculo.id;
+                            option.textContent = `${vehiculo.placa || vehiculoId} - ${vehiculo.marca || ''} ${vehiculo.modelo || ''}`.trim();
+                            fuelVehiculoSelect.appendChild(option);
+                        }
+                    } catch (error) {
+                        console.error(`Error cargando vehículo ${vehiculoId}:`, error);
+                    }
+                }
+                
+                // Habilitar el campo
+                fuelVehiculoSelect.disabled = false;
+                
+                // NO seleccionar automáticamente - dejar que el usuario elija
+                // Si solo hay un vehículo, se puede seleccionar automáticamente, pero mejor dejarlo al usuario
+                // if (vehiculosIds.length === 1) {
+                //     const vehiculoId = vehiculosIds[0];
+                //     const vehiculo = vehicles.find(v => v.id === vehiculoId || v.id === String(vehiculoId));
+                //     if (vehiculo) {
+                //         fuelVehiculoSelect.value = vehiculo.id;
+                //         // Disparar evento change para cargar rutas
+                //         fuelVehiculoSelect.dispatchEvent(new Event('change'));
+                //     }
+                // }
+            } else {
+                // Si no hay asignaciones, mostrar mensaje
+                fuelVehiculoSelect.innerHTML = '<option value="">El conductor no tiene vehículos asignados</option>';
+                showNotification('warning', 'Advertencia', 'El conductor seleccionado no tiene vehículos asignados.');
+            }
+        } else {
+            console.error('Error cargando asignaciones del conductor:', response.status, response.statusText);
+            fuelVehiculoSelect.innerHTML = '<option value="">Error al cargar vehículos</option>';
+            showNotification('error', 'Error', 'No se pudieron cargar los vehículos del conductor.');
+        }
+    } catch (error) {
+        console.error('Error cargando asignaciones:', error);
+        const fuelVehiculoSelect = document.getElementById('fuelVehiculo');
+        if (fuelVehiculoSelect) {
+            fuelVehiculoSelect.innerHTML = '<option value="">Error al cargar vehículos</option>';
+        }
+        showNotification('error', 'Error', 'Error de comunicación al cargar vehículos.');
+    }
+}
+
+// Cargar conductores asociados a un vehículo específico
+async function loadDriversByVehicle(vehiculoId) {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = 'http://localhost:8085/';
+            return;
+        }
+        
+        const response = await fetch(`${ASSIGNMENTS_API_URL}/vehiculo/${vehiculoId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const fuelChoferSelect = document.getElementById('fuelChofer');
+        
+        if (response.ok) {
+            const asignaciones = await response.json();
+            if (asignaciones && asignaciones.length > 0) {
+                // Extraer todos los conductores únicos de las asignaciones
+                const choferesIds = [...new Set(asignaciones.map(a => a.choferId).filter(id => id))];
+                
+                // Limpiar el select
+                if (fuelChoferSelect) {
+                    fuelChoferSelect.innerHTML = '<option value="">Seleccione un conductor</option>';
+                }
+                
+                // Cargar información de cada conductor y agregarlo al select
+                for (const choferId of choferesIds) {
+                    try {
+                        // Verificar si el conductor ya está en la lista
+                        let chofer = drivers.find(d => d.id === choferId);
+                        
+                        if (!chofer) {
+                            // Cargar el conductor desde la API
+                            const choferResponse = await fetch(`${DRIVERS_API_URL}/${choferId}`, {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            
+                            if (choferResponse.ok) {
+                                chofer = await choferResponse.json();
+                                // Agregar a la lista de conductores si no está
+                                if (!drivers.find(d => d.id === chofer.id)) {
+                                    drivers.push(chofer);
+                                }
+                            }
+                        }
+                        
+                        // Agregar al select
+                        if (chofer && fuelChoferSelect) {
+                            const option = document.createElement('option');
+                            option.value = chofer.id;
+                            option.textContent = `${chofer.nombre || ''} ${chofer.apellido || ''}`.trim() || choferId;
+                            fuelChoferSelect.appendChild(option);
+                        }
+                    } catch (error) {
+                        console.error(`Error cargando conductor ${choferId}:`, error);
+                    }
+                }
+                
+                // Habilitar el campo para que el usuario pueda seleccionar
+                if (fuelChoferSelect) {
+                    fuelChoferSelect.disabled = false;
+                }
+                
+                // Si solo hay un conductor, seleccionarlo automáticamente
+                if (choferesIds.length === 1) {
+                    fuelChoferSelect.value = choferesIds[0];
+                    // Disparar el evento change para cargar vehículos y rutas
+                    fuelChoferSelect.dispatchEvent(new Event('change'));
+                }
+            } else {
+                // Si no hay asignaciones, mostrar todos los conductores disponibles
+                if (fuelChoferSelect) {
+                    fuelChoferSelect.innerHTML = '<option value="">Seleccione un conductor</option>';
+                    drivers.forEach(chofer => {
+                        const option = document.createElement('option');
+                        option.value = chofer.id;
+                        option.textContent = `${chofer.nombre || ''} ${chofer.apellido || ''}`.trim() || chofer.id;
+                        fuelChoferSelect.appendChild(option);
+                    });
+                    fuelChoferSelect.disabled = false;
+                }
+            }
+        } else {
+            console.error('Error cargando asignaciones del vehículo:', response.status);
+            // En caso de error, mostrar todos los conductores disponibles
+            if (fuelChoferSelect) {
+                fuelChoferSelect.innerHTML = '<option value="">Seleccione un conductor</option>';
+                drivers.forEach(chofer => {
+                    const option = document.createElement('option');
+                    option.value = chofer.id;
+                    option.textContent = `${chofer.nombre || ''} ${chofer.apellido || ''}`.trim() || chofer.id;
+                    fuelChoferSelect.appendChild(option);
+                });
+                fuelChoferSelect.disabled = false;
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando asignaciones del vehículo:', error);
+        // En caso de error, mostrar todos los conductores disponibles
+        const fuelChoferSelect = document.getElementById('fuelChofer');
+        if (fuelChoferSelect) {
+            fuelChoferSelect.innerHTML = '<option value="">Seleccione un conductor</option>';
+            drivers.forEach(chofer => {
+                const option = document.createElement('option');
+                option.value = chofer.id;
+                option.textContent = `${chofer.nombre || ''} ${chofer.apellido || ''}`.trim() || chofer.id;
+                fuelChoferSelect.appendChild(option);
+            });
+            fuelChoferSelect.disabled = false;
+        }
+    }
+}
+
+// Cargar rutas de un conductor específico
+async function loadRoutesByDriver(choferId) {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = 'http://localhost:8085/';
+            return;
+        }
+        
+        // Filtrar rutas del conductor desde las rutas ya cargadas
+        const fuelRutaSelect = document.getElementById('fuelRuta');
+        
+        if (fuelRutaSelect) {
+            fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
+            
+            // Filtrar rutas del conductor seleccionado
+            const rutasDelConductor = routes.filter(route => route.choferId === choferId);
+            
+            if (rutasDelConductor.length > 0) {
+                rutasDelConductor.forEach(route => {
+                    const option = document.createElement('option');
+                    option.value = route.id;
+                    option.textContent = `${route.codigo || route.id} - ${route.nombreRuta || 'Sin nombre'}`;
+                    fuelRutaSelect.appendChild(option);
+                });
+            } else {
+                // Si no hay rutas, mantener solo la opción "Sin ruta asociada"
+                console.log('El conductor no tiene rutas asociadas');
+            }
+        }
+    } catch (error) {
+        console.error('Error filtrando rutas del conductor:', error);
+        // Mantener todas las rutas como fallback
+        populateRouteSelects();
+    }
+}
+
+// Cargar rutas de un vehículo específico
+async function loadRoutesByVehicle(vehiculoId) {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = 'http://localhost:8085/';
+            return;
+        }
+        
+        const fuelRutaSelect = document.getElementById('fuelRuta');
+        
+        if (!fuelRutaSelect) {
+            console.error('No se encontró el select de rutas');
+            return;
+        }
+        
+        fuelRutaSelect.innerHTML = '<option value="">Cargando rutas...</option>';
+        
+        // Filtrar rutas del vehículo desde las rutas ya cargadas
+        // Comparar tanto por ID directo como por String para asegurar coincidencia
+        const rutasDelVehiculo = routes.filter(route => {
+            const routeVehiculoId = route.vehiculoId;
+            return routeVehiculoId && (
+                routeVehiculoId === vehiculoId || 
+                routeVehiculoId === String(vehiculoId) ||
+                String(routeVehiculoId) === String(vehiculoId)
+            );
+        });
+        
+        console.log('Rutas filtradas para vehículo', vehiculoId, ':', rutasDelVehiculo);
+        console.log('Total de rutas cargadas:', routes.length);
+        console.log('IDs de vehículos en rutas:', routes.map(r => r.vehiculoId));
+        
+        fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
+        
+        if (rutasDelVehiculo.length > 0) {
+            rutasDelVehiculo.forEach(route => {
+                const option = document.createElement('option');
+                option.value = route.id;
+                option.textContent = `${route.codigo || route.id} - ${route.nombreRuta || 'Sin nombre'}`;
+                fuelRutaSelect.appendChild(option);
+            });
+        } else {
+            console.log('El vehículo no tiene rutas asociadas');
+        }
+    } catch (error) {
+        console.error('Error filtrando rutas del vehículo:', error);
+        const fuelRutaSelect = document.getElementById('fuelRuta');
+        if (fuelRutaSelect) {
+            fuelRutaSelect.innerHTML = '<option value="">Error al cargar rutas</option>';
+        }
+    }
+}
+
+// Función eliminada - ya no se necesita, solo filtramos por vehículo
+// async function updateRoutesByDriverAndVehicle() {
+
+// Cargar información de un vehículo por ID
+async function loadVehicleById(vehiculoId) {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        const response = await fetch(`${VEHICLES_API_URL}/${vehiculoId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const vehiculo = await response.json();
+            // Agregar a la lista de vehículos si no está
+            if (!vehicles.find(v => v.id === vehiculo.id)) {
+                vehicles.push(vehiculo);
+                populateVehicleSelects();
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando vehículo:', error);
     }
 }
 
@@ -489,6 +888,25 @@ function closeFuelModal() {
     document.getElementById('fuelModal').classList.remove('active');
     editingFuelId = null;
     document.getElementById('fuelForm').reset();
+    
+    // Bloquear el campo de vehículo al cerrar el modal
+    const fuelVehiculoSelect = document.getElementById('fuelVehiculo');
+    if (fuelVehiculoSelect) {
+        fuelVehiculoSelect.disabled = true;
+        fuelVehiculoSelect.innerHTML = '<option value="">Primero seleccione un conductor</option>';
+    }
+    
+    // Limpiar rutas
+    const fuelRutaSelect = document.getElementById('fuelRuta');
+    if (fuelRutaSelect) {
+        fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
+    }
+    
+    // Asegurar que el campo de conductor esté habilitado (siempre debe poder cambiar)
+    const fuelChoferSelect = document.getElementById('fuelChofer');
+    if (fuelChoferSelect) {
+        fuelChoferSelect.disabled = false;
+    }
 }
 
 async function handleFuelSubmit(e) {
