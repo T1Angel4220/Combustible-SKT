@@ -974,3 +974,230 @@ async function handleCreateUserSubmit(e) {
         showNotification('error', 'Error', 'Error al crear usuario: ' + error.message);
     }
 }
+
+// Función para generar el reporte en PDF
+async function generateReport() {
+    if (drivers.length === 0) {
+        showNotification('warning', 'Advertencia', 'No hay conductores para generar el reporte');
+        return;
+    }
+    
+    try {
+        // Asegurar que las asignaciones estén cargadas
+        await loadDriverAssignments();
+        
+        // Usar jsPDF desde window.jspdf
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Configuración de colores
+        const primaryColor = [220, 53, 69]; // Rojo principal
+        const darkColor = [13, 17, 23];
+        const lightGray = [240, 240, 240];
+        
+        let yPosition = 20;
+        const pageWidth = doc.internal.pageSize.width;
+        const margin = 20;
+        const contentWidth = pageWidth - (margin * 2);
+        
+        // Encabezado del reporte
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, pageWidth, 40, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SKT FUEL SYSTEM', margin, 25);
+        
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Reporte de Conductores', margin, 35);
+        
+        // Fecha de generación
+        doc.setFontSize(10);
+        const fechaGeneracion = new Date().toLocaleString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        doc.text(`Generado el: ${fechaGeneracion}`, pageWidth - margin, 35, { align: 'right' });
+        
+        yPosition = 50;
+        
+        // Estadísticas generales
+        doc.setTextColor(...darkColor);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Resumen Ejecutivo', margin, yPosition);
+        yPosition += 10;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const total = drivers.length;
+        const disponibles = drivers.filter(d => d.estado === 'DISPONIBLE' && d.activo !== false).length;
+        const enRuta = drivers.filter(d => d.estado === 'EN_RUTA' && d.activo !== false).length;
+        const fueraServicio = drivers.filter(d => !d.activo || d.estado === 'LICENCIA' || d.estado === 'VACACIONES' || d.estado === 'ENFERMO').length;
+        const activos = drivers.filter(d => d.activo !== false).length;
+        const inactivos = drivers.filter(d => d.activo === false).length;
+        
+        const stats = [
+            `Total de Conductores: ${total}`,
+            `Conductores Disponibles: ${disponibles}`,
+            `Conductores en Ruta: ${enRuta}`,
+            `Fuera de Servicio: ${fueraServicio}`,
+            `Activos: ${activos}`,
+            `Inactivos: ${inactivos}`
+        ];
+        
+        stats.forEach((stat, index) => {
+            if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            doc.text(`• ${stat}`, margin + 5, yPosition);
+            yPosition += 7;
+        });
+        
+        yPosition += 5;
+        
+        // Tabla de conductores
+        if (yPosition > 250) {
+            doc.addPage();
+            yPosition = 20;
+        }
+        
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Detalle de Conductores', margin, yPosition);
+        yPosition += 10;
+        
+        // Encabezado de tabla
+        doc.setFillColor(...lightGray);
+        doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...darkColor);
+        
+        const colWidths = [40, 30, 25, 25, 30, 25, 30];
+        const headers = ['Nombre', 'DNI', 'Licencia', 'Estado', 'Maquinaria', 'Contacto', 'Experiencia'];
+        let xPos = margin + 2;
+        
+        headers.forEach((header, index) => {
+            doc.text(header, xPos, yPosition);
+            xPos += colWidths[index];
+        });
+        
+        yPosition += 8;
+        
+        // Datos de conductores
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        
+        drivers.forEach((driver, index) => {
+            // Verificar si necesita nueva página
+            if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+                
+                // Reimprimir encabezados
+                doc.setFillColor(...lightGray);
+                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8);
+                xPos = margin + 2;
+                headers.forEach((header, idx) => {
+                    doc.text(header, xPos, yPosition);
+                    xPos += colWidths[idx];
+                });
+                yPosition += 8;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7);
+            }
+            
+            // Fila de datos
+            const nombreCompleto = `${driver.nombre || ''} ${driver.apellido || ''}`.trim() || 'N/A';
+            const dni = driver.dni || 'N/A';
+            const licencia = driver.licencia || 'N/A';
+            const estado = getStatusText(driver.estado, driver.activo);
+            const maquinaria = driver.tipoMaquinariaAsignada ? 
+                driver.tipoMaquinariaAsignada.replace('_', ' ') : 'Sin asignar';
+            const contacto = driver.telefono || driver.email || 'N/A';
+            const experiencia = calculateExperience(driver.fechaContratacion);
+            
+            // Obtener vehículo asignado
+            const vehiculoAsignado = getAssignedVehicle(driver.id);
+            
+            xPos = margin + 2;
+            const rowData = [
+                nombreCompleto.substring(0, 18),
+                dni,
+                licencia.substring(0, 10),
+                estado.substring(0, 12),
+                maquinaria.substring(0, 12),
+                contacto.substring(0, 18),
+                experiencia.substring(0, 15)
+            ];
+            
+            // Alternar color de fondo
+            if (index % 2 === 0) {
+                doc.setFillColor(250, 250, 250);
+                doc.rect(margin, yPosition - 4, contentWidth, 6, 'F');
+            }
+            
+            rowData.forEach((data, idx) => {
+                doc.setTextColor(...darkColor);
+                doc.text(data, xPos, yPosition);
+                xPos += colWidths[idx];
+            });
+            
+            // Si tiene vehículo asignado, agregarlo en línea adicional pequeña
+            if (vehiculoAsignado !== 'Sin asignar' && vehiculoAsignado !== 'N/A') {
+                yPosition += 3;
+                doc.setFontSize(6);
+                doc.setTextColor(128, 128, 128);
+                doc.text(`Vehículo: ${vehiculoAsignado}`, margin + 2, yPosition);
+                doc.setFontSize(7);
+                yPosition -= 3;
+            }
+            
+            yPosition += 7;
+        });
+        
+        // Pie de página en todas las páginas
+        const totalPages = doc.internal.pages.length - 1;
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.text(
+                `Página ${i} de ${totalPages}`,
+                pageWidth / 2,
+                doc.internal.pageSize.height - 10,
+                { align: 'center' }
+            );
+            
+            // Firma/Información de contacto
+            doc.setFontSize(7);
+            doc.text(
+                'Sistema de Gestión de Combustible SKT',
+                margin,
+                doc.internal.pageSize.height - 10
+            );
+        }
+        
+        // Guardar el PDF
+        const fechaArchivo = new Date().toISOString().split('T')[0];
+        const nombreArchivo = `Reporte_Conductores_${fechaArchivo}.pdf`;
+        doc.save(nombreArchivo);
+        
+        showNotification('success', 'Éxito', 'Reporte generado exitosamente');
+        
+    } catch (error) {
+        console.error('Error generando reporte:', error);
+        showNotification('error', 'Error', 'Error al generar el reporte: ' + error.message);
+    }
+}
