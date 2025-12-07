@@ -48,6 +48,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
+            
+            // Validar que el token no sea null, undefined o vacío
+            if (token == null || token.trim().isEmpty() || token.equals("null") || token.equals("undefined")) {
+                logger.warn("Token JWT inválido en request a: {} - Token vacío o inválido", requestURI);
+                sendUnauthorizedResponse(response);
+                return;
+            }
+            
             JwtTokenHolder.setToken(token); // Almacenar token para gRPC
             
             try {
@@ -78,6 +86,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // No limpiar aquí, se limpiará al final del request
             }
         } else {
+            // Si no hay token pero el endpoint requiere autenticación, verificar si es una solicitud de navegador
+            // Para archivos HTML, CSS, JS, permitir el acceso (el frontend manejará la autenticación)
+            if (requestURI.endsWith(".html") || requestURI.endsWith(".css") || requestURI.endsWith(".js") || requestURI.endsWith(".ico")) {
+                logger.debug("Permitiendo acceso a archivo estático sin token: {}", requestURI);
+                filterChain.doFilter(request, response);
+                return;
+            }
+            
             logger.debug("No se encontró token JWT en request a: {}", requestURI);
             sendUnauthorizedResponse(response);
             return;

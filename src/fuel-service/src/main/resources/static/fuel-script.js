@@ -66,7 +66,7 @@ function setupEventListeners() {
     const cantidadLitrosInput = document.getElementById('fuelCantidadLitros');
     
     // Interceptar clics en enlaces externos para compartir token
-    document.querySelectorAll('a[href^="http://localhost:8081"], a[href^="http://localhost:8082"], a[href^="http://localhost:8083"], a[href^="http://localhost:8085"]').forEach(link => {
+    document.querySelectorAll('a[href^="http://localhost:8081"], a[href^="http://localhost:8082"], a[href^="http://localhost:8083"], a[href^="http://localhost:8084"], a[href^="http://localhost:8085"]').forEach(link => {
         link.addEventListener('click', function(e) {
             const url = new URL(this.href);
             const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
@@ -127,6 +127,11 @@ function calculateCostoTotal() {
 async function loadFuelConsumptions() {
     try {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        if (!token || token === 'null' || token === 'undefined') {
+            console.warn('No hay token disponible, redirigiendo al login...');
+            window.location.href = 'http://localhost:8085/';
+            return;
+        }
         const response = await fetch(`${API_BASE_URL}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -138,11 +143,13 @@ async function loadFuelConsumptions() {
             renderFuelConsumptions();
             updateMetrics();
             populateFilters();
-        } else if (response.status === 401) {
-            window.location.href = 'http://localhost:8085/';
         } else {
             console.error('Error cargando registros de combustible:', response.statusText);
-            showNotification('error', 'Error', 'Error al cargar registros de combustible.');
+            if (response.status === 401) {
+                window.location.href = 'http://localhost:8085/';
+            } else {
+                showNotification('error', 'Error', 'Error al cargar registros de combustible.');
+            }
         }
     } catch (error) {
         console.error('Error de red al cargar registros:', error);

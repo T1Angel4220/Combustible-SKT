@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadRecentActivity();
     
     // Interceptar clics en enlaces externos para compartir token
-    document.querySelectorAll('a[href^="http://localhost:8081"], a[href^="http://localhost:8082"], a[href^="http://localhost:8083"]').forEach(link => {
+    document.querySelectorAll('a[href^="http://localhost:8081"], a[href^="http://localhost:8082"], a[href^="http://localhost:8083"], a[href^="http://localhost:8084"]').forEach(link => {
         link.addEventListener('click', function(e) {
             shareTokenWithServices();
             // Agregar token a la URL como parámetro
