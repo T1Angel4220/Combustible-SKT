@@ -9,6 +9,8 @@ echo 2. Auth Service (puerto 8085)
 echo 3. Drivers Service (puerto 8081)
 echo 4. Vehicles Service (puerto 8082)
 echo 5. Routes Service (puerto 8083)
+echo 6. Fuel Service (puerto 8084)
+echo 7. Gateway Service (puerto 8090)
 echo.
 echo Cada servicio se abrira en una nueva ventana.
 echo.
@@ -18,7 +20,7 @@ REM ==========================================
 REM PASO 1: Levantar MongoDB
 REM ==========================================
 echo.
-echo [1/6] Iniciando MongoDB...
+echo [1/9] Iniciando MongoDB...
 echo.
 
 REM Detener MongoDB previo
@@ -56,7 +58,7 @@ echo.
 REM ==========================================
 REM PASO 2: Verificar y cargar datos de prueba
 REM ==========================================
-echo [2/7] Verificando datos de prueba...
+echo [2/9] Verificando datos de prueba...
 echo.
 
 REM Verificar si ya existen datos
@@ -65,33 +67,38 @@ docker exec mongodb-local mongosh auth_db --quiet --eval "print('Usuarios:', db.
 docker exec mongodb-local mongosh drivers_db --quiet --eval "print('Choferes:', db.drivers.countDocuments())" > temp_drivers.txt 2>&1
 docker exec mongodb-local mongosh vehicles_db --quiet --eval "print('Vehiculos:', db.vehicles.countDocuments())" > temp_vehicles.txt 2>&1
 docker exec mongodb-local mongosh routes_db --quiet --eval "print('Rutas:', db.routes.countDocuments())" > temp_routes.txt 2>&1
+docker exec mongodb-local mongosh fuel_db --quiet --eval "print('Registros:', db.fuel_consumptions.countDocuments())" > temp_fuel.txt 2>&1
 
 REM Leer los resultados
 set /a auth_count=0
 set /a drivers_count=0
 set /a vehicles_count=0
 set /a routes_count=0
+set /a fuel_count=0
 
 for /f %%i in (temp_auth.txt) do set auth_count=%%i
 for /f %%i in (temp_drivers.txt) do set drivers_count=%%i
 for /f %%i in (temp_vehicles.txt) do set vehicles_count=%%i
 for /f %%i in (temp_routes.txt) do set routes_count=%%i
+for /f %%i in (temp_fuel.txt) do set fuel_count=%%i
 
 REM Limpiar archivos temporales
 del temp_auth.txt 2>nul
 del temp_drivers.txt 2>nul
 del temp_vehicles.txt 2>nul
 del temp_routes.txt 2>nul
+del temp_fuel.txt 2>nul
 
 echo Estado actual de la base de datos:
 echo   - Usuarios (auth_db): %auth_count%
 echo   - Choferes (drivers_db): %drivers_count%
 echo   - Vehiculos (vehicles_db): %vehicles_count%
 echo   - Rutas (routes_db): %routes_count%
+echo   - Registros Combustible (fuel_db): %fuel_count%
 echo.
 
 REM Verificar si hay datos existentes
-set /a total_data=%auth_count%+%drivers_count%+%vehicles_count%+%routes_count%
+set /a total_data=%auth_count%+%drivers_count%+%vehicles_count%+%routes_count%+%fuel_count%
 
 if %total_data% gtr 0 (
     echo ============================================
@@ -138,6 +145,7 @@ docker exec mongodb-local mongosh drivers_db --eval "db.drivers.deleteMany({})"
 docker exec mongodb-local mongosh vehicles_db --eval "db.vehicles.deleteMany({})"
 docker exec mongodb-local mongosh vehicles_db --eval "db.asignaciones_vehiculos.deleteMany({})"
 docker exec mongodb-local mongosh routes_db --eval "db.routes.deleteMany({})"
+docker exec mongodb-local mongosh fuel_db --eval "db.fuel_consumptions.deleteMany({})"
 echo Datos existentes eliminados.
 goto load_initial_data
 
@@ -164,6 +172,10 @@ if %routes_count% equ 0 (
     echo Cargando datos de rutas...
     call add-routes-data.bat >nul 2>&1
 )
+if %fuel_count% equ 0 (
+    echo Cargando datos de combustible...
+    call add-fuel-data.bat >nul 2>&1
+)
 echo Datos faltantes agregados.
 goto after_data_decision
 
@@ -172,25 +184,29 @@ echo ============================================
 echo   CARGANDO DATOS INICIALES
 echo ============================================
 echo.
-echo [1/5] Cargando datos de autenticacion...
+echo [1/6] Cargando datos de autenticacion...
 call add-auth-data.bat >nul 2>&1
 echo OK - Usuarios de prueba creados
 
-echo [2/5] Cargando datos de choferes...
+echo [2/6] Cargando datos de choferes...
 call add-drivers-data.bat >nul 2>&1
 echo OK - Choferes de prueba creados
 
-echo [3/5] Cargando datos de vehiculos...
+echo [3/6] Cargando datos de vehiculos...
 call add-simple-data.bat >nul 2>&1
 echo OK - Vehiculos de prueba creados
 
-echo [4/5] Cargando asignaciones de vehiculos a choferes...
+echo [4/6] Cargando asignaciones de vehiculos a choferes...
 call add-assignments-data.bat >nul 2>&1
 echo OK - Asignaciones de prueba creadas
 
-echo [5/5] Cargando datos de rutas...
+echo [5/6] Cargando datos de rutas...
 call add-routes-data.bat >nul 2>&1
 echo OK - Rutas de prueba creadas
+
+echo [6/6] Cargando datos de combustible...
+call add-fuel-data.bat >nul 2>&1
+echo OK - Registros de combustible de prueba creados
 
 echo.
 echo ============================================
@@ -208,7 +224,7 @@ echo.
 REM ==========================================
 REM PASO 3: Compilar el proyecto (opcional)
 REM ==========================================
-echo [3/7] Compilando proyecto...
+echo [3/9] Compilando proyecto...
 echo.
 echo Deseas compilar el proyecto? (Recomendado si hay cambios)
 echo [S] Si   [N] No (usar compilacion anterior)
@@ -238,7 +254,7 @@ echo.
 REM ==========================================
 REM PASO 4: Iniciar Auth Service
 REM ==========================================
-echo [4/7] Iniciando Auth Service (puerto 8085)...
+echo [4/9] Iniciando Auth Service (puerto 8085)...
 start "Auth Service - SKT" cmd /k "cd src\auth-service && echo Iniciando Auth Service... && mvn spring-boot:run"
 echo OK - Auth Service iniciado en nueva ventana
 ping 127.0.0.1 -n 5 >nul
@@ -247,7 +263,7 @@ echo.
 REM ==========================================
 REM PASO 5: Iniciar Drivers Service
 REM ==========================================
-echo [5/7] Iniciando Drivers Service (puerto 8081)...
+echo [5/9] Iniciando Drivers Service (puerto 8081)...
 start "Drivers Service - SKT" cmd /k "cd src\drivers-service && echo Iniciando Drivers Service... && mvn spring-boot:run"
 echo OK - Drivers Service iniciado en nueva ventana
 ping 127.0.0.1 -n 5 >nul
@@ -256,7 +272,7 @@ echo.
 REM ==========================================
 REM PASO 6: Iniciar Vehicles Service
 REM ==========================================
-echo [6/7] Iniciando Vehicles Service (puerto 8082)...
+echo [6/9] Iniciando Vehicles Service (puerto 8082)...
 start "Vehicles Service - SKT" cmd /k "cd src\vehicles-service && echo Iniciando Vehicles Service... && mvn spring-boot:run"
 echo OK - Vehicles Service iniciado en nueva ventana
 ping 127.0.0.1 -n 5 >nul
@@ -265,16 +281,25 @@ echo.
 REM ==========================================
 REM PASO 7: Iniciar Routes Service
 REM ==========================================
-echo [7/8] Iniciando Routes Service (puerto 8083)...
+echo [7/9] Iniciando Routes Service (puerto 8083)...
 start "Routes Service - SKT" cmd /k "cd src\routes-service && echo Iniciando Routes Service... && mvn spring-boot:run"
 echo OK - Routes Service iniciado en nueva ventana
 ping 127.0.0.1 -n 5 >nul
 echo.
 
 REM ==========================================
-REM PASO 8: Iniciar Gateway Service
+REM PASO 8: Iniciar Fuel Service
 REM ==========================================
-echo [8/8] Iniciando Gateway Service (puerto 8090)...
+echo [8/9] Iniciando Fuel Service (puerto 8084)...
+start "Fuel Service - SKT" cmd /k "cd src\fuel-service && echo Iniciando Fuel Service... && mvn spring-boot:run"
+echo OK - Fuel Service iniciado en nueva ventana
+ping 127.0.0.1 -n 5 >nul
+echo.
+
+REM ==========================================
+REM PASO 9: Iniciar Gateway Service
+REM ==========================================
+echo [9/9] Iniciando Gateway Service (puerto 8090)...
 start "Gateway Service - SKT" cmd /k "cd src\gateway-service && echo Iniciando Gateway Service... && mvn spring-boot:run"
 echo OK - Gateway Service iniciado en nueva ventana
 echo.
@@ -339,6 +364,15 @@ if %errorlevel% equ 0 (
 )
 
 echo.
+echo [Fuel Service - Puerto 8084]
+curl -s http://localhost:8084/actuator/health >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   Estado: OK
+) else (
+    echo   Estado: Iniciando... (puede tardar mas)
+)
+
+echo.
 echo [Gateway Service - Puerto 8090]
 curl -s http://localhost:8090/api/v1/gateway/health >nul 2>&1
 if %errorlevel% equ 0 (
@@ -357,7 +391,7 @@ echo.
 echo  MongoDB:
 echo    - Puerto: 27017
 echo    - Conexion: mongodb://localhost:27017
-echo    - Bases de datos: auth_db, drivers_db, vehicles_db, routes_db
+echo    - Bases de datos: auth_db, drivers_db, vehicles_db, routes_db, fuel_db
 echo.
 echo  Auth Service:
 echo    - Frontend: http://localhost:8085/
@@ -382,6 +416,12 @@ echo    - API: http://localhost:8083/api/v1/routes
 echo    - gRPC: localhost:9093
 echo    - Health: http://localhost:8083/actuator/health
 echo.
+echo  Fuel Service:
+echo    - Frontend: http://localhost:8084/fuel.html
+echo    - API: http://localhost:8084/api/v1/fuel
+echo    - gRPC: localhost:9094
+echo    - Health: http://localhost:8084/actuator/health
+echo.
 echo  Gateway Service:
 echo    - Drivers via Gateway: http://localhost:8090/api/v1/drivers
 echo    - Auth via Gateway: http://localhost:8090/api/v1/auth
@@ -399,6 +439,7 @@ echo   - 6 choferes con diferentes tipos de maquinaria
 echo   - 6 vehiculos (CAMION, EXCAVADORA, VOLQUETE, CARGADOR, GRUA)
 echo   - 5 asignaciones de vehiculos a choferes
 echo   - 5 rutas de prueba (PENDIENTE, EN_CURSO, COMPLETADA)
+echo   - 7 registros de consumo de combustible
 echo.
 echo ============================================
 echo.

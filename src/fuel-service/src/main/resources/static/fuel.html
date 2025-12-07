@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Combustible - SKT FUEL SYSTEM</title>
+  <link rel="stylesheet" href="fuel-styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-icon">
+          <i class="fas fa-gas-pump"></i>
+        </div>
+        <h1 class="logo-title">SKT FUEL SYSTEM</h1>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="http://localhost:8085/dashboard.html" class="nav-item">
+          <i class="fas fa-chart-line"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="http://localhost:8081/drivers.html" class="nav-item">
+          <i class="fas fa-users"></i>
+          <span>Conductores</span>
+        </a>
+        <a href="http://localhost:8082/vehicles.html" class="nav-item">
+          <i class="fas fa-truck"></i>
+          <span>Vehículos</span>
+        </a>
+        <a href="http://localhost:8083/routes.html" class="nav-item">
+          <i class="fas fa-route"></i>
+          <span>Rutas</span>
+        </a>
+        <a href="fuel.html" class="nav-item active">
+          <i class="fas fa-gas-pump"></i>
+          <span>Combustible</span>
+        </a>
+        <a href="#" class="nav-item">
+          <i class="fas fa-chart-bar"></i>
+          <span>Reportes</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <a href="#" class="nav-item">
+          <i class="fas fa-cog"></i>
+          <span>Configuración</span>
+        </a>
+        <a href="#" class="nav-item" onclick="logout()">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Cerrar Sesión</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="main-header">
+        <div class="header-left">
+          <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Buscar por vehículo, conductor o ruta...">
+          </div>
+        </div>
+        <div class="header-right">
+          <button class="add-fuel-btn" onclick="showAddFuelModal()">
+            <i class="fas fa-plus"></i>
+            Registrar Combustible
+          </button>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="content-wrapper">
+        <div class="page-header">
+          <div>
+            <h1>Gestión de Combustible</h1>
+            <p>Registra y monitorea el consumo de combustible</p>
+          </div>
+        </div>
+
+        <!-- Metrics Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <h3>Total Registros</h3>
+            <div class="metric-value" id="totalRegistros">0</div>
+            <div class="metric-label">Registros de consumo</div>
+          </div>
+          <div class="metric-card">
+            <h3>Total Litros</h3>
+            <div class="metric-value" id="totalLitros">0</div>
+            <div class="metric-label">Litros consumidos</div>
+          </div>
+          <div class="metric-card">
+            <h3>Costo Total</h3>
+            <div class="metric-value" id="costoTotal">$0.00</div>
+            <div class="metric-label">Costo acumulado</div>
+          </div>
+          <div class="metric-card">
+            <h3>Promedio por Registro</h3>
+            <div class="metric-value" id="promedioLitros">0</div>
+            <div class="metric-label">Litros promedio</div>
+          </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filters-section">
+          <div class="filter-group">
+            <label>Filtrar por Tipo de Maquinaria:</label>
+            <select id="machineryTypeFilter" class="filter-select">
+              <option value="">Todos</option>
+              <option value="CAMION">Camión (Liviana)</option>
+              <option value="VOLQUETE">Volquete (Liviana)</option>
+              <option value="EXCAVADORA">Excavadora (Pesada)</option>
+              <option value="CARGADOR">Cargador (Pesada)</option>
+              <option value="GRUA">Grúa (Pesada)</option>
+              <option value="MOTONIVELADORA">Motoniveladora (Pesada)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Filtrar por Vehículo:</label>
+            <select id="vehicleFilter" class="filter-select">
+              <option value="">Todos los vehículos</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Filtrar por Conductor:</label>
+            <select id="driverFilter" class="filter-select">
+              <option value="">Todos los conductores</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Rango de Fechas:</label>
+            <div class="date-range-inputs">
+              <input type="date" id="fechaInicio" class="date-input">
+              <span>a</span>
+              <input type="date" id="fechaFin" class="date-input">
+              <button class="btn-filter" onclick="applyFilters()">
+                <i class="fas fa-filter"></i> Filtrar
+              </button>
+              <button class="btn-filter btn-secondary" onclick="clearFilters()">
+                <i class="fas fa-times"></i> Limpiar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fuel Consumptions Table Section -->
+        <div class="table-section">
+          <div class="table-header">
+            <h2>Registros de Combustible</h2>
+            <p>Historial completo de consumo de combustible</p>
+          </div>
+
+          <div class="table-container">
+            <table class="fuel-table">
+              <thead>
+                <tr>
+                  <th>Fecha/Hora</th>
+                  <th>Vehículo</th>
+                  <th>Conductor</th>
+                  <th>Ruta</th>
+                  <th>Cantidad (L)</th>
+                  <th>Tipo</th>
+                  <th>Precio/L</th>
+                  <th>Costo Total</th>
+                  <th>Tipo Maquinaria</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="fuelTableBody">
+                <!-- Los registros se cargarán aquí -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Reports Section -->
+        <div class="reports-section">
+          <div class="report-card">
+            <h3>Comparación Estimado vs Real</h3>
+            <p class="report-subtitle">Compara el consumo estimado de rutas con el consumo real registrado</p>
+            <div class="report-content">
+              <div class="form-group">
+                <label>Seleccionar Ruta:</label>
+                <select id="routeComparisonSelect" class="filter-select">
+                  <option value="">Seleccione una ruta</option>
+                </select>
+                <button class="btn-primary" onclick="compareConsumption()" style="margin-top: 10px;">
+                  <i class="fas fa-balance-scale"></i> Comparar
+                </button>
+              </div>
+              <div id="comparisonResult" style="display: none; margin-top: 20px; padding: 15px; background: var(--dark-card); border-radius: 8px;">
+                <!-- Resultado de la comparación -->
+              </div>
+            </div>
+          </div>
+
+          <div class="report-card">
+            <h3>Reporte por Tipo de Maquinaria</h3>
+            <p class="report-subtitle">Estadísticas de consumo por tipo de maquinaria</p>
+            <div class="report-content">
+              <div class="form-group">
+                <label>Tipo de Maquinaria:</label>
+                <select id="reportMachineryType" class="filter-select">
+                  <option value="">Seleccione un tipo</option>
+                  <option value="CAMION">Camión (Liviana)</option>
+                  <option value="VOLQUETE">Volquete (Liviana)</option>
+                  <option value="EXCAVADORA">Excavadora (Pesada)</option>
+                  <option value="CARGADOR">Cargador (Pesada)</option>
+                  <option value="GRUA">Grúa (Pesada)</option>
+                  <option value="MOTONIVELADORA">Motoniveladora (Pesada)</option>
+                </select>
+                <button class="btn-primary" onclick="generateMachineryReport()" style="margin-top: 10px;">
+                  <i class="fas fa-chart-bar"></i> Generar Reporte
+                </button>
+              </div>
+              <div id="machineryReportResult" style="display: none; margin-top: 20px; padding: 15px; background: var(--dark-card); border-radius: 8px;">
+                <!-- Resultado del reporte -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit Fuel Consumption Modal -->
+  <div id="fuelModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="fuelModalTitle">Registrar Combustible</h2>
+        <button class="close-btn" onclick="closeFuelModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="fuelForm" class="modal-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha y Hora <span style="color: red;">*</span></label>
+            <input type="datetime-local" id="fuelFechaHora" required>
+          </div>
+          <div class="form-group">
+            <label>Cantidad (Litros) <span style="color: red;">*</span></label>
+            <input type="number" id="fuelCantidadLitros" step="0.01" required min="0">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tipo de Combustible <span style="color: red;">*</span></label>
+            <select id="fuelTipoCombustible" required>
+              <option value="">Seleccionar</option>
+              <option value="DIESEL">Diesel</option>
+              <option value="GASOLINA">Gasolina</option>
+              <option value="GAS">Gas</option>
+              <option value="ELECTRICO">Eléctrico</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Precio por Litro</label>
+            <input type="number" id="fuelPrecioPorLitro" step="0.01" min="0" placeholder="Opcional">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Costo Total</label>
+            <input type="number" id="fuelCostoTotal" step="0.01" min="0" readonly placeholder="Se calculará automáticamente">
+          </div>
+          <div class="form-group">
+            <label>Lectura Odómetro (Horas)</label>
+            <input type="number" id="fuelLecturaOdometro" step="0.01" min="0" placeholder="Opcional">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Vehículo <span style="color: red;">*</span></label>
+            <select id="fuelVehiculo" required>
+              <option value="">Seleccione un vehículo</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Conductor <span style="color: red;">*</span></label>
+            <select id="fuelChofer" required>
+              <option value="">Seleccione un conductor</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Ruta (Opcional)</label>
+          <select id="fuelRuta">
+            <option value="">Sin ruta asociada</option>
+          </select>
+          <small style="color: #666; font-size: 0.85em;">Asociar este consumo a una ruta específica</small>
+        </div>
+        <div class="form-group">
+          <label>Observaciones</label>
+          <textarea 
+            id="fuelObservaciones" 
+            rows="4" 
+            placeholder="Notas sobre el consumo de combustible..."
+            class="observations-textarea"
+          ></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeFuelModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" id="fuelSubmitBtn">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Modal -->
+  <div id="notificationModal" class="notification-modal">
+    <div class="notification-content">
+      <div class="notification-icon" id="notificationIcon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <h3 id="notificationTitle">Éxito</h3>
+      <p id="notificationMessage">Operación completada correctamente</p>
+      <button class="notification-btn" onclick="closeNotificationModal()">Aceptar</button>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmationModal" class="notification-modal">
+    <div class="notification-content">
+      <div class="notification-icon" id="confirmationIcon">
+        <i class="fas fa-question-circle"></i>
+      </div>
+      <h3 id="confirmationTitle">Confirmar</h3>
+      <p id="confirmationMessage">¿Estás seguro?</p>
+      <div class="confirmation-actions">
+        <button class="notification-btn btn-secondary" onclick="closeConfirmationModal(false)">Cancelar</button>
+        <button class="notification-btn btn-primary" onclick="closeConfirmationModal(true)">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="fuel-script.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,212 @@
+syntax = "proto3";
+
+package com.skt.combustible.fuel;
+
+option java_multiple_files = true;
+option java_package = "com.skt.combustible.fuel.grpc";
+option java_outer_classname = "FuelServiceProto";
+
+// Servicio gRPC para gestión de consumo de combustible
+service FuelService {
+  // Crear un nuevo registro de combustible
+  rpc CreateFuelConsumption(CreateFuelConsumptionRequest) returns (FuelConsumptionResponse);
+  
+  // Obtener registro por ID
+  rpc GetFuelConsumptionById(GetFuelConsumptionByIdRequest) returns (FuelConsumptionResponse);
+  
+  // Obtener todos los registros
+  rpc GetAllFuelConsumptions(GetAllFuelConsumptionsRequest) returns (GetAllFuelConsumptionsResponse);
+  
+  // Obtener registros por vehículo
+  rpc GetFuelConsumptionsByVehicle(GetFuelConsumptionsByVehicleRequest) returns (GetAllFuelConsumptionsResponse);
+  
+  // Obtener registros por chofer
+  rpc GetFuelConsumptionsByDriver(GetFuelConsumptionsByDriverRequest) returns (GetAllFuelConsumptionsResponse);
+  
+  // Obtener registros por ruta
+  rpc GetFuelConsumptionsByRoute(GetFuelConsumptionsByRouteRequest) returns (GetAllFuelConsumptionsResponse);
+  
+  // Obtener registros por tipo de maquinaria
+  rpc GetFuelConsumptionsByMachineryType(GetFuelConsumptionsByMachineryTypeRequest) returns (GetAllFuelConsumptionsResponse);
+  
+  // Obtener registros por rango de fechas
+  rpc GetFuelConsumptionsByDateRange(GetFuelConsumptionsByDateRangeRequest) returns (GetAllFuelConsumptionsResponse);
+  
+  // Actualizar registro
+  rpc UpdateFuelConsumption(UpdateFuelConsumptionRequest) returns (FuelConsumptionResponse);
+  
+  // Eliminar registro
+  rpc DeleteFuelConsumption(DeleteFuelConsumptionRequest) returns (Empty);
+  
+  // Obtener estadísticas de consumo
+  rpc GetFuelConsumptionStats(GetFuelConsumptionStatsRequest) returns (FuelConsumptionStatsResponse);
+  
+  // Comparar consumo estimado vs real por ruta
+  rpc CompareEstimatedVsReal(CompareEstimatedVsRealRequest) returns (CompareEstimatedVsRealResponse);
+  
+  // Obtener reporte por tipo de maquinaria
+  rpc GetReportByMachineryType(GetReportByMachineryTypeRequest) returns (MachineryTypeReportResponse);
+}
+
+// Enums
+enum TipoCombustibleProto {
+  DIESEL = 0;
+  GASOLINA = 1;
+  GAS = 2;
+  ELECTRICO = 3;
+}
+
+enum TipoMaquinariaFuelProto {
+  CAMION = 0;
+  VOLQUETE = 1;
+  EXCAVADORA = 2;
+  CARGADOR = 3;
+  GRUA = 4;
+  MOTONIVELADORA = 5;
+}
+
+// Mensajes de request
+message CreateFuelConsumptionRequest {
+  string fecha_hora = 1; // ISO 8601 format
+  double cantidad_litros = 2;
+  TipoCombustibleProto tipo_combustible = 3;
+  optional double precio_por_litro = 4;
+  optional double costo_total = 5;
+  string vehiculo_id = 6;
+  string chofer_id = 7;
+  optional string ruta_id = 8;
+  optional double lectura_odometro_horas = 9;
+  optional string observaciones = 10;
+}
+
+message GetFuelConsumptionByIdRequest {
+  string id = 1;
+}
+
+message GetAllFuelConsumptionsRequest {
+  int32 page = 1;
+  int32 size = 2;
+}
+
+message GetFuelConsumptionsByVehicleRequest {
+  string vehiculo_id = 1;
+  optional string fecha_inicio = 2;
+  optional string fecha_fin = 3;
+}
+
+message GetFuelConsumptionsByDriverRequest {
+  string chofer_id = 1;
+  optional string fecha_inicio = 2;
+  optional string fecha_fin = 3;
+}
+
+message GetFuelConsumptionsByRouteRequest {
+  string ruta_id = 1;
+}
+
+message GetFuelConsumptionsByMachineryTypeRequest {
+  TipoMaquinariaFuelProto tipo_maquinaria = 1;
+  optional string fecha_inicio = 2;
+  optional string fecha_fin = 3;
+}
+
+message GetFuelConsumptionsByDateRangeRequest {
+  string fecha_inicio = 1;
+  string fecha_fin = 2;
+}
+
+message UpdateFuelConsumptionRequest {
+  string id = 1;
+  optional string fecha_hora = 2;
+  optional double cantidad_litros = 3;
+  optional TipoCombustibleProto tipo_combustible = 4;
+  optional double precio_por_litro = 5;
+  optional double costo_total = 6;
+  optional string vehiculo_id = 7;
+  optional string chofer_id = 8;
+  optional string ruta_id = 9;
+  optional double lectura_odometro_horas = 10;
+  optional string observaciones = 11;
+}
+
+message DeleteFuelConsumptionRequest {
+  string id = 1;
+}
+
+message GetFuelConsumptionStatsRequest {
+  optional string fecha_inicio = 1;
+  optional string fecha_fin = 2;
+  optional TipoMaquinariaFuelProto tipo_maquinaria = 3;
+}
+
+message CompareEstimatedVsRealRequest {
+  string ruta_id = 1;
+}
+
+message GetReportByMachineryTypeRequest {
+  TipoMaquinariaFuelProto tipo_maquinaria = 1;
+  optional string fecha_inicio = 2;
+  optional string fecha_fin = 3;
+}
+
+// Mensajes de response
+message FuelConsumptionResponse {
+  string id = 1;
+  string fecha_hora = 2;
+  double cantidad_litros = 3;
+  TipoCombustibleProto tipo_combustible = 4;
+  optional double precio_por_litro = 5;
+  optional double costo_total = 6;
+  string vehiculo_id = 7;
+  string chofer_id = 8;
+  optional string ruta_id = 9;
+  optional double lectura_odometro_horas = 10;
+  optional string observaciones = 11;
+  string created_at = 12;
+  string updated_at = 13;
+  // Información adicional
+  optional string vehiculo_placa = 14;
+  optional string chofer_nombre = 15;
+  optional string ruta_nombre = 16;
+  optional TipoMaquinariaFuelProto tipo_maquinaria = 17;
+}
+
+message GetAllFuelConsumptionsResponse {
+  repeated FuelConsumptionResponse consumptions = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 size = 4;
+}
+
+message FuelConsumptionStatsResponse {
+  double total_litros = 1;
+  double total_costo = 2;
+  double promedio_litros_por_registro = 3;
+  double promedio_costo_por_litro = 4;
+  int64 total_registros = 5;
+  optional double consumo_por_tipo_maquinaria = 6;
+}
+
+message CompareEstimatedVsRealResponse {
+  string ruta_id = 1;
+  string ruta_nombre = 2;
+  double consumo_estimado_litros = 3;
+  double consumo_real_litros = 4;
+  double diferencia_litros = 5;
+  double diferencia_porcentaje = 6;
+  bool consumo_real_mayor = 7;
+}
+
+message MachineryTypeReportResponse {
+  TipoMaquinariaFuelProto tipo_maquinaria = 1;
+  double total_litros = 2;
+  double total_costo = 3;
+  int64 total_registros = 4;
+  double promedio_litros_por_registro = 5;
+  repeated FuelConsumptionResponse consumptions = 6;
+}
+
+message Empty {
+  // Mensaje vacío para operaciones que no retornan datos
+}
+
