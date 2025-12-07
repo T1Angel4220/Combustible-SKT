@@ -9,6 +9,7 @@ let drivers = [];
 let editingRouteId = null;
 let confirmationCallback = null;
 let currentUserRole = null; // Rol del usuario actual
+let currentDriverId = null; // ID del conductor actual (si es CONDUCTOR)
 
 // Variables para Leaflet (mapa gratuito)
 let map = null;
@@ -20,6 +21,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     await checkAuth();
     loadRoutes();
     loadVehicles();
+    // loadDrivers se llamará después de applyRoleBasedUI para que currentDriverId esté disponible
+    await applyRoleBasedUI();
     loadDrivers();
     setupEventListeners();
 });
@@ -69,20 +72,147 @@ async function checkAuth() {
     }
 }
 
-function applyRoleBasedUI() {
+async function applyRoleBasedUI() {
     // Ocultar botones según el rol
     const addRouteBtn = document.querySelector('.btn-primary');
     
-    // Solo ADMIN y SUPERVISOR pueden crear rutas
-    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'SUPERVISOR') {
+    // ADMIN, SUPERVISOR y CONDUCTOR pueden crear rutas (CONDUCTOR solo para sí mismo)
+    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'SUPERVISOR' && currentUserRole !== 'CONDUCTOR') {
         if (addRouteBtn && addRouteBtn.textContent.includes('Nueva Ruta')) {
             addRouteBtn.style.display = 'none';
         }
     }
     
+    // Si es CONDUCTOR, obtener su ID de conductor
+    if (currentUserRole === 'CONDUCTOR') {
+        await loadCurrentDriverId();
+    }
+    
     // Re-renderizar la tabla para ocultar botones de acciones
     if (routes.length > 0) {
         renderRoutes();
+    }
+}
+
+/**
+ * Decodifica un token JWT (sin verificar la firma, solo para obtener claims)
+ */
+function decodeJwtToken(token) {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (error) {
+        console.error('Error decodificando token JWT:', error);
+        return null;
+    }
+}
+
+async function loadCurrentDriverId() {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        if (!token) {
+            console.warn('No se encontró token para cargar conductor');
+            return;
+        }
+        
+        let userId = null;
+        
+        // Primero intentar obtener userId desde auth-service usando el endpoint /me
+        try {
+            const authResponse = await fetch('http://localhost:8085/api/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (authResponse.ok) {
+                const userData = await authResponse.json();
+                // El userId puede estar en diferentes campos según la respuesta
+                userId = userData.id || userData.userId || (userData.user && (userData.user.id || userData.user.userId));
+                console.log('UserId obtenido desde auth-service:', userId);
+            }
+        } catch (error) {
+            console.warn('Error obteniendo userId desde auth-service:', error);
+        }
+        
+        // Si no se pudo obtener desde auth-service, intentar del token JWT directamente
+        if (!userId) {
+            const decodedToken = decodeJwtToken(token);
+            if (decodedToken) {
+                // El userId puede estar en "sub" o "userId"
+                userId = decodedToken.sub || decodedToken.userId;
+                // Verificar que no sea un username (si parece ser un ObjectId de MongoDB, es válido)
+                if (userId && !userId.match(/^[0-9a-fA-F]{24}$/)) {
+                    // Parece ser un username, no un userId
+                    console.warn('El valor obtenido parece ser un username, no un userId:', userId);
+                    userId = null;
+                }
+            }
+        }
+        
+        // Si aún no se tiene, intentar del localStorage
+        if (!userId) {
+            const userData = JSON.parse(localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser') || '{}');
+            userId = userData.id || userData.userId;
+        }
+        
+        if (!userId) {
+            console.warn('No se pudo obtener userId del token, auth-service o localStorage');
+            return;
+        }
+        
+        console.log('UserId final obtenido:', userId);
+        
+        // Obtener conductor por usuarioId desde drivers-service
+        let response = await fetch(`${DRIVERS_API_URL}/by-usuario/${userId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const driver = await response.json();
+            currentDriverId = driver.id;
+            console.log('Conductor actual cargado por usuarioId:', currentDriverId);
+        } else if (response.status === 404) {
+            console.warn('No se encontró conductor por usuarioId. Intentando buscar por email...');
+            
+            // Si no se encontró por usuarioId, intentar buscar por email
+            const userData = await fetch('http://localhost:8085/api/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }).then(r => r.ok ? r.json() : null);
+            
+            if (userData && userData.email) {
+                const email = encodeURIComponent(userData.email);
+                response = await fetch(`${DRIVERS_API_URL}/by-email/${email}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const driver = await response.json();
+                    currentDriverId = driver.id;
+                    console.log('Conductor actual cargado por email:', currentDriverId);
+                } else {
+                    console.warn('No se encontró conductor asociado al usuario ni por usuarioId ni por email. El usuario puede no tener un conductor vinculado.');
+                }
+            } else {
+                console.warn('No se pudo obtener el email del usuario para buscar conductor.');
+            }
+        } else {
+            console.error('Error obteniendo conductor. Status:', response.status);
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
+        }
+    } catch (error) {
+        console.error('Error cargando ID del conductor actual:', error);
     }
 }
 
@@ -271,7 +401,27 @@ async function loadVehicles() {
 async function loadDrivers() {
     try {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-        // Usar el nuevo endpoint que filtra conductores sin rutas activas
+        
+        // Si es CONDUCTOR, cargar solo su propio conductor
+        if (currentUserRole === 'CONDUCTOR' && currentDriverId) {
+            try {
+                const response = await fetch(`${DRIVERS_API_URL}/${currentDriverId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const driver = await response.json();
+                    drivers = [driver];
+                    populateDriverSelect();
+                    return;
+                }
+            } catch (error) {
+                console.error('Error cargando conductor actual:', error);
+            }
+        }
+        
+        // Para otros roles, usar el endpoint que filtra conductores sin rutas activas
         const response = await fetch(`${API_BASE_URL}/available-drivers`, {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -360,6 +510,22 @@ function populateDriverSelect() {
     if (!select) return;
     
     select.innerHTML = '<option value="">Seleccione un conductor</option>';
+    
+    // Si es CONDUCTOR, solo mostrar su propio nombre y auto-seleccionarlo
+    if (currentUserRole === 'CONDUCTOR' && currentDriverId) {
+        const driver = drivers.find(d => d.id === currentDriverId);
+        if (driver) {
+            const option = document.createElement('option');
+            option.value = driver.id;
+            option.textContent = `${driver.nombre} ${driver.apellido}`;
+            option.selected = true;
+            select.appendChild(option);
+            select.disabled = true; // Deshabilitar el campo para que no pueda cambiar
+            return;
+        }
+    }
+    
+    // Para otros roles, mostrar todos los conductores
     drivers.forEach(driver => {
         const option = document.createElement('option');
         option.value = driver.id;
@@ -722,9 +888,12 @@ function renderRoutes() {
                 </td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn edit" onclick="editRoute('${route.id}')" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
+                        ${(currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR' || (currentUserRole === 'CONDUCTOR' && route.choferId === currentDriverId))
+                            ? `<button class="action-btn edit" onclick="editRoute('${route.id}')" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>`
+                            : ''
+                        }
                         ${route.estado === 'PENDIENTE' 
                             ? `<button class="action-btn start" onclick="startRoute('${route.id}')" title="Iniciar">
                                 <i class="fas fa-play"></i>
@@ -738,14 +907,19 @@ function renderRoutes() {
                             : ''
                         }
                         ${route.estado !== 'COMPLETADA' && route.estado !== 'CANCELADA'
-                            ? `<button class="action-btn cancel" onclick="cancelRoute('${route.id}')" title="Cancelar">
-                                <i class="fas fa-times"></i>
+                            ? (currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR' || (currentUserRole === 'CONDUCTOR' && route.choferId === currentDriverId))
+                                ? `<button class="action-btn cancel" onclick="cancelRoute('${route.id}')" title="Cancelar">
+                                    <i class="fas fa-times"></i>
+                                </button>`
+                                : ''
+                            : ''
+                        }
+                        ${(currentUserRole === 'ADMIN' || (currentUserRole === 'CONDUCTOR' && route.choferId === currentDriverId))
+                            ? `<button class="action-btn delete" onclick="deleteRoute('${route.id}')" title="Eliminar">
+                                <i class="fas fa-trash"></i>
                             </button>`
                             : ''
                         }
-                        <button class="action-btn delete" onclick="deleteRoute('${route.id}')" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
                     </div>
                 </td>
             </tr>
@@ -841,9 +1015,12 @@ function filterRoutes() {
                 </td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn edit" onclick="editRoute('${route.id}')" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
+                        ${(currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR' || (currentUserRole === 'CONDUCTOR' && route.choferId === currentDriverId))
+                            ? `<button class="action-btn edit" onclick="editRoute('${route.id}')" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>`
+                            : ''
+                        }
                         ${route.estado === 'PENDIENTE' 
                             ? `<button class="action-btn start" onclick="startRoute('${route.id}')" title="Iniciar">
                                 <i class="fas fa-play"></i>
@@ -857,14 +1034,19 @@ function filterRoutes() {
                             : ''
                         }
                         ${route.estado !== 'COMPLETADA' && route.estado !== 'CANCELADA'
-                            ? `<button class="action-btn cancel" onclick="cancelRoute('${route.id}')" title="Cancelar">
-                                <i class="fas fa-times"></i>
+                            ? (currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR' || (currentUserRole === 'CONDUCTOR' && route.choferId === currentDriverId))
+                                ? `<button class="action-btn cancel" onclick="cancelRoute('${route.id}')" title="Cancelar">
+                                    <i class="fas fa-times"></i>
+                                </button>`
+                                : ''
+                            : ''
+                        }
+                        ${(currentUserRole === 'ADMIN' || (currentUserRole === 'CONDUCTOR' && route.choferId === currentDriverId))
+                            ? `<button class="action-btn delete" onclick="deleteRoute('${route.id}')" title="Eliminar">
+                                <i class="fas fa-trash"></i>
                             </button>`
                             : ''
                         }
-                        <button class="action-btn delete" onclick="deleteRoute('${route.id}')" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
                     </div>
                 </td>
             </tr>
@@ -1288,11 +1470,13 @@ function logout() {
         'Cerrar Sesión',
         '¿Estás seguro de cerrar sesión?',
         () => {
+            // Limpiar tokens primero
             localStorage.removeItem('authToken');
             localStorage.removeItem('currentUser');
             sessionStorage.removeItem('authToken');
             sessionStorage.removeItem('currentUser');
-            window.location.href = 'http://localhost:8085/';
+            // Redirigir con parámetro de logout para evitar redirección automática
+            window.location.href = 'http://localhost:8085/index.html?logout=true';
         }
     );
 }

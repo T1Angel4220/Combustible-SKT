@@ -48,6 +48,15 @@ public class RouteRestController {
     @Autowired
     private com.skt.combustible.routes.infrastructure.client.AssignmentsRestClient assignmentsRestClient;
 
+    @Autowired
+    private com.skt.combustible.routes.infrastructure.client.DriversRestClient driversRestClient;
+
+    @Autowired
+    private com.skt.combustible.routes.infrastructure.client.AuthRestClient authRestClient;
+
+    @Autowired
+    private com.skt.combustible.routes.infrastructure.security.JwtService jwtService;
+
     /**
      * Verifica si el usuario actual tiene un rol específico
      */
@@ -70,14 +79,92 @@ public class RouteRestController {
     }
 
     /**
+     * Obtiene el ID del conductor asociado al usuario actual si es CONDUCTOR
+     */
+    private String getCurrentDriverId(String token) {
+        try {
+            if (hasRole(RolUsuario.CONDUCTOR)) {
+                // Intentar obtener userId del token directamente
+                String userId = jwtService.getUserIdFromToken(token);
+                logger.debug("UserId extraído del token (directo): {}", userId);
+                
+                // Si no se pudo obtener del token o parece ser un username, obtener desde auth-service
+                if (userId == null || userId.isEmpty() || !userId.matches("^[0-9a-fA-F]{24}$")) {
+                    logger.debug("UserId no válido o parece ser username, obteniendo desde auth-service");
+                    userId = authRestClient.getUserIdFromToken(token);
+                    logger.debug("UserId obtenido desde auth-service: {}", userId);
+                }
+                
+                // Primero intentar buscar por usuarioId
+                if (userId != null && !userId.isEmpty()) {
+                    Map<String, Object> driver = driversRestClient.getDriverByUsuarioId(userId, token);
+                    if (driver != null && driver.get("id") != null) {
+                        String driverId = driver.get("id").toString();
+                        logger.info("Conductor encontrado para userId {}: driverId {}", userId, driverId);
+                        return driverId;
+                    } else {
+                        logger.warn("No se encontró conductor para userId: {}", userId);
+                    }
+                }
+                
+                // Si no se encontró por usuarioId, intentar buscar por email
+                String email = authRestClient.getEmailFromToken(token);
+                if (email != null && !email.isEmpty()) {
+                    logger.debug("Intentando buscar conductor por email: {}", email);
+                    Map<String, Object> driver = driversRestClient.getDriverByEmail(email, token);
+                    if (driver != null && driver.get("id") != null) {
+                        String driverId = driver.get("id").toString();
+                        logger.info("Conductor encontrado para email {}: driverId {}", email, driverId);
+                        return driverId;
+                    } else {
+                        logger.warn("No se encontró conductor para email: {}", email);
+                    }
+                }
+                
+                logger.warn("No se pudo obtener conductor ni por userId ni por email");
+            }
+        } catch (Exception e) {
+            logger.error("Error obteniendo conductor actual: {}", e.getMessage(), e);
+        }
+        return null;
+    }
+
+    /**
      * Obtiene todas las rutas activas
-     * Todos los roles pueden ver rutas
+     * Todos los roles pueden ver rutas, pero CONDUCTOR solo ve las suyas
+     * 
+     * @param authHeader Header de autorización
+     * @param allRoutes Parámetro opcional para obtener todas las rutas sin filtrar por rol (para fuel-service)
      */
     @GetMapping
-    public ResponseEntity<List<RouteResponse>> getAllRoutes() {
+    public ResponseEntity<List<RouteResponse>> getAllRoutes(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "all", required = false, defaultValue = "false") boolean allRoutes) {
         try {
-            logger.info("REST: Obteniendo todas las rutas");
-            List<RouteResponse> routes = routeService.obtenerTodasLasRutas();
+            logger.info("REST: Obteniendo todas las rutas (all={})", allRoutes);
+            List<RouteResponse> routes;
+            
+            // Si se solicita todas las rutas (para fuel-service), no filtrar por rol
+            if (allRoutes) {
+                logger.info("REST: Obteniendo todas las rutas sin filtrar por rol");
+                routes = routeService.obtenerTodasLasRutas();
+            } else if (hasRole(RolUsuario.CONDUCTOR) && authHeader != null && authHeader.startsWith("Bearer ")) {
+                // Si es CONDUCTOR, filtrar solo sus rutas
+                String token = authHeader.substring(7);
+                String driverId = getCurrentDriverId(token);
+                if (driverId != null) {
+                    logger.info("REST: Filtrando rutas para conductor con ID: {}", driverId);
+                    routes = routeService.obtenerRutasPorChofer(driverId);
+                } else {
+                    logger.warn("REST: No se pudo obtener el ID del conductor. El usuario puede no tener un conductor asociado. Retornando lista vacía.");
+                    // Si no se encuentra el conductor, retornar lista vacía
+                    // El usuario debe tener un conductor asociado para ver rutas
+                    routes = java.util.Collections.emptyList();
+                }
+            } else {
+                routes = routeService.obtenerTodasLasRutas();
+            }
+            
             return ResponseEntity.ok(routes);
         } catch (Exception e) {
             logger.error("Error obteniendo todas las rutas: {}", e.getMessage(), e);
@@ -109,16 +196,39 @@ public class RouteRestController {
 
     /**
      * Crea una nueva ruta
-     * Solo ADMIN y SUPERVISOR pueden crear rutas
+     * ADMIN y SUPERVISOR pueden crear rutas para cualquier conductor
+     * CONDUCTOR solo puede crear rutas para sí mismo
      */
     @PostMapping
-    public ResponseEntity<?> createRoute(@Valid @RequestBody RouteCreateRequest request) {
+    public ResponseEntity<?> createRoute(@Valid @RequestBody RouteCreateRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
-            if (!isAdminOrSupervisor()) {
+            // Si es CONDUCTOR, forzar que la ruta sea para él mismo
+            if (hasRole(RolUsuario.CONDUCTOR)) {
+                if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .body(java.util.Map.of("error", "Token de autenticación requerido", "status", 401));
+                }
+                
+                String token = authHeader.substring(7);
+                String driverId = getCurrentDriverId(token);
+                
+                if (driverId == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(java.util.Map.of("error", "No se pudo identificar el conductor asociado", "status", 403));
+                }
+                
+                // Forzar que el choferId sea el del conductor actual
+                if (request.getChoferId() == null || !request.getChoferId().equals(driverId)) {
+                    logger.info("REST: CONDUCTOR intentando crear ruta, forzando choferId a: {}", driverId);
+                    request.setChoferId(driverId);
+                }
+            } else if (!isAdminOrSupervisor()) {
                 logger.warn("Intento de crear ruta por usuario sin permisos");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(java.util.Map.of("error", "No tiene permisos para crear rutas", "status", 403));
             }
+            
             logger.info("REST: Creando nueva ruta: {} -> {}", request.getOrigen(), request.getDestino());
             RouteResponse route = routeService.crearRuta(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(route);
@@ -139,16 +249,39 @@ public class RouteRestController {
 
     /**
      * Actualiza una ruta existente
-     * Solo ADMIN y SUPERVISOR pueden actualizar rutas
+     * ADMIN y SUPERVISOR pueden actualizar cualquier ruta
+     * CONDUCTOR solo puede actualizar sus propias rutas
      */
     @PutMapping("/{id}")
     public ResponseEntity<RouteResponse> updateRoute(@PathVariable("id") String id,
-                                                     @Valid @RequestBody RouteUpdateRequest request) {
+                                                     @Valid @RequestBody RouteUpdateRequest request,
+                                                     @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
-            if (!isAdminOrSupervisor()) {
+            // Verificar permisos
+            if (hasRole(RolUsuario.CONDUCTOR)) {
+                if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
+                
+                String token = authHeader.substring(7);
+                String driverId = getCurrentDriverId(token);
+                
+                // Obtener la ruta para verificar que pertenece al conductor
+                Optional<RouteResponse> existingRoute = routeService.obtenerRutaPorId(id);
+                if (existingRoute.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                
+                if (driverId == null || !driverId.equals(existingRoute.get().getChoferId())) {
+                    logger.warn("CONDUCTOR intentando actualizar ruta que no le pertenece. Ruta ID: {}, Conductor actual: {}", 
+                            id, driverId);
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+            } else if (!isAdminOrSupervisor()) {
                 logger.warn("Intento de actualizar ruta por usuario sin permisos");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
+            
             logger.info("REST: Actualizando ruta con ID: {}", id);
             RouteResponse route = routeService.actualizarRuta(id, request);
             return ResponseEntity.ok(route);
@@ -166,15 +299,38 @@ public class RouteRestController {
 
     /**
      * Elimina una ruta (soft delete)
-     * Solo ADMIN puede eliminar rutas
+     * ADMIN puede eliminar cualquier ruta
+     * CONDUCTOR solo puede eliminar sus propias rutas
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteRoute(@PathVariable("id") String id) {
+    public ResponseEntity<Void> deleteRoute(@PathVariable("id") String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
-            if (!hasRole(RolUsuario.ADMIN)) {
+            // Verificar permisos
+            if (hasRole(RolUsuario.CONDUCTOR)) {
+                if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
+                
+                String token = authHeader.substring(7);
+                String driverId = getCurrentDriverId(token);
+                
+                // Obtener la ruta para verificar que pertenece al conductor
+                Optional<RouteResponse> existingRoute = routeService.obtenerRutaPorId(id);
+                if (existingRoute.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                
+                if (driverId == null || !driverId.equals(existingRoute.get().getChoferId())) {
+                    logger.warn("CONDUCTOR intentando eliminar ruta que no le pertenece. Ruta ID: {}, Conductor actual: {}", 
+                            id, driverId);
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+            } else if (!hasRole(RolUsuario.ADMIN)) {
                 logger.warn("Intento de eliminar ruta por usuario sin permisos");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
+            
             logger.info("REST: Eliminando ruta con ID: {}", id);
             routeService.eliminarRuta(id);
             return ResponseEntity.noContent().build();

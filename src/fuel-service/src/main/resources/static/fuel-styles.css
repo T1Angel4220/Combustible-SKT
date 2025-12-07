@@ -463,6 +463,16 @@ body {
   border-color: var(--primary-red);
 }
 
+.action-btn.view {
+  color: var(--info-blue);
+}
+
+.action-btn.view:hover {
+  background: rgba(88, 166, 255, 0.2);
+  color: var(--info-blue);
+  border-color: var(--info-blue);
+}
+
 /* Reports Section */
 .reports-section {
   display: grid;

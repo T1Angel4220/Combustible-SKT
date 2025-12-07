@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Servicio de gestión de choferes con lógica de negocio
@@ -183,6 +184,43 @@ public class DriverService {
     }
 
     /**
+     * Obtiene un chofer por usuarioId
+     * 
+     * @param usuarioId ID del usuario en auth-service
+     * @return DriverResponse con los datos del chofer
+     * @throws DriverNotFoundException si no se encuentra el chofer
+     */
+    @Transactional(readOnly = true)
+    public DriverResponse getDriverByUsuarioId(String usuarioId) {
+        logger.debug("Buscando chofer por usuarioId: {}", usuarioId);
+
+        Optional<Driver> driverOpt = driverRepository.findByUsuarioId(usuarioId);
+        
+        if (driverOpt.isPresent()) {
+            return driverMapper.toResponse(driverOpt.get());
+        }
+        
+        throw new DriverNotFoundException("usuarioId", usuarioId);
+    }
+
+    /**
+     * Obtiene un chofer por email (fallback cuando no se encuentra por usuarioId)
+     * 
+     * @param email Email del usuario/chofer
+     * @return DriverResponse con los datos del chofer
+     * @throws DriverNotFoundException si no se encuentra el chofer
+     */
+    @Transactional(readOnly = true)
+    public DriverResponse getDriverByEmail(String email) {
+        logger.debug("Buscando chofer por email: {}", email);
+
+        Driver driver = driverRepository.findByEmail(email)
+                .orElseThrow(() -> new DriverNotFoundException("email", email));
+
+        return driverMapper.toResponse(driver);
+    }
+
+    /**
      * Obtiene todos los choferes con paginación (activos e inactivos, pero no
      * eliminados)
      * 
@@ -333,11 +371,26 @@ public class DriverService {
 
         // Preservar fechaContratacion si no se está actualizando
         LocalDate fechaContratacionOriginal = existingDriver.getFechaContratacion();
+        
+        // Log del usuarioId antes de actualizar
+        logger.debug("UsuarioId en request: {}", request.getUsuarioId());
+        logger.debug("UsuarioId actual del driver: {}", existingDriver.getUsuarioId());
+        
         driverMapper.updateFromRequest(request, existingDriver);
+        
         // Si la fecha no se envió en el request, preservar la original
         if (request.getFechaContratacion() == null && fechaContratacionOriginal != null) {
             existingDriver.setFechaContratacion(fechaContratacionOriginal);
         }
+        
+        // Asegurar que el usuarioId se actualice si viene en el request
+        if (request.getUsuarioId() != null) {
+            existingDriver.setUsuarioId(request.getUsuarioId());
+            logger.info("UsuarioId actualizado en driver {}: {}", id, request.getUsuarioId());
+        }
+        
+        logger.debug("UsuarioId después de actualizar: {}", existingDriver.getUsuarioId());
+        
         Driver updatedDriver = driverRepository.save(existingDriver);
 
         logger.info("Chofer actualizado exitosamente con ID: {}", updatedDriver.getId());

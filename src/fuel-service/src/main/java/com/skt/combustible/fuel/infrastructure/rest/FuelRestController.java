@@ -102,12 +102,15 @@ public class FuelRestController {
     
     /**
      * Crea un nuevo registro de combustible
-     * Solo ADMIN y SUPERVISOR pueden crear registros
+     * ADMIN, SUPERVISOR y CONDUCTOR pueden crear registros
+     * CONDUCTOR puede registrar su propio consumo de combustible
      */
     @PostMapping
     public ResponseEntity<?> createFuelConsumption(@Valid @RequestBody FuelConsumptionCreateRequest request) {
         try {
-            if (!isAdminOrSupervisor()) {
+            // ADMIN, SUPERVISOR y CONDUCTOR pueden crear registros de combustible
+            // CONDUCTOR puede registrar su propio consumo
+            if (!isAdminOrSupervisor() && !hasRole(RolUsuario.CONDUCTOR)) {
                 logger.warn("Intento de crear registro de combustible por usuario sin permisos");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "No tiene permisos para crear registros de combustible", "status", 403));

@@ -13,6 +13,18 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function checkAuthStatus() {
+    // Verificar si viene de un logout (parámetro en URL)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isLogout = urlParams.get('logout') === 'true';
+    
+    // Si viene de un logout, limpiar cualquier token residual y no redirigir
+    if (isLogout) {
+        clearAuthData();
+        // Limpiar el parámetro de la URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+    }
+    
     const savedToken = localStorage.getItem('authToken');
     const savedUser = localStorage.getItem('currentUser');
     

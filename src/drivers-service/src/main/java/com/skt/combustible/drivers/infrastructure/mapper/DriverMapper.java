@@ -28,6 +28,7 @@ public interface DriverMapper {
     @Mapping(target = "activo", constant = "true")
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "usuarioId", ignore = true)
     Driver toEntity(CreateDriverRequest request);
 
     /**
@@ -55,6 +56,7 @@ public interface DriverMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "usuarioId", source = "usuarioId", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.SET_TO_NULL)
     void updateFromRequest(UpdateDriverRequest request, @MappingTarget Driver driver);
 
     /**

@@ -147,4 +147,20 @@ public interface DriverRepository extends MongoRepository<Driver, String> {
      * @return Lista de choferes en servicio
      */
     List<Driver> findByActivoTrueAndEstadoIn(List<EstadoOperativo> estados);
+
+    /**
+     * Busca un chofer por usuarioId
+     * 
+     * @param usuarioId ID del usuario en auth-service
+     * @return Optional con el chofer encontrado
+     */
+    Optional<Driver> findByUsuarioId(String usuarioId);
+
+    /**
+     * Busca un chofer por email
+     * 
+     * @param email Email del chofer
+     * @return Optional con el chofer encontrado
+     */
+    Optional<Driver> findByEmail(String email);
 }

@@ -782,11 +782,13 @@ function logout() {
         'Cerrar Sesión',
         '¿Estás seguro de cerrar sesión?',
         () => {
+            // Limpiar tokens primero
             localStorage.removeItem('authToken');
             localStorage.removeItem('currentUser');
             sessionStorage.removeItem('authToken');
             sessionStorage.removeItem('currentUser');
-            window.location.href = 'http://localhost:8085/';
+            // Redirigir con parámetro de logout para evitar redirección automática
+            window.location.href = 'http://localhost:8085/index.html?logout=true';
         }
     );
 }
@@ -908,7 +910,16 @@ async function handleCreateUserSubmit(e) {
         
         if (response.ok) {
             const result = await response.json();
-            const userId = result.user?.id || result.id;
+            // El endpoint /api/users devuelve un AuthResponse directamente con el campo 'id'
+            const userId = result.id || result.user?.id;
+            
+            if (!userId) {
+                console.error('No se pudo obtener el userId de la respuesta:', result);
+                showNotification('error', 'Error', 'Usuario creado pero no se pudo obtener el ID del usuario');
+                return;
+            }
+            
+            console.log('Usuario creado con ID:', userId);
             
             // Actualizar el chofer con el usuario_id
             const updateData = {
@@ -925,6 +936,8 @@ async function handleCreateUserSubmit(e) {
                 usuarioId: userId
             };
             
+            console.log('Actualizando conductor con datos:', updateData);
+            
             const updateDriverResponse = await fetch(`${API_BASE_URL}/${driverId}`, {
                 method: 'PUT',
                 headers: {
@@ -935,11 +948,15 @@ async function handleCreateUserSubmit(e) {
             });
             
             if (updateDriverResponse.ok) {
+                const updatedDriver = await updateDriverResponse.json();
+                console.log('Conductor actualizado exitosamente:', updatedDriver);
                 closeCreateUserModal();
                 loadDrivers(); // Recargar lista de choferes
                 showNotification('success', 'Éxito', 'Usuario creado y asignado al chofer correctamente');
             } else {
-                showNotification('warning', 'Advertencia', 'Usuario creado pero no se pudo actualizar el chofer');
+                const errorText = await updateDriverResponse.text();
+                console.error('Error actualizando conductor:', errorText);
+                showNotification('warning', 'Advertencia', 'Usuario creado pero no se pudo actualizar el chofer. ' + errorText);
             }
         } else {
             const errorText = await response.text();

@@ -795,11 +795,13 @@ function logout() {
         'Cerrar Sesión',
         '¿Estás seguro de cerrar sesión?',
         () => {
+            // Limpiar tokens primero
             localStorage.removeItem('authToken');
             localStorage.removeItem('currentUser');
             sessionStorage.removeItem('authToken');
             sessionStorage.removeItem('currentUser');
-            window.location.href = 'http://localhost:8085/';
+            // Redirigir con parámetro de logout para evitar redirección automática
+            window.location.href = 'http://localhost:8085/index.html?logout=true';
         }
     );
 }

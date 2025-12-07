@@ -12,13 +12,22 @@ let routes = [];
 let editingFuelId = null;
 let confirmationCallback = null;
 let currentUserRole = null; // Rol del usuario actual
+let currentUserId = null; // ID del usuario actual (MongoDB _id)
+let currentDriverId = null; // ID del conductor asociado al usuario actual
 
 document.addEventListener('DOMContentLoaded', async function() {
     await checkAuth();
-    loadFuelConsumptions();
-    loadVehicles();
-    loadDrivers();
-    loadRoutes();
+    
+    // Cargar datos en paralelo, pero asegurar que las rutas se carguen antes de renderizar
+    await Promise.all([
+        loadVehicles(),
+        loadDrivers(),
+        loadRoutes()
+    ]);
+    
+    // Después de cargar las rutas, cargar y renderizar los consumos
+    await loadFuelConsumptions();
+    
     setupEventListeners();
     
     // Establecer fecha actual por defecto
@@ -71,6 +80,14 @@ async function checkAuth() {
         if (response.ok) {
             const userData = await response.json();
             currentUserRole = userData.rol || userData.role || null;
+            currentUserId = userData.id || userData.userId || null;
+            console.log('Usuario actual:', { role: currentUserRole, id: currentUserId });
+            
+            // Si es CONDUCTOR, cargar su conductor asociado
+            if (currentUserRole === 'CONDUCTOR' && currentUserId) {
+                await loadCurrentDriverId();
+            }
+            
             // Aplicar restricciones de UI según el rol
             applyRoleBasedUI();
         }
@@ -79,12 +96,69 @@ async function checkAuth() {
     }
 }
 
+// Cargar el ID del conductor asociado al usuario actual (para CONDUCTOR)
+async function loadCurrentDriverId() {
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        if (!token || !currentUserId) {
+            console.warn('No se pudo obtener userId o token para cargar conductor');
+            return;
+        }
+        
+        console.log('Intentando obtener conductor para userId:', currentUserId);
+        
+        // Obtener conductor por usuarioId desde drivers-service
+        const response = await fetch(`${DRIVERS_API_URL}/by-usuario/${currentUserId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const driver = await response.json();
+            currentDriverId = driver.id;
+            console.log('Conductor actual cargado:', currentDriverId);
+        } else if (response.status === 404) {
+            console.warn('No se encontró conductor asociado al usuario. Intentando buscar por email...');
+            
+            // Si no se encontró por usuarioId, intentar buscar por email
+            const userData = await fetch('http://localhost:8085/api/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }).then(r => r.ok ? r.json() : null);
+            
+            if (userData && userData.email) {
+                const email = encodeURIComponent(userData.email);
+                const emailResponse = await fetch(`${DRIVERS_API_URL}/by-email/${email}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (emailResponse.ok) {
+                    const driver = await emailResponse.json();
+                    currentDriverId = driver.id;
+                    console.log('Conductor actual cargado por email:', currentDriverId);
+                } else {
+                    console.warn('No se encontró conductor asociado al usuario ni por usuarioId ni por email.');
+                }
+            }
+        } else {
+            console.error('Error obteniendo conductor. Status:', response.status);
+        }
+    } catch (error) {
+        console.error('Error cargando ID del conductor actual:', error);
+    }
+}
+
 function applyRoleBasedUI() {
     // Ocultar botones según el rol
     const addFuelBtn = document.querySelector('.add-fuel-btn');
     
-    // Solo ADMIN y SUPERVISOR pueden crear registros de combustible
-    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'SUPERVISOR') {
+    // ADMIN, SUPERVISOR y CONDUCTOR pueden crear registros de combustible
+    // CONDUCTOR puede registrar su propio consumo
+    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'SUPERVISOR' && currentUserRole !== 'CONDUCTOR') {
         if (addFuelBtn) addFuelBtn.style.display = 'none';
     }
     
@@ -142,9 +216,13 @@ function setupEventListeners() {
                 // Cargar vehículos asociados al conductor
                 await loadDriverAssignmentsForFuel(choferId);
                 
-                // Limpiar rutas (se cargarán cuando se seleccione un vehículo)
+                // Limpiar vehículo y rutas (se cargarán cuando se seleccione un vehículo)
+                if (fuelVehiculoSelect) {
+                    fuelVehiculoSelect.value = '';
+                }
                 if (fuelRutaSelect) {
                     fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
+                    fuelRutaSelect.value = '';
                 }
             } else {
                 // Si no hay conductor seleccionado, bloquear y limpiar vehículo
@@ -232,6 +310,29 @@ async function loadFuelConsumptions() {
         
         if (response.ok) {
             fuelConsumptions = await response.json();
+            console.log('Registros de combustible cargados:', fuelConsumptions.length);
+            console.log('Rutas cargadas:', routes.length);
+            
+            // Mostrar información de debugging
+            const consumosConRuta = fuelConsumptions.filter(c => c.rutaId);
+            console.log('Consumos con rutaId:', consumosConRuta.length);
+            if (consumosConRuta.length > 0) {
+                const ejemplo = consumosConRuta[0];
+                console.log('Ejemplo de consumo con rutaId:', {
+                    consumoId: ejemplo.id,
+                    rutaId: ejemplo.rutaId,
+                    tipoRutaId: typeof ejemplo.rutaId,
+                    rutaNombre: ejemplo.rutaNombre
+                });
+                
+                // Verificar si la ruta existe en el array
+                const rutaEncontrada = routes.find(r => String(r.id) === String(ejemplo.rutaId));
+                console.log('¿Ruta encontrada en array?', rutaEncontrada ? 'Sí' : 'No', 
+                           rutaEncontrada ? { id: rutaEncontrada.id, nombre: rutaEncontrada.nombreRuta } : 'N/A');
+            }
+            
+            console.log('IDs de rutas disponibles (primeros 5):', routes.slice(0, 5).map(r => ({ id: r.id, tipo: typeof r.id })));
+            
             renderFuelConsumptions();
             updateMetrics();
             populateFilters();
@@ -292,7 +393,9 @@ async function loadDrivers() {
 async function loadRoutes() {
     try {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-        const response = await fetch(`${ROUTES_API_URL}`, {
+        // Usar parámetro ?all=true para obtener todas las rutas sin filtrar por rol
+        // Esto es necesario para poder asociar cualquier ruta a un registro de combustible
+        const response = await fetch(`${ROUTES_API_URL}?all=true`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -300,9 +403,45 @@ async function loadRoutes() {
         
         if (response.ok) {
             routes = await response.json();
+            console.log('Rutas cargadas:', routes.length);
+            if (routes.length > 0) {
+                console.log('Primeras 3 rutas:', routes.slice(0, 3).map(r => ({ 
+                    id: r.id, 
+                    tipoId: typeof r.id,
+                    codigo: r.codigo, 
+                    nombreRuta: r.nombreRuta, 
+                    vehiculoId: r.vehiculoId,
+                    tipoVehiculoId: typeof r.vehiculoId
+                })));
+            }
             populateRouteSelects();
+            
+            // Si ya hay consumos cargados, re-renderizar para mostrar las rutas
+            if (fuelConsumptions.length > 0) {
+                console.log('Re-renderizando tabla después de cargar rutas');
+                renderFuelConsumptions();
+            }
         } else {
-            console.error('Error cargando rutas:', response.statusText);
+            console.error('Error cargando rutas:', response.status, response.statusText);
+            // Si falla, intentar sin el parámetro all
+            const fallbackResponse = await fetch(`${ROUTES_API_URL}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (fallbackResponse.ok) {
+                routes = await fallbackResponse.json();
+                console.log('Rutas cargadas (fallback):', routes.length);
+                populateRouteSelects();
+                
+                // Si ya hay consumos cargados, re-renderizar para mostrar las rutas
+                if (fuelConsumptions.length > 0) {
+                    console.log('Re-renderizando tabla después de cargar rutas (fallback)');
+                    renderFuelConsumptions();
+                }
+            } else {
+                console.error('Error en fallback cargando rutas:', fallbackResponse.status, fallbackResponse.statusText);
+            }
         }
     } catch (error) {
         console.error('Error de red al cargar rutas:', error);
@@ -586,22 +725,27 @@ async function loadRoutesByVehicle(vehiculoId) {
             return;
         }
         
+        if (!vehiculoId) {
+            fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
+            return;
+        }
+        
         fuelRutaSelect.innerHTML = '<option value="">Cargando rutas...</option>';
         
         // Filtrar rutas del vehículo desde las rutas ya cargadas
         // Comparar tanto por ID directo como por String para asegurar coincidencia
         const rutasDelVehiculo = routes.filter(route => {
-            const routeVehiculoId = route.vehiculoId;
-            return routeVehiculoId && (
-                routeVehiculoId === vehiculoId || 
-                routeVehiculoId === String(vehiculoId) ||
-                String(routeVehiculoId) === String(vehiculoId)
-            );
+            if (!route.vehiculoId) return false;
+            const routeVehiculoId = String(route.vehiculoId).trim();
+            const vehiculoIdStr = String(vehiculoId).trim();
+            return routeVehiculoId === vehiculoIdStr;
         });
         
-        console.log('Rutas filtradas para vehículo', vehiculoId, ':', rutasDelVehiculo);
+        console.log('Rutas filtradas para vehículo', vehiculoId, ':', rutasDelVehiculo.length);
         console.log('Total de rutas cargadas:', routes.length);
-        console.log('IDs de vehículos en rutas:', routes.map(r => r.vehiculoId));
+        if (rutasDelVehiculo.length > 0) {
+            console.log('Rutas del vehículo:', rutasDelVehiculo.map(r => ({ id: r.id, codigo: r.codigo, nombreRuta: r.nombreRuta })));
+        }
         
         fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
         
@@ -609,11 +753,14 @@ async function loadRoutesByVehicle(vehiculoId) {
             rutasDelVehiculo.forEach(route => {
                 const option = document.createElement('option');
                 option.value = route.id;
-                option.textContent = `${route.codigo || route.id} - ${route.nombreRuta || 'Sin nombre'}`;
+                const nombreRuta = route.nombreRuta || 'Sin nombre';
+                option.textContent = `${route.codigo || route.id} - ${nombreRuta}`;
                 fuelRutaSelect.appendChild(option);
             });
+            console.log(`Se agregaron ${rutasDelVehiculo.length} rutas al select para el vehículo ${vehiculoId}`);
         } else {
-            console.log('El vehículo no tiene rutas asociadas');
+            console.log('El vehículo no tiene rutas asociadas. Solo se mostrará la opción "Sin ruta asociada".');
+            // NO mostrar todas las rutas, solo dejar "Sin ruta asociada"
         }
     } catch (error) {
         console.error('Error filtrando rutas del vehículo:', error);
@@ -701,18 +848,10 @@ function populateDriverSelects() {
 }
 
 function populateRouteSelects() {
-    const fuelRutaSelect = document.getElementById('fuelRuta');
+    // NO poblar el select de rutas del modal (fuelRuta) aquí
+    // Ese select se poblará dinámicamente cuando se seleccione un vehículo
+    // Solo poblar el select de comparación de rutas que sí necesita todas las rutas
     const routeComparisonSelect = document.getElementById('routeComparisonSelect');
-    
-    if (fuelRutaSelect) {
-        fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
-        routes.forEach(route => {
-            const option = document.createElement('option');
-            option.value = route.id;
-            option.textContent = `${route.codigo || route.id} - ${route.nombreRuta}`;
-            fuelRutaSelect.appendChild(option);
-        });
-    }
     
     if (routeComparisonSelect) {
         routeComparisonSelect.innerHTML = '<option value="">Seleccione una ruta</option>';
@@ -723,6 +862,9 @@ function populateRouteSelects() {
             routeComparisonSelect.appendChild(option);
         });
     }
+    
+    // El select fuelRuta se mantiene vacío hasta que se seleccione un vehículo
+    // Esto se maneja en loadRoutesByVehicle()
 }
 
 function populateFilters() {
@@ -826,11 +968,50 @@ function renderFuelConsumptions(consumptionsToRender = fuelConsumptions) {
     tbody.innerHTML = consumptionsToRender.map(consumption => {
         const vehiculo = vehicles.find(v => v.id === consumption.vehiculoId);
         const conductor = drivers.find(d => d.id === consumption.choferId);
-        const ruta = routes.find(r => r.id === consumption.rutaId);
         
         const vehiculoText = vehiculo ? `${vehiculo.placa} - ${vehiculo.marca} ${vehiculo.modelo}` : 'N/A';
         const conductorText = conductor ? `${conductor.nombre} ${conductor.apellido}` : 'N/A';
-        const rutaText = ruta ? `${ruta.codigo || ruta.id} - ${ruta.nombreRuta}` : 'Sin ruta';
+        
+        // Buscar ruta de múltiples formas para asegurar que se encuentre
+        let rutaText = 'Sin ruta';
+        if (consumption.rutaId) {
+            // Primero usar rutaNombre si está disponible en el consumo
+            if (consumption.rutaNombre) {
+                rutaText = consumption.rutaNombre;
+            } else {
+                // Buscar en el array de rutas cargadas
+                let ruta = null;
+                
+                // Intentar búsqueda exacta con String
+                ruta = routes.find(r => {
+                    if (!r || !r.id) return false;
+                    return String(r.id).trim() === String(consumption.rutaId).trim();
+                });
+                
+                // Si no se encuentra, intentar con diferentes formatos
+                if (!ruta) {
+                    ruta = routes.find(r => {
+                        if (!r || !r.id) return false;
+                        const rId = String(r.id);
+                        const cId = String(consumption.rutaId);
+                        return rId === cId || 
+                               r.id === consumption.rutaId ||
+                               rId.toLowerCase() === cId.toLowerCase();
+                    });
+                }
+                
+                if (ruta) {
+                    rutaText = `${ruta.codigo || ruta.id} - ${ruta.nombreRuta || 'Sin nombre'}`;
+                } else {
+                    // Si hay rutaId pero no se encontró la ruta, mostrar el ID para debugging
+                    console.warn('Ruta no encontrada para rutaId:', consumption.rutaId, 
+                                'Tipo:', typeof consumption.rutaId,
+                                'Rutas disponibles:', routes.length,
+                                'Primeros IDs:', routes.slice(0, 3).map(r => ({ id: r.id, tipo: typeof r.id })));
+                    rutaText = `Ruta ID: ${consumption.rutaId}`;
+                }
+            }
+        }
         
         const fechaHora = consumption.fechaHora ? new Date(consumption.fechaHora) : null;
         const fechaHoraText = fechaHora ? fechaHora.toLocaleString('es-EC') : 'N/A';
@@ -854,6 +1035,9 @@ function renderFuelConsumptions(consumptionsToRender = fuelConsumptions) {
                 <td><span class="machinery-type-badge ${tipoMaquinariaClass}">${tipoMaquinariaText}</span></td>
                 <td>
                     <div class="table-actions">
+                        <button class="action-btn view" onclick="viewFuelDetails('${consumption.id}')" title="Ver Detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
                         ${(currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR')
                             ? `<button class="action-btn edit" onclick="editFuelConsumption('${consumption.id}')" title="Editar">
                                 <i class="fas fa-edit"></i>
@@ -907,10 +1091,23 @@ function getTipoMaquinariaText(tipo) {
     return tipos[tipo] || tipo;
 }
 
-function showAddFuelModal() {
+async function showAddFuelModal() {
     editingFuelId = null;
     document.getElementById('fuelModalTitle').textContent = 'Registrar Combustible';
     document.getElementById('fuelForm').reset();
+    
+    // Limpiar rutas y vehículo al abrir el modal
+    const fuelRutaSelect = document.getElementById('fuelRuta');
+    const fuelVehiculoSelect = document.getElementById('fuelVehiculo');
+    if (fuelRutaSelect) {
+        fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
+        fuelRutaSelect.value = '';
+    }
+    if (fuelVehiculoSelect) {
+        fuelVehiculoSelect.value = '';
+        fuelVehiculoSelect.disabled = true;
+        fuelVehiculoSelect.innerHTML = '<option value="">Primero seleccione un conductor</option>';
+    }
     
     // Establecer fecha actual
     const now = new Date();
@@ -920,6 +1117,32 @@ function showAddFuelModal() {
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     document.getElementById('fuelFechaHora').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    
+    // Si es CONDUCTOR, cargar automáticamente su conductor y deshabilitar el campo
+    const fuelChoferSelect = document.getElementById('fuelChofer');
+    if (currentUserRole === 'CONDUCTOR' && currentDriverId && fuelChoferSelect) {
+        // Buscar el conductor en la lista
+        const driver = drivers.find(d => d.id === currentDriverId);
+        if (driver) {
+            // Limpiar y poblar solo con el conductor actual
+            fuelChoferSelect.innerHTML = '';
+            const option = document.createElement('option');
+            option.value = driver.id;
+            option.textContent = `${driver.nombre} ${driver.apellido}`;
+            option.selected = true;
+            fuelChoferSelect.appendChild(option);
+            fuelChoferSelect.disabled = true;
+            
+            // Cargar vehículos del conductor automáticamente
+            await loadDriverAssignmentsForFuel(currentDriverId);
+        } else {
+            console.warn('Conductor no encontrado en la lista de conductores');
+        }
+    } else if (fuelChoferSelect) {
+        // Para otros roles, habilitar el campo y mostrar todos los conductores
+        fuelChoferSelect.disabled = false;
+        populateDriverSelects();
+    }
     
     document.getElementById('fuelModal').classList.add('active');
 }
@@ -942,10 +1165,26 @@ function closeFuelModal() {
         fuelRutaSelect.innerHTML = '<option value="">Sin ruta asociada</option>';
     }
     
-    // Asegurar que el campo de conductor esté habilitado (siempre debe poder cambiar)
+    // Restaurar el campo de conductor según el rol
     const fuelChoferSelect = document.getElementById('fuelChofer');
     if (fuelChoferSelect) {
-        fuelChoferSelect.disabled = false;
+        if (currentUserRole === 'CONDUCTOR' && currentDriverId) {
+            // Para CONDUCTOR, mantener deshabilitado y con su conductor
+            const driver = drivers.find(d => d.id === currentDriverId);
+            if (driver) {
+                fuelChoferSelect.innerHTML = '';
+                const option = document.createElement('option');
+                option.value = driver.id;
+                option.textContent = `${driver.nombre} ${driver.apellido}`;
+                option.selected = true;
+                fuelChoferSelect.appendChild(option);
+                fuelChoferSelect.disabled = true;
+            }
+        } else {
+            // Para otros roles, habilitar y mostrar todos los conductores
+            fuelChoferSelect.disabled = false;
+            populateDriverSelects();
+        }
     }
 }
 
@@ -1032,11 +1271,56 @@ async function editFuelConsumption(id) {
     document.getElementById('fuelTipoCombustible').value = consumption.tipoCombustible || '';
     document.getElementById('fuelPrecioPorLitro').value = consumption.precioPorLitro || '';
     document.getElementById('fuelCostoTotal').value = consumption.costoTotal || '';
-    document.getElementById('fuelVehiculo').value = consumption.vehiculoId || '';
-    document.getElementById('fuelChofer').value = consumption.choferId || '';
-    document.getElementById('fuelRuta').value = consumption.rutaId || '';
     document.getElementById('fuelLecturaOdometro').value = consumption.lecturaOdometroHoras || '';
     document.getElementById('fuelObservaciones').value = consumption.observaciones || '';
+    
+    const fuelChoferSelect = document.getElementById('fuelChofer');
+    const fuelVehiculoSelect = document.getElementById('fuelVehiculo');
+    const fuelRutaSelect = document.getElementById('fuelRuta');
+    
+    // Si es CONDUCTOR, cargar automáticamente su conductor y deshabilitar el campo
+    if (currentUserRole === 'CONDUCTOR' && currentDriverId && fuelChoferSelect) {
+        const driver = drivers.find(d => d.id === currentDriverId);
+        if (driver) {
+            fuelChoferSelect.innerHTML = '';
+            const option = document.createElement('option');
+            option.value = driver.id;
+            option.textContent = `${driver.nombre} ${driver.apellido}`;
+            option.selected = true;
+            fuelChoferSelect.appendChild(option);
+            fuelChoferSelect.disabled = true;
+            
+            // Cargar vehículos del conductor
+            await loadDriverAssignmentsForFuel(currentDriverId);
+            
+            // Si hay un vehículo en el consumo, seleccionarlo
+            if (consumption.vehiculoId && fuelVehiculoSelect) {
+                fuelVehiculoSelect.value = consumption.vehiculoId;
+                // Cargar rutas del vehículo
+                await loadRoutesByVehicle(consumption.vehiculoId);
+            }
+        }
+    } else {
+        // Para otros roles, permitir seleccionar cualquier conductor
+        if (fuelChoferSelect) {
+            fuelChoferSelect.disabled = false;
+            populateDriverSelects();
+            fuelChoferSelect.value = consumption.choferId || '';
+        }
+        
+        if (consumption.vehiculoId && fuelVehiculoSelect) {
+            fuelVehiculoSelect.disabled = false;
+            populateVehicleSelects();
+            fuelVehiculoSelect.value = consumption.vehiculoId;
+            // Cargar rutas del vehículo
+            await loadRoutesByVehicle(consumption.vehiculoId);
+        }
+    }
+    
+    // Establecer ruta si existe
+    if (consumption.rutaId && fuelRutaSelect) {
+        fuelRutaSelect.value = consumption.rutaId;
+    }
     
     document.getElementById('fuelModal').classList.add('active');
 }
@@ -1260,11 +1544,124 @@ function closeConfirmationModal(confirmed) {
     }
 }
 
+function viewFuelDetails(id) {
+    const consumption = fuelConsumptions.find(f => f.id === id);
+    if (!consumption) {
+        showNotification('error', 'Error', 'Registro no encontrado');
+        return;
+    }
+    
+    const vehiculo = vehicles.find(v => v.id === consumption.vehiculoId);
+    const conductor = drivers.find(d => d.id === consumption.choferId);
+    const ruta = routes.find(r => r.id === consumption.rutaId);
+    
+    const vehiculoText = vehiculo ? `${vehiculo.placa} - ${vehiculo.marca} ${vehiculo.modelo}` : 'N/A';
+    const conductorText = conductor ? `${conductor.nombre} ${conductor.apellido}` : 'N/A';
+    const rutaText = ruta ? `${ruta.codigo || ruta.id} - ${ruta.nombreRuta}` : 'Sin ruta asociada';
+    
+    const fechaHora = consumption.fechaHora ? new Date(consumption.fechaHora) : null;
+    const fechaHoraText = fechaHora ? fechaHora.toLocaleString('es-EC') : 'N/A';
+    
+    const tipoCombustibleText = getTipoCombustibleText(consumption.tipoCombustible);
+    const tipoMaquinariaText = getTipoMaquinariaText(consumption.tipoMaquinaria);
+    
+    const detailsHtml = `
+        <div style="padding: 20px; color: var(--text-primary);">
+            <h3 style="margin-bottom: 20px; color: var(--primary-color);">Detalles del Registro de Combustible</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <strong>Fecha y Hora:</strong>
+                    <p>${fechaHoraText}</p>
+                </div>
+                <div>
+                    <strong>Vehículo:</strong>
+                    <p>${vehiculoText}</p>
+                </div>
+                <div>
+                    <strong>Conductor:</strong>
+                    <p>${conductorText}</p>
+                </div>
+                <div>
+                    <strong>Ruta:</strong>
+                    <p>${rutaText}</p>
+                </div>
+                <div>
+                    <strong>Cantidad (Litros):</strong>
+                    <p><strong>${consumption.cantidadLitros?.toFixed(2) || '0.00'} L</strong></p>
+                </div>
+                <div>
+                    <strong>Tipo de Combustible:</strong>
+                    <p>${tipoCombustibleText}</p>
+                </div>
+                <div>
+                    <strong>Precio por Litro:</strong>
+                    <p>${consumption.precioPorLitro ? `$${consumption.precioPorLitro.toFixed(2)}` : 'N/A'}</p>
+                </div>
+                <div>
+                    <strong>Costo Total:</strong>
+                    <p><strong style="color: var(--primary-color);">${consumption.costoTotal ? `$${consumption.costoTotal.toFixed(2)}` : 'N/A'}</strong></p>
+                </div>
+                <div>
+                    <strong>Tipo de Maquinaria:</strong>
+                    <p>${tipoMaquinariaText}</p>
+                </div>
+                <div>
+                    <strong>Lectura Odómetro (Horas):</strong>
+                    <p>${consumption.lecturaOdometroHoras ? consumption.lecturaOdometroHoras.toFixed(2) + ' horas' : 'N/A'}</p>
+                </div>
+            </div>
+            ${consumption.observaciones ? `
+                <div style="margin-top: 20px;">
+                    <strong>Observaciones:</strong>
+                    <p style="background: var(--dark-card); padding: 10px; border-radius: 5px; margin-top: 5px;">${consumption.observaciones}</p>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    // Crear modal de detalles
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Detalles del Registro</h2>
+                <button class="close-btn" onclick="this.closest('.modal').remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            ${detailsHtml}
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button type="button" class="btn-secondary" onclick="this.closest('.modal').remove()">Cerrar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Cerrar al hacer clic fuera del modal
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
 function logout() {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('currentUser');
-    sessionStorage.removeItem('authToken');
-    sessionStorage.removeItem('currentUser');
-    window.location.href = 'http://localhost:8085/';
+    showConfirmation(
+        'Cerrar Sesión',
+        '¿Estás seguro de cerrar sesión?',
+        (confirmed) => {
+            if (confirmed) {
+                // Limpiar tokens primero
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('currentUser');
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('currentUser');
+                // Redirigir con parámetro de logout para evitar redirección automática
+                window.location.href = 'http://localhost:8085/index.html?logout=true';
+            }
+        }
+    );
 }
 

@@ -528,3 +528,111 @@ body {
   }
 }
 
+/* Confirmation Modal */
+.notification-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-modal.active {
+  display: flex;
+}
+
+.notification-content {
+  background: var(--dark-card);
+  border: 1px solid var(--dark-border);
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.notification-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.notification-icon.success {
+  color: var(--success-green);
+}
+
+.notification-icon.error {
+  color: var(--primary-red);
+}
+
+.notification-icon.warning {
+  color: var(--warning-yellow);
+}
+
+.notification-icon.info {
+  color: var(--info-blue);
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.confirmation-actions .notification-btn {
+  min-width: 100px;
+}
+
+.notification-content h3 {
+  font-size: 20px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.notification-content p {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.notification-btn {
+  background: var(--primary-red);
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.notification-btn:hover {
+  background: #c82333;
+}
+
+.notification-btn.btn-secondary {
+  background: var(--text-secondary);
+}
+
+.notification-btn.btn-secondary:hover {
+  background: #6e7681;
+}
+

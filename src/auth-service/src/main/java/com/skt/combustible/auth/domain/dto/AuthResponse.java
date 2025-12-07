@@ -16,6 +16,7 @@ public class AuthResponse {
     private String token;
     private String refreshToken; // Refresh token para renovar access token
     private String tipoToken = "Bearer";
+    private String id; // ID del usuario
     private String username;
     private String email;
     private String nombre;
@@ -31,6 +32,19 @@ public class AuthResponse {
     public AuthResponse(String token, String username, String email, String nombre, String apellido,
             RolUsuario rol, List<String> permisos, LocalDateTime expiracion) {
         this.token = token;
+        this.username = username;
+        this.email = email;
+        this.nombre = nombre;
+        this.apellido = apellido;
+        this.rol = rol;
+        this.permisos = permisos;
+        this.expiracion = expiracion;
+    }
+
+    public AuthResponse(String token, String id, String username, String email, String nombre, String apellido,
+            RolUsuario rol, List<String> permisos, LocalDateTime expiracion) {
+        this.token = token;
+        this.id = id;
         this.username = username;
         this.email = email;
         this.nombre = nombre;
@@ -119,6 +133,14 @@ public class AuthResponse {
 
     public void setExpiracion(LocalDateTime expiracion) {
         this.expiracion = expiracion;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getNombreCompleto() {

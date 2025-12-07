@@ -102,6 +102,48 @@ public class DriverRestController {
     }
 
     /**
+     * Obtiene un chofer por usuarioId
+     * 
+     * @param usuarioId ID del usuario en auth-service
+     * @return Chofer encontrado
+     */
+    @GetMapping("/by-usuario/{usuarioId}")
+    public ResponseEntity<DriverResponse> getDriverByUsuarioId(@PathVariable("usuarioId") String usuarioId) {
+        try {
+            logger.info("REST: Obteniendo chofer por usuarioId: {}", usuarioId);
+            DriverResponse driver = driverService.getDriverByUsuarioId(usuarioId);
+            return ResponseEntity.ok(driver);
+        } catch (DriverNotFoundException e) {
+            logger.warn("Chofer no encontrado con usuarioId: {}", usuarioId);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            logger.error("Error obteniendo chofer por usuarioId: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Obtiene un chofer por email (fallback cuando no se encuentra por usuarioId)
+     * 
+     * @param email Email del usuario/chofer
+     * @return Chofer encontrado
+     */
+    @GetMapping("/by-email/{email}")
+    public ResponseEntity<DriverResponse> getDriverByEmail(@PathVariable("email") String email) {
+        try {
+            logger.info("REST: Obteniendo chofer por email: {}", email);
+            DriverResponse driver = driverService.getDriverByEmail(email);
+            return ResponseEntity.ok(driver);
+        } catch (DriverNotFoundException e) {
+            logger.warn("Chofer no encontrado con email: {}", email);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            logger.error("Error obteniendo chofer por email: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * Crea un nuevo chofer
      * Solo ADMIN y SUPERVISOR pueden crear choferes
      * 

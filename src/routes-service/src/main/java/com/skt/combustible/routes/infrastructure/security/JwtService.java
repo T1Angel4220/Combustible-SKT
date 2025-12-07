@@ -57,6 +57,25 @@ public class JwtService {
     }
 
     /**
+     * Extrae el ID del usuario del token JWT
+     * El userId puede estar en "sub" o "userId" según la versión del token
+     */
+    public String getUserIdFromToken(String token) {
+        try {
+            // Primero intentar obtener de "sub" (estándar JWT)
+            String userId = getClaimFromToken(token, claims -> claims.get("sub", String.class));
+            if (userId != null && !userId.isEmpty()) {
+                return userId;
+            }
+            // Si no está en "sub", intentar "userId"
+            return getClaimFromToken(token, claims -> claims.get("userId", String.class));
+        } catch (Exception e) {
+            logger.error("Error extrayendo userId del token: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Verifica si el token está expirado
      */
     public Boolean isTokenExpired(String token) {

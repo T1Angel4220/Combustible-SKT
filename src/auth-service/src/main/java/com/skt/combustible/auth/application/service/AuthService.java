@@ -83,6 +83,7 @@ public class AuthService {
 
         AuthResponse authResponse = new AuthResponse(
                 token,
+                usuario.getId(),
                 usuario.getUsername(),
                 usuario.getEmail(),
                 usuario.getNombre(),
@@ -140,6 +141,7 @@ public class AuthService {
 
         return new AuthResponse(
                 token,
+                usuarioGuardado.getId(),
                 usuarioGuardado.getUsername(),
                 usuarioGuardado.getEmail(),
                 usuarioGuardado.getNombre(),
@@ -182,6 +184,7 @@ public class AuthService {
 
         return new AuthResponse(
                 token,
+                usuario.getId(),
                 usuario.getUsername(),
                 usuario.getEmail(),
                 usuario.getNombre(),
@@ -300,6 +303,7 @@ public class AuthService {
 
         AuthResponse authResponse = new AuthResponse(
                 newAccessToken,
+                usuario.getId(),
                 usuario.getUsername(),
                 usuario.getEmail(),
                 usuario.getNombre(),

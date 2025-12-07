@@ -104,10 +104,31 @@ public class FuelConsumptionService {
      */
     @Transactional(readOnly = true)
     public List<FuelConsumptionResponse> obtenerTodosLosRegistros() {
-        return fuelConsumptionRepository.findByActivoTrue(Pageable.unpaged())
+        List<FuelConsumptionResponse> responses = fuelConsumptionRepository.findByActivoTrue(Pageable.unpaged())
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+        
+        // Enriquecer con nombres de rutas si están disponibles (solo si el cliente está disponible)
+        if (routesGrpcClient != null) {
+            responses.forEach(response -> {
+                if (response.getRutaId() != null && !response.getRutaId().isEmpty() && response.getRutaNombre() == null) {
+                    try {
+                        RouteResponse route = routesGrpcClient.getRouteById(response.getRutaId());
+                        if (route != null && route.getNombreRuta() != null && !route.getNombreRuta().isEmpty()) {
+                            String rutaNombre = route.getCodigo() != null && !route.getCodigo().isEmpty() 
+                                    ? route.getCodigo() + " - " + route.getNombreRuta()
+                                    : route.getNombreRuta();
+                            response.setRutaNombre(rutaNombre);
+                        }
+                    } catch (Exception e) {
+                        logger.debug("No se pudo obtener información de la ruta {}: {}", response.getRutaId(), e.getMessage());
+                    }
+                }
+            });
+        }
+        
+        return responses;
     }
     
     /**
