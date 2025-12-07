@@ -821,3 +821,217 @@ function closeConfirmationModal(confirmed) {
         confirmationCallback = null;
     }
 }
+
+// Función para generar el reporte en PDF
+async function generateReport() {
+    if (vehicles.length === 0) {
+        showNotification('warning', 'Advertencia', 'No hay vehículos para generar el reporte');
+        return;
+    }
+    
+    try {
+        // Usar jsPDF desde window.jspdf
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Configuración de colores
+        const primaryColor = [220, 53, 69]; // Rojo principal
+        const darkColor = [13, 17, 23];
+        const lightGray = [240, 240, 240];
+        
+        let yPosition = 20;
+        const pageWidth = doc.internal.pageSize.width;
+        const margin = 20;
+        const contentWidth = pageWidth - (margin * 2);
+        
+        // Encabezado del reporte
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, pageWidth, 40, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SKT FUEL SYSTEM', margin, 25);
+        
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Reporte de Vehículos', margin, 35);
+        
+        // Fecha de generación
+        doc.setFontSize(10);
+        const fechaGeneracion = new Date().toLocaleString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        doc.text(`Generado el: ${fechaGeneracion}`, pageWidth - margin, 35, { align: 'right' });
+        
+        yPosition = 50;
+        
+        // Estadísticas generales
+        doc.setTextColor(...darkColor);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Resumen Ejecutivo', margin, yPosition);
+        yPosition += 10;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const total = vehicles.length;
+        const light = vehicles.filter(v => isLightMachinery(v.tipoMaquinaria)).length;
+        const heavy = vehicles.filter(v => isHeavyMachinery(v.tipoMaquinaria)).length;
+        const activos = vehicles.filter(v => v.activo && v.estadoOperativo !== 'FUERA_SERVICIO').length;
+        const enMantenimiento = vehicles.filter(v => v.estadoOperativo === 'MANTENIMIENTO').length;
+        const enUso = vehicles.filter(v => v.estadoOperativo === 'EN_USO' || v.estadoOperativo === 'ASIGNADO').length;
+        const disponibles = vehicles.filter(v => v.estadoOperativo === 'DISPONIBLE').length;
+        
+        const stats = [
+            `Total de Vehículos: ${total}`,
+            `Maquinaria Liviana: ${light}`,
+            `Maquinaria Pesada: ${heavy}`,
+            `Vehículos Activos: ${activos}`,
+            `Disponibles: ${disponibles}`,
+            `En Uso: ${enUso}`,
+            `En Mantenimiento: ${enMantenimiento}`
+        ];
+        
+        stats.forEach((stat, index) => {
+            if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            doc.text(`• ${stat}`, margin + 5, yPosition);
+            yPosition += 7;
+        });
+        
+        yPosition += 5;
+        
+        // Tabla de vehículos
+        if (yPosition > 250) {
+            doc.addPage();
+            yPosition = 20;
+        }
+        
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Detalle de Vehículos', margin, yPosition);
+        yPosition += 10;
+        
+        // Encabezado de tabla
+        doc.setFillColor(...lightGray);
+        doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...darkColor);
+        
+        const colWidths = [25, 20, 40, 15, 30, 25, 25, 30];
+        const headers = ['Placa', 'Tipo', 'Marca/Modelo', 'Año', 'Capacidad', 'Consumo', 'Estado', 'Conductor'];
+        let xPos = margin + 2;
+        
+        headers.forEach((header, index) => {
+            doc.text(header, xPos, yPosition);
+            xPos += colWidths[index];
+        });
+        
+        yPosition += 8;
+        
+        // Datos de vehículos
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        
+        vehicles.forEach((vehicle, index) => {
+            // Verificar si necesita nueva página
+            if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+                
+                // Reimprimir encabezados
+                doc.setFillColor(...lightGray);
+                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8);
+                xPos = margin + 2;
+                headers.forEach((header, idx) => {
+                    doc.text(header, xPos, yPosition);
+                    xPos += colWidths[idx];
+                });
+                yPosition += 8;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7);
+            }
+            
+            // Fila de datos
+            const placa = vehicle.placa || 'N/A';
+            const tipo = isLightMachinery(vehicle.tipoMaquinaria) ? 'Liviana' : 'Pesada';
+            const marcaModelo = `${vehicle.marca || ''} ${vehicle.modelo || ''}`.trim() || 'N/A';
+            const anio = vehicle.anio || 'N/A';
+            const capacidad = vehicle.capacidadTanque ? `${vehicle.capacidadTanque} L` : 'N/A';
+            const consumo = vehicle.consumoPromedio ? `${vehicle.consumoPromedio} L/100km` : 'N/A';
+            const estado = getStatusText(vehicle.estadoOperativo);
+            const conductor = getAssignedDriverSync(vehicle.id);
+            
+            xPos = margin + 2;
+            const rowData = [
+                placa.substring(0, 12),
+                tipo.substring(0, 10),
+                marcaModelo.substring(0, 18),
+                anio.toString().substring(0, 4),
+                capacidad.substring(0, 12),
+                consumo.substring(0, 12),
+                estado.substring(0, 12),
+                conductor.substring(0, 15)
+            ];
+            
+            // Alternar color de fondo
+            if (index % 2 === 0) {
+                doc.setFillColor(250, 250, 250);
+                doc.rect(margin, yPosition - 4, contentWidth, 6, 'F');
+            }
+            
+            rowData.forEach((data, idx) => {
+                doc.setTextColor(...darkColor);
+                doc.text(data, xPos, yPosition);
+                xPos += colWidths[idx];
+            });
+            
+            yPosition += 7;
+        });
+        
+        // Pie de página en todas las páginas
+        const totalPages = doc.internal.pages.length - 1;
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.text(
+                `Página ${i} de ${totalPages}`,
+                pageWidth / 2,
+                doc.internal.pageSize.height - 10,
+                { align: 'center' }
+            );
+            
+            // Firma/Información de contacto
+            doc.setFontSize(7);
+            doc.text(
+                'Sistema de Gestión de Combustible SKT',
+                margin,
+                doc.internal.pageSize.height - 10
+            );
+        }
+        
+        // Guardar el PDF
+        const fechaArchivo = new Date().toISOString().split('T')[0];
+        const nombreArchivo = `Reporte_Vehiculos_${fechaArchivo}.pdf`;
+        doc.save(nombreArchivo);
+        
+        showNotification('success', 'Éxito', 'Reporte generado exitosamente');
+        
+    } catch (error) {
+        console.error('Error generando reporte:', error);
+        showNotification('error', 'Error', 'Error al generar el reporte: ' + error.message);
+    }
+}

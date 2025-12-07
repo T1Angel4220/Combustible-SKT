@@ -1481,3 +1481,222 @@ function logout() {
     );
 }
 
+// Función para generar el reporte en PDF
+async function generateReport() {
+    if (routes.length === 0) {
+        showNotification('warning', 'Advertencia', 'No hay rutas para generar el reporte');
+        return;
+    }
+    
+    try {
+        // Usar jsPDF desde window.jspdf
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Configuración de colores
+        const primaryColor = [220, 53, 69]; // Rojo principal
+        const darkColor = [13, 17, 23];
+        const lightGray = [240, 240, 240];
+        
+        let yPosition = 20;
+        const pageWidth = doc.internal.pageSize.width;
+        const margin = 20;
+        const contentWidth = pageWidth - (margin * 2);
+        
+        // Encabezado del reporte
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, pageWidth, 40, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SKT FUEL SYSTEM', margin, 25);
+        
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Reporte de Rutas', margin, 35);
+        
+        // Fecha de generación
+        doc.setFontSize(10);
+        const fechaGeneracion = new Date().toLocaleString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        doc.text(`Generado el: ${fechaGeneracion}`, pageWidth - margin, 35, { align: 'right' });
+        
+        yPosition = 50;
+        
+        // Estadísticas generales
+        doc.setTextColor(...darkColor);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Resumen Ejecutivo', margin, yPosition);
+        yPosition += 10;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const totalRoutes = routes.length;
+        const activeRoutes = routes.filter(r => r.estado === 'EN_CURSO').length;
+        const completedRoutes = routes.filter(r => r.estado === 'COMPLETADA').length;
+        const pendingRoutes = routes.filter(r => r.estado === 'PENDIENTE').length;
+        const cancelledRoutes = routes.filter(r => r.estado === 'CANCELADA').length;
+        const totalDistance = routes.reduce((sum, r) => sum + (r.distanciaKm || 0), 0);
+        const totalFuel = routes.reduce((sum, r) => sum + (r.consumoEstimadoLitros || 0), 0);
+        
+        const stats = [
+            `Total de Rutas: ${totalRoutes}`,
+            `Rutas Activas: ${activeRoutes}`,
+            `Rutas Completadas: ${completedRoutes}`,
+            `Rutas Pendientes: ${pendingRoutes}`,
+            `Rutas Canceladas: ${cancelledRoutes}`,
+            `Distancia Total: ${totalDistance.toFixed(2)} km`,
+            `Combustible Estimado Total: ${totalFuel.toFixed(2)} L`
+        ];
+        
+        stats.forEach((stat, index) => {
+            if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            doc.text(`• ${stat}`, margin + 5, yPosition);
+            yPosition += 7;
+        });
+        
+        yPosition += 5;
+        
+        // Tabla de rutas
+        if (yPosition > 250) {
+            doc.addPage();
+            yPosition = 20;
+        }
+        
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Detalle de Rutas', margin, yPosition);
+        yPosition += 10;
+        
+        // Encabezado de tabla
+        doc.setFillColor(...lightGray);
+        doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...darkColor);
+        
+        const colWidths = [20, 35, 50, 20, 25, 30, 25, 20, 20];
+        const headers = ['Código', 'Ruta', 'Origen-Destino', 'Distancia', 'Tiempo Est.', 'Conductor', 'Vehículo', 'Combust.', 'Estado'];
+        let xPos = margin + 2;
+        
+        headers.forEach((header, index) => {
+            doc.text(header, xPos, yPosition);
+            xPos += colWidths[index];
+        });
+        
+        yPosition += 8;
+        
+        // Datos de rutas
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        
+        routes.forEach((route, index) => {
+            // Verificar si necesita nueva página
+            if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+                
+                // Reimprimir encabezados
+                doc.setFillColor(...lightGray);
+                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8);
+                xPos = margin + 2;
+                headers.forEach((header, idx) => {
+                    doc.text(header, xPos, yPosition);
+                    xPos += colWidths[idx];
+                });
+                yPosition += 8;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7);
+            }
+            
+            // Fila de datos
+            const codigo = route.codigo || 'N/A';
+            const nombreRuta = route.nombreRuta || 'N/A';
+            const origenDestino = `${route.origen || 'N/A'} - ${route.destino || 'N/A'}`;
+            const distancia = route.distanciaKm ? `${route.distanciaKm.toFixed(1)} km` : 'N/A';
+            const tiempoEst = route.duracionEstimadaHoras ? formatTime(route.duracionEstimadaHoras) : 'N/A';
+            const conductor = route.nombreChofer && route.apellidoChofer 
+                ? `${route.nombreChofer} ${route.apellidoChofer}` 
+                : 'Sin asignar';
+            const vehiculo = route.placaVehiculo || 'Sin asignar';
+            const combustible = route.consumoEstimadoLitros 
+                ? `${Math.round(route.consumoEstimadoLitros)} L` 
+                : 'N/A';
+            const estado = getEstadoText(route.estado);
+            
+            xPos = margin + 2;
+            const rowData = [
+                codigo.substring(0, 10),
+                nombreRuta.substring(0, 18),
+                origenDestino.substring(0, 25),
+                distancia.substring(0, 12),
+                tiempoEst.substring(0, 12),
+                conductor.substring(0, 15),
+                vehiculo.substring(0, 12),
+                combustible.substring(0, 10),
+                estado.substring(0, 12)
+            ];
+            
+            // Alternar color de fondo
+            if (index % 2 === 0) {
+                doc.setFillColor(250, 250, 250);
+                doc.rect(margin, yPosition - 4, contentWidth, 6, 'F');
+            }
+            
+            rowData.forEach((data, idx) => {
+                doc.setTextColor(...darkColor);
+                doc.text(data, xPos, yPosition);
+                xPos += colWidths[idx];
+            });
+            
+            yPosition += 7;
+        });
+        
+        // Pie de página en todas las páginas
+        const totalPages = doc.internal.pages.length - 1;
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.text(
+                `Página ${i} de ${totalPages}`,
+                pageWidth / 2,
+                doc.internal.pageSize.height - 10,
+                { align: 'center' }
+            );
+            
+            // Firma/Información de contacto
+            doc.setFontSize(7);
+            doc.text(
+                'Sistema de Gestión de Combustible SKT',
+                margin,
+                doc.internal.pageSize.height - 10
+            );
+        }
+        
+        // Guardar el PDF
+        const fechaArchivo = new Date().toISOString().split('T')[0];
+        const nombreArchivo = `Reporte_Rutas_${fechaArchivo}.pdf`;
+        doc.save(nombreArchivo);
+        
+        showNotification('success', 'Éxito', 'Reporte generado exitosamente');
+        
+    } catch (error) {
+        console.error('Error generando reporte:', error);
+        showNotification('error', 'Error', 'Error al generar el reporte: ' + error.message);
+    }
+}

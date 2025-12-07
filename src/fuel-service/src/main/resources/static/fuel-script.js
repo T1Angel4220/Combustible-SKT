@@ -1665,3 +1665,313 @@ function logout() {
     );
 }
 
+// Función para generar el reporte en PDF
+async function generateReport() {
+    if (fuelConsumptions.length === 0) {
+        showNotification('warning', 'Advertencia', 'No hay registros de combustible para generar el reporte');
+        return;
+    }
+    
+    try {
+        // Usar jsPDF desde window.jspdf
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Configuración de colores
+        const primaryColor = [220, 53, 69]; // Rojo principal
+        const darkColor = [13, 17, 23];
+        const lightGray = [240, 240, 240];
+        
+        let yPosition = 20;
+        const pageWidth = doc.internal.pageSize.width;
+        const margin = 20;
+        const contentWidth = pageWidth - (margin * 2);
+        
+        // Encabezado del reporte
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, pageWidth, 40, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SKT FUEL SYSTEM', margin, 25);
+        
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Reporte de Combustible', margin, 35);
+        
+        // Fecha de generación
+        doc.setFontSize(10);
+        const fechaGeneracion = new Date().toLocaleString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        doc.text(`Generado el: ${fechaGeneracion}`, pageWidth - margin, 35, { align: 'right' });
+        
+        yPosition = 50;
+        
+        // Estadísticas generales
+        doc.setTextColor(...darkColor);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Resumen Ejecutivo', margin, yPosition);
+        yPosition += 10;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const totalRegistros = fuelConsumptions.length;
+        const totalLitros = fuelConsumptions.reduce((sum, f) => sum + (f.cantidadLitros || 0), 0);
+        const costoTotal = fuelConsumptions.reduce((sum, f) => sum + (f.costoTotal || 0), 0);
+        const promedioLitros = totalRegistros > 0 ? totalLitros / totalRegistros : 0;
+        const promedioCosto = totalRegistros > 0 ? costoTotal / totalRegistros : 0;
+        
+        // Agrupar por tipo de combustible
+        const porTipoCombustible = {};
+        fuelConsumptions.forEach(f => {
+            const tipo = f.tipoCombustible || 'N/A';
+            if (!porTipoCombustible[tipo]) {
+                porTipoCombustible[tipo] = { litros: 0, costo: 0, registros: 0 };
+            }
+            porTipoCombustible[tipo].litros += f.cantidadLitros || 0;
+            porTipoCombustible[tipo].costo += f.costoTotal || 0;
+            porTipoCombustible[tipo].registros += 1;
+        });
+        
+        // Agrupar por tipo de maquinaria
+        const porTipoMaquinaria = {};
+        fuelConsumptions.forEach(f => {
+            const tipo = f.tipoMaquinaria || 'N/A';
+            if (!porTipoMaquinaria[tipo]) {
+                porTipoMaquinaria[tipo] = { litros: 0, costo: 0, registros: 0 };
+            }
+            porTipoMaquinaria[tipo].litros += f.cantidadLitros || 0;
+            porTipoMaquinaria[tipo].costo += f.costoTotal || 0;
+            porTipoMaquinaria[tipo].registros += 1;
+        });
+        
+        const stats = [
+            `Total de Registros: ${totalRegistros}`,
+            `Total de Litros: ${totalLitros.toFixed(2)} L`,
+            `Costo Total: $${costoTotal.toFixed(2)}`,
+            `Promedio por Registro: ${promedioLitros.toFixed(2)} L`,
+            `Costo Promedio: $${promedioCosto.toFixed(2)}`,
+            `Precio Promedio por Litro: $${totalLitros > 0 ? (costoTotal / totalLitros).toFixed(2) : '0.00'}`
+        ];
+        
+        stats.forEach((stat, index) => {
+            if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            doc.text(`• ${stat}`, margin + 5, yPosition);
+            yPosition += 7;
+        });
+        
+        yPosition += 5;
+        
+        // Resumen por tipo de combustible
+        if (yPosition > 240) {
+            doc.addPage();
+            yPosition = 20;
+        }
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Consumo por Tipo de Combustible', margin, yPosition);
+        yPosition += 10;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        Object.entries(porTipoCombustible).forEach(([tipo, datos]) => {
+            if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            const tipoText = getTipoCombustibleText(tipo);
+            doc.text(`  ${tipoText}: ${datos.litros.toFixed(2)} L - $${datos.costo.toFixed(2)} (${datos.registros} registros)`, margin + 5, yPosition);
+            yPosition += 6;
+        });
+        
+        yPosition += 5;
+        
+        // Resumen por tipo de maquinaria
+        if (yPosition > 240) {
+            doc.addPage();
+            yPosition = 20;
+        }
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Consumo por Tipo de Maquinaria', margin, yPosition);
+        yPosition += 10;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        Object.entries(porTipoMaquinaria).forEach(([tipo, datos]) => {
+            if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            const tipoText = getTipoMaquinariaText(tipo);
+            doc.text(`  ${tipoText}: ${datos.litros.toFixed(2)} L - $${datos.costo.toFixed(2)} (${datos.registros} registros)`, margin + 5, yPosition);
+            yPosition += 6;
+        });
+        
+        yPosition += 5;
+        
+        // Tabla de consumos
+        if (yPosition > 250) {
+            doc.addPage();
+            yPosition = 20;
+        }
+        
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Detalle de Registros de Combustible', margin, yPosition);
+        yPosition += 10;
+        
+        // Encabezado de tabla
+        doc.setFillColor(...lightGray);
+        doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...darkColor);
+        
+        const colWidths = [35, 40, 30, 30, 20, 20, 25, 25, 25];
+        const headers = ['Fecha/Hora', 'Vehículo', 'Conductor', 'Ruta', 'Cantidad', 'Tipo', 'Precio/L', 'Costo', 'Maquinaria'];
+        let xPos = margin + 2;
+        
+        headers.forEach((header, index) => {
+            doc.text(header, xPos, yPosition);
+            xPos += colWidths[index];
+        });
+        
+        yPosition += 8;
+        
+        // Datos de consumos
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        
+        fuelConsumptions.forEach((consumption, index) => {
+            // Verificar si necesita nueva página
+            if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+                
+                // Reimprimir encabezados
+                doc.setFillColor(...lightGray);
+                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8);
+                xPos = margin + 2;
+                headers.forEach((header, idx) => {
+                    doc.text(header, xPos, yPosition);
+                    xPos += colWidths[idx];
+                });
+                yPosition += 8;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7);
+            }
+            
+            // Buscar datos relacionados
+            const vehiculo = vehicles.find(v => v.id === consumption.vehiculoId);
+            const conductor = drivers.find(d => d.id === consumption.choferId);
+            
+            const vehiculoText = vehiculo ? `${vehiculo.placa || 'N/A'}` : 'N/A';
+            const conductorText = conductor ? `${conductor.nombre || ''} ${conductor.apellido || ''}`.trim() : 'N/A';
+            
+            let rutaText = 'Sin ruta';
+            if (consumption.rutaId) {
+                if (consumption.rutaNombre) {
+                    rutaText = consumption.rutaNombre;
+                } else {
+                    const ruta = routes.find(r => String(r.id).trim() === String(consumption.rutaId).trim());
+                    if (ruta) {
+                        rutaText = ruta.nombreRuta || ruta.codigo || 'Sin nombre';
+                    } else {
+                        rutaText = 'Ruta ID: ' + consumption.rutaId;
+                    }
+                }
+            }
+            
+            const fechaHora = consumption.fechaHora ? new Date(consumption.fechaHora) : null;
+            const fechaHoraText = fechaHora ? fechaHora.toLocaleDateString('es-EC', { 
+                year: '2-digit', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            }) : 'N/A';
+            
+            const cantidad = consumption.cantidadLitros ? consumption.cantidadLitros.toFixed(2) : '0.00';
+            const tipoCombustible = getTipoCombustibleText(consumption.tipoCombustible);
+            const precioLitro = consumption.precioPorLitro ? `$${consumption.precioPorLitro.toFixed(2)}` : 'N/A';
+            const costo = consumption.costoTotal ? `$${consumption.costoTotal.toFixed(2)}` : 'N/A';
+            const tipoMaquinaria = getTipoMaquinariaText(consumption.tipoMaquinaria);
+            
+            xPos = margin + 2;
+            const rowData = [
+                fechaHoraText.substring(0, 18),
+                vehiculoText.substring(0, 15),
+                conductorText.substring(0, 15),
+                rutaText.substring(0, 15),
+                cantidad,
+                tipoCombustible.substring(0, 12),
+                precioLitro.substring(0, 12),
+                costo.substring(0, 12),
+                tipoMaquinaria.substring(0, 15)
+            ];
+            
+            // Alternar color de fondo
+            if (index % 2 === 0) {
+                doc.setFillColor(250, 250, 250);
+                doc.rect(margin, yPosition - 4, contentWidth, 6, 'F');
+            }
+            
+            rowData.forEach((data, idx) => {
+                doc.setTextColor(...darkColor);
+                doc.text(data, xPos, yPosition);
+                xPos += colWidths[idx];
+            });
+            
+            yPosition += 7;
+        });
+        
+        // Pie de página en todas las páginas
+        const totalPages = doc.internal.pages.length - 1;
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.text(
+                `Página ${i} de ${totalPages}`,
+                pageWidth / 2,
+                doc.internal.pageSize.height - 10,
+                { align: 'center' }
+            );
+            
+            // Firma/Información de contacto
+            doc.setFontSize(7);
+            doc.text(
+                'Sistema de Gestión de Combustible SKT',
+                margin,
+                doc.internal.pageSize.height - 10
+            );
+        }
+        
+        // Guardar el PDF
+        const fechaArchivo = new Date().toISOString().split('T')[0];
+        const nombreArchivo = `Reporte_Combustible_${fechaArchivo}.pdf`;
+        doc.save(nombreArchivo);
+        
+        showNotification('success', 'Éxito', 'Reporte generado exitosamente');
+        
+    } catch (error) {
+        console.error('Error generando reporte:', error);
+        showNotification('error', 'Error', 'Error al generar el reporte: ' + error.message);
+    }
+}

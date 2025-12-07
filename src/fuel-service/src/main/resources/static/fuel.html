@@ -6,6 +6,7 @@
   <title>Gestión de Combustible - SKT FUEL SYSTEM</title>
   <link rel="stylesheet" href="fuel-styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
   <div class="dashboard-container">
@@ -60,6 +61,10 @@
           </div>
         </div>
         <div class="header-right">
+          <button class="add-fuel-btn" onclick="generateReport()" style="background-color: #17a2b8; margin-right: 10px;">
+            <i class="fas fa-file-pdf"></i>
+            Generar Reportes
+          </button>
           <button class="add-fuel-btn" onclick="showAddFuelModal()">
             <i class="fas fa-plus"></i>
             Registrar Combustible
