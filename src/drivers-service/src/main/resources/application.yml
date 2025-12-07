@@ -43,6 +43,10 @@ grpc:
     health-service-enabled: true
     max-inbound-message-size: 4194304
     max-inbound-metadata-size: 8192
+  client:
+    auth-service:
+      host: ${GRPC_AUTH_HOST:localhost}
+      port: ${GRPC_AUTH_PORT:9095}
 
 # Service Discovery (para comunicación entre microservicios)
 service:

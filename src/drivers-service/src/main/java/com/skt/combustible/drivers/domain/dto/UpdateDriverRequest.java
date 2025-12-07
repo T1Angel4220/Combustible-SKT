@@ -43,6 +43,8 @@ public class UpdateDriverRequest {
 
     private Boolean activo;
 
+    private String usuarioId; // ID del usuario asociado en auth-service
+
     // Constructores
     public UpdateDriverRequest() {
     }
@@ -126,5 +128,13 @@ public class UpdateDriverRequest {
 
     public void setActivo(Boolean activo) {
         this.activo = activo;
+    }
+
+    public String getUsuarioId() {
+        return usuarioId;
+    }
+
+    public void setUsuarioId(String usuarioId) {
+        this.usuarioId = usuarioId;
     }
 }

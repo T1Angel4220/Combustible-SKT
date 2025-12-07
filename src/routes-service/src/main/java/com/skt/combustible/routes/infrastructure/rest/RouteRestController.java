@@ -6,12 +6,16 @@ import com.skt.combustible.routes.domain.dto.RouteResponse;
 import com.skt.combustible.routes.domain.dto.RouteUpdateRequest;
 import com.skt.combustible.routes.domain.entity.Route;
 import com.skt.combustible.routes.domain.exception.RouteNotFoundException;
+import com.skt.combustible.shared.domain.enums.RolUsuario;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,7 +49,29 @@ public class RouteRestController {
     private com.skt.combustible.routes.infrastructure.client.AssignmentsRestClient assignmentsRestClient;
 
     /**
+     * Verifica si el usuario actual tiene un rol específico
+     */
+    private boolean hasRole(RolUsuario rol) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        String roleString = "ROLE_" + rol.name();
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals(roleString));
+    }
+
+    /**
+     * Verifica si el usuario es ADMIN o SUPERVISOR
+     */
+    private boolean isAdminOrSupervisor() {
+        return hasRole(RolUsuario.ADMIN) || hasRole(RolUsuario.SUPERVISOR);
+    }
+
+    /**
      * Obtiene todas las rutas activas
+     * Todos los roles pueden ver rutas
      */
     @GetMapping
     public ResponseEntity<List<RouteResponse>> getAllRoutes() {
@@ -83,10 +109,16 @@ public class RouteRestController {
 
     /**
      * Crea una nueva ruta
+     * Solo ADMIN y SUPERVISOR pueden crear rutas
      */
     @PostMapping
     public ResponseEntity<?> createRoute(@Valid @RequestBody RouteCreateRequest request) {
         try {
+            if (!isAdminOrSupervisor()) {
+                logger.warn("Intento de crear ruta por usuario sin permisos");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(java.util.Map.of("error", "No tiene permisos para crear rutas", "status", 403));
+            }
             logger.info("REST: Creando nueva ruta: {} -> {}", request.getOrigen(), request.getDestino());
             RouteResponse route = routeService.crearRuta(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(route);
@@ -107,11 +139,16 @@ public class RouteRestController {
 
     /**
      * Actualiza una ruta existente
+     * Solo ADMIN y SUPERVISOR pueden actualizar rutas
      */
     @PutMapping("/{id}")
     public ResponseEntity<RouteResponse> updateRoute(@PathVariable("id") String id,
                                                      @Valid @RequestBody RouteUpdateRequest request) {
         try {
+            if (!isAdminOrSupervisor()) {
+                logger.warn("Intento de actualizar ruta por usuario sin permisos");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
             logger.info("REST: Actualizando ruta con ID: {}", id);
             RouteResponse route = routeService.actualizarRuta(id, request);
             return ResponseEntity.ok(route);
@@ -129,10 +166,15 @@ public class RouteRestController {
 
     /**
      * Elimina una ruta (soft delete)
+     * Solo ADMIN puede eliminar rutas
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRoute(@PathVariable("id") String id) {
         try {
+            if (!hasRole(RolUsuario.ADMIN)) {
+                logger.warn("Intento de eliminar ruta por usuario sin permisos");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
             logger.info("REST: Eliminando ruta con ID: {}", id);
             routeService.eliminarRuta(id);
             return ResponseEntity.noContent().build();
@@ -225,10 +267,15 @@ public class RouteRestController {
 
     /**
      * Obtiene estadísticas de rutas
+     * Solo ADMIN y SUPERVISOR pueden ver estadísticas
      */
     @GetMapping("/stats")
     public ResponseEntity<RouteService.RouteStatsDTO> getRouteStats() {
         try {
+            if (!isAdminOrSupervisor()) {
+                logger.warn("Intento de ver estadísticas por usuario sin permisos");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
             logger.info("REST: Obteniendo estadísticas de rutas");
             RouteService.RouteStatsDTO stats = routeService.obtenerEstadisticas();
             return ResponseEntity.ok(stats);

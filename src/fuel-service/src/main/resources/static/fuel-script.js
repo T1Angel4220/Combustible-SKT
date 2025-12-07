@@ -11,9 +11,10 @@ let drivers = [];
 let routes = [];
 let editingFuelId = null;
 let confirmationCallback = null;
+let currentUserRole = null; // Rol del usuario actual
 
-document.addEventListener('DOMContentLoaded', function() {
-    checkAuth();
+document.addEventListener('DOMContentLoaded', async function() {
+    await checkAuth();
     loadFuelConsumptions();
     loadVehicles();
     loadDrivers();
@@ -33,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function checkAuth() {
+async function checkAuth() {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('token');
     const userFromUrl = urlParams.get('user');
@@ -57,6 +58,39 @@ function checkAuth() {
         if (sessionStorage.getItem('currentUser')) {
             localStorage.setItem('currentUser', sessionStorage.getItem('currentUser'));
         }
+    }
+    
+    // Obtener el rol del usuario desde el token
+    try {
+        const response = await fetch('http://localhost:8085/api/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const userData = await response.json();
+            currentUserRole = userData.rol || userData.role || null;
+            // Aplicar restricciones de UI según el rol
+            applyRoleBasedUI();
+        }
+    } catch (error) {
+        console.error('Error obteniendo información del usuario:', error);
+    }
+}
+
+function applyRoleBasedUI() {
+    // Ocultar botones según el rol
+    const addFuelBtn = document.querySelector('.add-fuel-btn');
+    
+    // Solo ADMIN y SUPERVISOR pueden crear registros de combustible
+    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'SUPERVISOR') {
+        if (addFuelBtn) addFuelBtn.style.display = 'none';
+    }
+    
+    // Re-renderizar la tabla para ocultar botones de acciones
+    if (fuelConsumptions.length > 0) {
+        renderFuelConsumptions();
     }
 }
 
@@ -820,12 +854,18 @@ function renderFuelConsumptions(consumptionsToRender = fuelConsumptions) {
                 <td><span class="machinery-type-badge ${tipoMaquinariaClass}">${tipoMaquinariaText}</span></td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn edit" onclick="editFuelConsumption('${consumption.id}')" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="action-btn delete" onclick="deleteFuelConsumption('${consumption.id}')" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        ${(currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR')
+                            ? `<button class="action-btn edit" onclick="editFuelConsumption('${consumption.id}')" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>`
+                            : ''
+                        }
+                        ${currentUserRole === 'ADMIN'
+                            ? `<button class="action-btn delete" onclick="deleteFuelConsumption('${consumption.id}')" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>`
+                            : ''
+                        }
                     </div>
                 </td>
             </tr>

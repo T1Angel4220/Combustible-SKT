@@ -9,7 +9,8 @@ package com.skt.combustible.shared.domain.enums;
 public enum RolUsuario {
     ADMIN("Administrador"),
     OPERADOR("Operador"),
-    SUPERVISOR("Supervisor");
+    SUPERVISOR("Supervisor"),
+    CONDUCTOR("Conductor");
 
     private final String descripcion;
 

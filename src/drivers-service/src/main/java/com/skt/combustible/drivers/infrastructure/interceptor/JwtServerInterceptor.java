@@ -31,6 +31,7 @@ public class JwtServerInterceptor implements ServerInterceptor {
     public static final Context.Key<String> USER_ID_CONTEXT_KEY = Context.key("userId");
     public static final Context.Key<String> USERNAME_CONTEXT_KEY = Context.key("username");
     public static final Context.Key<String> USER_ROLE_CONTEXT_KEY = Context.key("userRole");
+    public static final Context.Key<String> USER_TOKEN_CONTEXT_KEY = Context.key("userToken");
 
     @Value("${jwt.secret:mySecretKey1234567890123456789012345}")
     private String jwtSecret;
@@ -92,7 +93,8 @@ public class JwtServerInterceptor implements ServerInterceptor {
             Context context = Context.current()
                     .withValue(USER_ID_CONTEXT_KEY, userId)
                     .withValue(USERNAME_CONTEXT_KEY, username)
-                    .withValue(USER_ROLE_CONTEXT_KEY, userRole);
+                    .withValue(USER_ROLE_CONTEXT_KEY, userRole)
+                    .withValue(USER_TOKEN_CONTEXT_KEY, token);
 
             // Continuar con la llamada en el contexto autenticado
             return Contexts.interceptCall(context, call, headers, next);

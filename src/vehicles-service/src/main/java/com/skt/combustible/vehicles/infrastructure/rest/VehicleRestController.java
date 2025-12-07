@@ -1,14 +1,20 @@
 package com.skt.combustible.vehicles.infrastructure.rest;
 
 import com.skt.combustible.shared.domain.enums.EstadoOperativo;
+import com.skt.combustible.shared.domain.enums.RolUsuario;
 import com.skt.combustible.shared.domain.enums.TipoMaquinaria;
 import com.skt.combustible.vehicles.application.service.VehicleService;
 import com.skt.combustible.vehicles.domain.dto.VehicleCreateRequest;
 import com.skt.combustible.vehicles.domain.dto.VehicleResponse;
 import com.skt.combustible.vehicles.domain.dto.VehicleUpdateRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -26,14 +32,42 @@ import java.util.Optional;
 @CrossOrigin(origins = "*")
 public class VehicleRestController {
     
+    private static final Logger logger = LoggerFactory.getLogger(VehicleRestController.class);
+    
     @Autowired
     private VehicleService vehicleService;
     
     /**
+     * Verifica si el usuario actual tiene un rol específico
+     */
+    private boolean hasRole(RolUsuario rol) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        String roleString = "ROLE_" + rol.name();
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals(roleString));
+    }
+    
+    /**
+     * Verifica si el usuario es ADMIN o SUPERVISOR
+     */
+    private boolean isAdminOrSupervisor() {
+        return hasRole(RolUsuario.ADMIN) || hasRole(RolUsuario.SUPERVISOR);
+    }
+    
+    /**
      * Crea un nuevo vehículo
+     * Solo ADMIN puede crear vehículos
      */
     @PostMapping
     public ResponseEntity<VehicleResponse> crearVehiculo(@Valid @RequestBody VehicleCreateRequest request) {
+        if (!hasRole(RolUsuario.ADMIN)) {
+            logger.warn("Intento de crear vehículo por usuario sin permisos");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         VehicleResponse response = vehicleService.crearVehiculo(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -105,10 +139,15 @@ public class VehicleRestController {
     
     /**
      * Actualiza un vehículo
+     * Solo ADMIN y SUPERVISOR pueden actualizar vehículos
      */
     @PutMapping("/{id}")
     public ResponseEntity<VehicleResponse> actualizarVehiculo(@PathVariable("id") String id, 
                                                                @Valid @RequestBody VehicleUpdateRequest request) {
+        if (!isAdminOrSupervisor()) {
+            logger.warn("Intento de actualizar vehículo por usuario sin permisos");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         VehicleResponse response = vehicleService.actualizarVehiculo(id, request);
         return ResponseEntity.ok(response);
     }
@@ -135,18 +174,28 @@ public class VehicleRestController {
     
     /**
      * Desactiva un vehículo
+     * Solo ADMIN puede eliminar vehículos
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> desactivarVehiculo(@PathVariable("id") String id) {
+        if (!hasRole(RolUsuario.ADMIN)) {
+            logger.warn("Intento de eliminar vehículo por usuario sin permisos");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         vehicleService.desactivarVehiculo(id);
         return ResponseEntity.noContent().build();
     }
     
     /**
      * Obtiene estadísticas de vehículos
+     * Solo ADMIN y SUPERVISOR pueden ver estadísticas
      */
     @GetMapping("/estadisticas")
     public ResponseEntity<VehicleService.VehicleStatsDTO> obtenerEstadisticas() {
+        if (!isAdminOrSupervisor()) {
+            logger.warn("Intento de ver estadísticas por usuario sin permisos");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         VehicleService.VehicleStatsDTO stats = vehicleService.obtenerEstadisticas();
         return ResponseEntity.ok(stats);
     }

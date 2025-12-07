@@ -1,6 +1,7 @@
 package com.skt.combustible.drivers.domain.dto;
 
 import com.skt.combustible.shared.domain.enums.EstadoOperativo;
+import com.skt.combustible.shared.domain.enums.RolUsuario;
 import com.skt.combustible.shared.domain.enums.TipoMaquinaria;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -47,6 +48,10 @@ public class CreateDriverRequest {
     private EstadoOperativo estado;
 
     private TipoMaquinaria tipoMaquinariaAsignada;
+
+    // Campos para crear usuario en auth-service
+    private Boolean crearUsuario = false; // Si se debe crear un usuario para este chofer
+    private RolUsuario rolUsuario; // Rol del usuario (OPERADOR, SUPERVISOR o CONDUCTOR)
 
     // Constructores
     public CreateDriverRequest() {
@@ -130,5 +135,21 @@ public class CreateDriverRequest {
 
     public void setEstado(EstadoOperativo estado) {
         this.estado = estado;
+    }
+
+    public Boolean getCrearUsuario() {
+        return crearUsuario;
+    }
+
+    public void setCrearUsuario(Boolean crearUsuario) {
+        this.crearUsuario = crearUsuario;
+    }
+
+    public RolUsuario getRolUsuario() {
+        return rolUsuario;
+    }
+
+    public void setRolUsuario(RolUsuario rolUsuario) {
+        this.rolUsuario = rolUsuario;
     }
 }

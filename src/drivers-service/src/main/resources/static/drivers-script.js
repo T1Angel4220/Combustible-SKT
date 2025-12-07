@@ -6,12 +6,19 @@ let drivers = [];
 let editingDriverId = null;
 let driverAssignments = {}; // Mapa de driverId -> asignaciones activas
 let confirmationCallback = null; // Callback para el modal de confirmación
+let currentUserRole = null; // Rol del usuario actual
 
-document.addEventListener('DOMContentLoaded', function() {
-    checkAuth();
+document.addEventListener('DOMContentLoaded', async function() {
+    await checkAuth();
     populateEnumSelects(); // Cargar enums primero
     loadDrivers();
     setupEventListeners();
+    
+    // Agregar listener para el formulario de crear usuario
+    const createUserForm = document.getElementById('createUserForm');
+    if (createUserForm) {
+        createUserForm.addEventListener('submit', handleCreateUserSubmit);
+    }
 });
 
 // Función para poblar los selects con todos los valores de los enums
@@ -98,7 +105,7 @@ async function loadDriverAssignments() {
     }
 }
 
-function checkAuth() {
+async function checkAuth() {
     // Primero verificar si hay token en la URL (viene del dashboard)
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('token');
@@ -128,6 +135,41 @@ function checkAuth() {
         if (sessionStorage.getItem('currentUser')) {
             localStorage.setItem('currentUser', sessionStorage.getItem('currentUser'));
         }
+    }
+    
+    // Obtener el rol del usuario desde el token
+    try {
+        const response = await fetch('http://localhost:8085/api/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const userData = await response.json();
+            currentUserRole = userData.rol || userData.role || null;
+            // Aplicar restricciones de UI según el rol
+            applyRoleBasedUI();
+        }
+    } catch (error) {
+        console.error('Error obteniendo información del usuario:', error);
+    }
+}
+
+function applyRoleBasedUI() {
+    // Ocultar botones según el rol
+    const addDriverBtn = document.querySelector('.add-driver-btn');
+    const createUserBtn = document.querySelectorAll('.add-driver-btn')[1]; // Segundo botón
+    
+    // Solo ADMIN y SUPERVISOR pueden crear choferes
+    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'SUPERVISOR') {
+        if (addDriverBtn) addDriverBtn.style.display = 'none';
+        if (createUserBtn) createUserBtn.style.display = 'none';
+    }
+    
+    // Re-renderizar la tabla para ocultar botones de acciones
+    if (drivers.length > 0) {
+        renderDrivers();
     }
 }
 
@@ -252,7 +294,7 @@ function renderDrivers(driversToRender = drivers) {
                 <td>
                     <span class="license-badge ${licenseType.class}">${licenseType.text}</span>
                 </td>
-                <td>5 años</td>
+                <td>${calculateExperience(driver.fechaContratacion)}</td>
                 <td>
                     <span class="status-badge ${statusClass}">${statusText}</span>
                 </td>
@@ -261,20 +303,29 @@ function renderDrivers(driversToRender = drivers) {
                 </td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn edit" onclick="editDriver('${driver.id}')" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        ${driver.activo !== false 
-                            ? `<button class="action-btn deactivate" onclick="deactivateDriver('${driver.id}')" title="Desactivar">
-                                <i class="fas fa-ban"></i>
+                        ${(currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR')
+                            ? `<button class="action-btn edit" onclick="editDriver('${driver.id}')" title="Editar">
+                                <i class="fas fa-edit"></i>
                             </button>`
-                            : `<button class="action-btn activate" onclick="activateDriver('${driver.id}')" title="Reactivar">
-                                <i class="fas fa-check-circle"></i>
-                            </button>`
+                            : ''
                         }
-                        <button class="action-btn delete" onclick="deleteDriverPermanently('${driver.id}')" title="Eliminar permanentemente">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        ${currentUserRole === 'ADMIN'
+                            ? (driver.activo !== false 
+                                ? `<button class="action-btn deactivate" onclick="deactivateDriver('${driver.id}')" title="Desactivar">
+                                    <i class="fas fa-ban"></i>
+                                </button>`
+                                : `<button class="action-btn activate" onclick="activateDriver('${driver.id}')" title="Reactivar">
+                                    <i class="fas fa-check-circle"></i>
+                                </button>`
+                            )
+                            : ''
+                        }
+                        ${currentUserRole === 'ADMIN'
+                            ? `<button class="action-btn delete" onclick="deleteDriverPermanently('${driver.id}')" title="Eliminar permanentemente">
+                                <i class="fas fa-trash"></i>
+                            </button>`
+                            : ''
+                        }
                     </div>
                 </td>
             </tr>
@@ -287,6 +338,34 @@ function getLicenseType(tipo) {
     const pesados = ['EXCAVADORA', 'CARGADOR', 'GRUA', 'MOTONIVELADORA'];
     if (pesados.includes(tipo)) return { class: 'pesada', text: 'Pesada' };
     return { class: 'liviana', text: 'Liviana' };
+}
+
+function calculateExperience(fechaContratacion) {
+    if (!fechaContratacion) {
+        return 'N/A';
+    }
+    
+    try {
+        const fecha = new Date(fechaContratacion);
+        const hoy = new Date();
+        const diffTime = Math.abs(hoy - fecha);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const years = Math.floor(diffDays / 365);
+        const months = Math.floor((diffDays % 365) / 30);
+        
+        if (years === 0 && months === 0) {
+            return 'Menos de 1 mes';
+        } else if (years === 0) {
+            return `${months} ${months === 1 ? 'mes' : 'meses'}`;
+        } else if (months === 0) {
+            return `${years} ${years === 1 ? 'año' : 'años'}`;
+        } else {
+            return `${years} ${years === 1 ? 'año' : 'años'} ${months} ${months === 1 ? 'mes' : 'meses'}`;
+        }
+    } catch (error) {
+        console.error('Error calculando experiencia:', error);
+        return 'N/A';
+    }
 }
 
 function getStatusClass(estado, activo) {
@@ -363,6 +442,50 @@ function closeAddDriverModal() {
     document.querySelector('#addDriverModal .modal-header h2').textContent = 'Agregar Chofer';
 }
 
+function showCreateUserModal() {
+    // Cargar lista de choferes sin usuario
+    populateDriversForUserCreation();
+    document.getElementById('createUserModal').classList.add('active');
+}
+
+function closeCreateUserModal() {
+    document.getElementById('createUserModal').classList.remove('active');
+    document.getElementById('createUserForm').reset();
+    document.getElementById('driverInfo').style.display = 'none';
+}
+
+function populateDriversForUserCreation() {
+    const select = document.getElementById('selectedDriverId');
+    select.innerHTML = '<option value="">-- Seleccione un chofer --</option>';
+    
+    // Filtrar choferes que no tengan usuario_id (sin cuenta)
+    const driversWithoutUser = drivers.filter(driver => !driver.usuarioId || driver.usuarioId === '');
+    
+    driversWithoutUser.forEach(driver => {
+        const option = document.createElement('option');
+        option.value = driver.id;
+        option.textContent = `${driver.nombre} ${driver.apellido} - ${driver.dni}`;
+        select.appendChild(option);
+    });
+    
+    // Agregar listener para mostrar info del chofer seleccionado
+    select.addEventListener('change', function() {
+        const selectedDriverId = this.value;
+        if (selectedDriverId) {
+            const driver = drivers.find(d => d.id === selectedDriverId);
+            if (driver) {
+                document.getElementById('selectedDriverNombre').textContent = driver.nombre || '';
+                document.getElementById('selectedDriverApellido').textContent = driver.apellido || '';
+                document.getElementById('selectedDriverEmail').textContent = driver.email || 'No tiene email';
+                document.getElementById('selectedDriverDni').textContent = driver.dni || '';
+                document.getElementById('driverInfo').style.display = 'block';
+            }
+        } else {
+            document.getElementById('driverInfo').style.display = 'none';
+        }
+    });
+}
+
 async function handleDriverSubmit(e) {
     e.preventDefault();
     
@@ -389,6 +512,12 @@ async function handleDriverSubmit(e) {
     const tipoMaquinaria = document.getElementById('driverTipoMaquinaria').value.trim();
     if (tipoMaquinaria) {
         driverData.tipoMaquinariaAsignada = tipoMaquinaria;
+    }
+    
+    // Fecha de contratación - siempre incluir si tiene valor
+    const fechaContratacion = document.getElementById('driverFechaContratacion').value;
+    if (fechaContratacion) {
+        driverData.fechaContratacion = fechaContratacion;
     }
     
     try {
@@ -451,6 +580,16 @@ function editDriver(id) {
     document.getElementById('driverTelefono').value = driver.telefono || '';
     document.getElementById('driverTipoMaquinaria').value = driver.tipoMaquinariaAsignada || '';
     document.getElementById('driverEstado').value = driver.estado || 'DISPONIBLE';
+    
+    // Fecha de contratación
+    if (driver.fechaContratacion) {
+        // Formatear fecha de ISO a formato YYYY-MM-DD para input type="date"
+        const fecha = new Date(driver.fechaContratacion);
+        const fechaFormateada = fecha.toISOString().split('T')[0];
+        document.getElementById('driverFechaContratacion').value = fechaFormateada;
+    } else {
+        document.getElementById('driverFechaContratacion').value = '';
+    }
     
     document.getElementById('addDriverModal').classList.add('active');
 }
@@ -665,5 +804,156 @@ function closeConfirmationModal(confirmed) {
     if (confirmed && confirmationCallback) {
         confirmationCallback();
         confirmationCallback = null;
+    }
+}
+
+// Funciones para el modal de crear usuario
+function showCreateUserModal() {
+    // Cargar lista de choferes sin usuario
+    populateDriversForUserCreation();
+    document.getElementById('createUserModal').classList.add('active');
+}
+
+function closeCreateUserModal() {
+    document.getElementById('createUserModal').classList.remove('active');
+    document.getElementById('createUserForm').reset();
+    document.getElementById('driverInfo').style.display = 'none';
+}
+
+function populateDriversForUserCreation() {
+    const select = document.getElementById('selectedDriverId');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">-- Seleccione un chofer --</option>';
+    
+    // Filtrar choferes que no tengan usuario_id (sin cuenta)
+    const driversWithoutUser = drivers.filter(driver => !driver.usuarioId || driver.usuarioId === '');
+    
+    driversWithoutUser.forEach(driver => {
+        const option = document.createElement('option');
+        option.value = driver.id;
+        option.textContent = `${driver.nombre} ${driver.apellido} - ${driver.dni}`;
+        select.appendChild(option);
+    });
+    
+    // Remover listeners anteriores y agregar nuevo
+    const newSelect = select.cloneNode(true);
+    select.parentNode.replaceChild(newSelect, select);
+    
+    // Agregar listener para mostrar info del chofer seleccionado
+    newSelect.addEventListener('change', function() {
+        const selectedDriverId = this.value;
+        if (selectedDriverId) {
+            const driver = drivers.find(d => d.id === selectedDriverId);
+            if (driver) {
+                document.getElementById('selectedDriverNombre').textContent = driver.nombre || '';
+                document.getElementById('selectedDriverApellido').textContent = driver.apellido || '';
+                document.getElementById('selectedDriverEmail').textContent = driver.email || 'No tiene email';
+                document.getElementById('selectedDriverDni').textContent = driver.dni || '';
+                document.getElementById('driverInfo').style.display = 'block';
+            }
+        } else {
+            document.getElementById('driverInfo').style.display = 'none';
+        }
+    });
+}
+
+async function handleCreateUserSubmit(e) {
+    e.preventDefault();
+    
+    const driverId = document.getElementById('selectedDriverId').value;
+    const password = document.getElementById('userPassword').value.trim();
+    const rol = document.getElementById('userRol').value;
+    
+    if (!driverId) {
+        showNotification('error', 'Error', 'Debe seleccionar un chofer');
+        return;
+    }
+    
+    if (!password || password.length < 6) {
+        showNotification('error', 'Error', 'La contraseña debe tener al menos 6 caracteres');
+        return;
+    }
+    
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) {
+        showNotification('error', 'Error', 'Chofer no encontrado');
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        
+        // Crear usuario usando el endpoint del auth-service
+        const username = driver.email ? driver.email.split('@')[0] : driver.dni;
+        const email = driver.email || driver.dni + '@skt.com';
+        
+        const createUserData = {
+            username: username,
+            email: email,
+            password: password,
+            nombre: driver.nombre,
+            apellido: driver.apellido,
+            rol: rol
+        };
+        
+        const response = await fetch('http://localhost:8085/api/users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(createUserData)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            const userId = result.user?.id || result.id;
+            
+            // Actualizar el chofer con el usuario_id
+            const updateData = {
+                nombre: driver.nombre,
+                apellido: driver.apellido,
+                dni: driver.dni,
+                licencia: driver.licencia,
+                telefono: driver.telefono || null,
+                email: driver.email || null,
+                estado: driver.estado,
+                tipoMaquinariaAsignada: driver.tipoMaquinariaAsignada || null,
+                fechaContratacion: driver.fechaContratacion || null,
+                activo: driver.activo !== false,
+                usuarioId: userId
+            };
+            
+            const updateDriverResponse = await fetch(`${API_BASE_URL}/${driverId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(updateData)
+            });
+            
+            if (updateDriverResponse.ok) {
+                closeCreateUserModal();
+                loadDrivers(); // Recargar lista de choferes
+                showNotification('success', 'Éxito', 'Usuario creado y asignado al chofer correctamente');
+            } else {
+                showNotification('warning', 'Advertencia', 'Usuario creado pero no se pudo actualizar el chofer');
+            }
+        } else {
+            const errorText = await response.text();
+            let errorMessage = 'Error al crear usuario';
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.message || errorJson.error || errorMessage;
+            } catch (e) {
+                errorMessage = errorText || errorMessage;
+            }
+            showNotification('error', 'Error', errorMessage);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('error', 'Error', 'Error al crear usuario: ' + error.message);
     }
 }

@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -40,21 +41,25 @@ public class DriverService {
 
     private final DriverRepository driverRepository;
     private final DriverMapper driverMapper;
+    private final com.skt.combustible.drivers.infrastructure.client.AuthServiceClient authServiceClient;
 
-    public DriverService(DriverRepository driverRepository, DriverMapper driverMapper) {
+    public DriverService(DriverRepository driverRepository, DriverMapper driverMapper,
+                        com.skt.combustible.drivers.infrastructure.client.AuthServiceClient authServiceClient) {
         this.driverRepository = driverRepository;
         this.driverMapper = driverMapper;
+        this.authServiceClient = authServiceClient;
     }
 
     /**
      * Crea un nuevo chofer
      * 
      * @param request Datos del chofer a crear
+     * @param authToken Token JWT del usuario autenticado (requerido si se va a crear usuario)
      * @return DriverResponse con los datos del chofer creado
      * @throws DriverDuplicateException si ya existe un chofer con el mismo DNI o
      *                                  licencia
      */
-    public DriverResponse createDriver(CreateDriverRequest request) {
+    public DriverResponse createDriver(CreateDriverRequest request, String authToken) {
         logger.info("Creando nuevo chofer: {}", request.getNombre() + " " + request.getApellido());
 
         // Validar que el estado sea válido para choferes
@@ -73,7 +78,53 @@ public class DriverService {
             throw new DriverDuplicateException("licencia", request.getLicencia());
         }
 
+        // Si se solicita crear usuario, validar campos y crear usuario en auth-service
+        String usuarioId = null;
+        if (Boolean.TRUE.equals(request.getCrearUsuario())) {
+            if (authToken == null || authToken.isEmpty()) {
+                throw new IllegalArgumentException("Se requiere token de autenticación para crear usuario");
+            }
+            if (request.getRolUsuario() == null) {
+                throw new IllegalArgumentException("Se requiere especificar el rol del usuario");
+            }
+
+            // Usar email del chofer como username, si no tiene email usar DNI
+            String username;
+            String email = request.getEmail();
+            
+            if (email != null && !email.isEmpty()) {
+                // Usar email como username (parte antes del @)
+                username = email.split("@")[0];
+            } else {
+                // Si no hay email, usar DNI como username
+                username = request.getDni();
+                email = request.getDni() + "@skt.com"; // Generar email por defecto
+            }
+
+            // Generar contraseña automáticamente usando el DNI del chofer
+            String password = request.getDni(); // Usar DNI como contraseña inicial
+
+            try {
+                usuarioId = authServiceClient.createUser(
+                    username,
+                    email,
+                    password, // Contraseña generada automáticamente
+                    request.getNombre(),
+                    request.getApellido(),
+                    request.getRolUsuario(),
+                    authToken
+                );
+                logger.info("Usuario creado exitosamente para chofer con ID: {} - Username: {} - Password: {}", 
+                    usuarioId, username, password);
+            } catch (Exception e) {
+                logger.error("Error creando usuario para chofer: {}", e.getMessage());
+                throw new RuntimeException("Error creando usuario: " + e.getMessage(), e);
+            }
+        }
+
         Driver driver = driverMapper.toEntity(request);
+        driver.setUsuarioId(usuarioId); // Asignar ID del usuario si se creó
+        
         Driver savedDriver = driverRepository.save(driver);
 
         logger.info("Chofer creado exitosamente con ID: {}", savedDriver.getId());
@@ -280,7 +331,13 @@ public class DriverService {
             }
         }
 
+        // Preservar fechaContratacion si no se está actualizando
+        LocalDate fechaContratacionOriginal = existingDriver.getFechaContratacion();
         driverMapper.updateFromRequest(request, existingDriver);
+        // Si la fecha no se envió en el request, preservar la original
+        if (request.getFechaContratacion() == null && fechaContratacionOriginal != null) {
+            existingDriver.setFechaContratacion(fechaContratacionOriginal);
+        }
         Driver updatedDriver = driverRepository.save(existingDriver);
 
         logger.info("Chofer actualizado exitosamente con ID: {}", updatedDriver.getId());

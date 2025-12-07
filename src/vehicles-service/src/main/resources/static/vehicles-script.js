@@ -10,15 +10,16 @@ let currentFilter = 'all';
 let editingVehicleId = null;
 let assigningVehicleId = null;
 let confirmationCallback = null; // Callback para el modal de confirmación
+let currentUserRole = null; // Rol del usuario actual
 
-document.addEventListener('DOMContentLoaded', function() {
-    checkAuth();
+document.addEventListener('DOMContentLoaded', async function() {
+    await checkAuth();
     loadVehicles();
     loadDrivers();
     setupEventListeners();
 });
 
-function checkAuth() {
+async function checkAuth() {
     // Primero verificar si hay token en la URL (viene del dashboard)
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('token');
@@ -48,6 +49,39 @@ function checkAuth() {
         if (sessionStorage.getItem('currentUser')) {
             localStorage.setItem('currentUser', sessionStorage.getItem('currentUser'));
         }
+    }
+    
+    // Obtener el rol del usuario desde el token
+    try {
+        const response = await fetch('http://localhost:8085/api/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const userData = await response.json();
+            currentUserRole = userData.rol || userData.role || null;
+            // Aplicar restricciones de UI según el rol
+            applyRoleBasedUI();
+        }
+    } catch (error) {
+        console.error('Error obteniendo información del usuario:', error);
+    }
+}
+
+function applyRoleBasedUI() {
+    // Ocultar botones según el rol
+    const addVehicleBtn = document.querySelector('.add-vehicle-btn');
+    
+    // Solo ADMIN puede crear vehículos
+    if (currentUserRole !== 'ADMIN') {
+        if (addVehicleBtn) addVehicleBtn.style.display = 'none';
+    }
+    
+    // Re-renderizar la tabla para ocultar botones de acciones
+    if (vehicles.length > 0) {
+        renderVehicles();
     }
 }
 
@@ -373,20 +407,29 @@ function renderVehicles(vehiclesToRender = vehicles) {
                 <td>${formatDate(vehicle.fechaActualizacion)}</td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn edit" onclick="editVehicle('${vehicle.id}')" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        ${getAssignedDriverSync(vehicle.id) !== 'Sin asignar' && getAssignedDriverSync(vehicle.id) !== 'Cargando...'
-                            ? `<button class="action-btn unassign" onclick="unassignVehicle('${vehicle.id}')" title="Desasignar conductor">
-                                <i class="fas fa-user-minus"></i>
+                        ${(currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR')
+                            ? `<button class="action-btn edit" onclick="editVehicle('${vehicle.id}')" title="Editar">
+                                <i class="fas fa-edit"></i>
                             </button>`
-                            : `<button class="action-btn assign" onclick="assignDriver('${vehicle.id}')" title="Asignar conductor">
-                                <i class="fas fa-user-plus"></i>
-                            </button>`
+                            : ''
                         }
-                        <button class="action-btn delete" onclick="deleteVehicle('${vehicle.id}')" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        ${(currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR')
+                            ? (getAssignedDriverSync(vehicle.id) !== 'Sin asignar' && getAssignedDriverSync(vehicle.id) !== 'Cargando...'
+                                ? `<button class="action-btn unassign" onclick="unassignVehicle('${vehicle.id}')" title="Desasignar conductor">
+                                    <i class="fas fa-user-minus"></i>
+                                </button>`
+                                : `<button class="action-btn assign" onclick="assignDriver('${vehicle.id}')" title="Asignar conductor">
+                                    <i class="fas fa-user-plus"></i>
+                                </button>`
+                            )
+                            : ''
+                        }
+                        ${currentUserRole === 'ADMIN'
+                            ? `<button class="action-btn delete" onclick="deleteVehicle('${vehicle.id}')" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>`
+                            : ''
+                        }
                     </div>
                 </td>
             </tr>

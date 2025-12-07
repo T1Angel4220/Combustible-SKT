@@ -32,6 +32,7 @@ enum Role {
   ADMIN = 0;
   OPERADOR = 1;
   SUPERVISOR = 2;
+  CONDUCTOR = 3;
 }
 
 // Mensajes de request

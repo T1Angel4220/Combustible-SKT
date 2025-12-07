@@ -69,6 +69,9 @@ public class Driver {
     @Field("activo")
     private Boolean activo = true;
 
+    @Field("usuario_id")
+    private String usuarioId; // ID del usuario asociado en auth-service
+
     @CreatedDate
     @Field("created_at")
     private LocalDateTime createdAt;
@@ -175,6 +178,14 @@ public class Driver {
 
     public void setActivo(Boolean activo) {
         this.activo = activo;
+    }
+
+    public String getUsuarioId() {
+        return usuarioId;
+    }
+
+    public void setUsuarioId(String usuarioId) {
+        this.usuarioId = usuarioId;
     }
 
     public LocalDateTime getCreatedAt() {

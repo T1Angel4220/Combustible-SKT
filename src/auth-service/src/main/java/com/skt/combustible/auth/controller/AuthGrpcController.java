@@ -289,6 +289,7 @@ public class AuthGrpcController extends AuthServiceGrpc.AuthServiceImplBase {
             case ADMIN -> com.skt.combustible.auth.grpc.Role.ADMIN;
             case OPERADOR -> com.skt.combustible.auth.grpc.Role.OPERADOR;
             case SUPERVISOR -> com.skt.combustible.auth.grpc.Role.SUPERVISOR;
+            case CONDUCTOR -> com.skt.combustible.auth.grpc.Role.CONDUCTOR;
         };
     }
 
@@ -300,6 +301,7 @@ public class AuthGrpcController extends AuthServiceGrpc.AuthServiceImplBase {
             case ADMIN -> RolUsuario.ADMIN;
             case OPERADOR -> RolUsuario.OPERADOR;
             case SUPERVISOR -> RolUsuario.SUPERVISOR;
+            case CONDUCTOR -> RolUsuario.CONDUCTOR;
             default -> RolUsuario.OPERADOR; // Valor por defecto
         };
     }

@@ -5,6 +5,7 @@ import com.skt.combustible.fuel.domain.dto.FuelConsumptionCreateRequest;
 import com.skt.combustible.fuel.domain.dto.FuelConsumptionResponse;
 import com.skt.combustible.fuel.domain.dto.FuelConsumptionUpdateRequest;
 import com.skt.combustible.fuel.domain.exception.FuelConsumptionNotFoundException;
+import com.skt.combustible.shared.domain.enums.RolUsuario;
 import com.skt.combustible.shared.domain.enums.TipoMaquinaria;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -13,6 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -38,7 +42,29 @@ public class FuelRestController {
     private FuelConsumptionService fuelConsumptionService;
     
     /**
+     * Verifica si el usuario actual tiene un rol específico
+     */
+    private boolean hasRole(RolUsuario rol) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        String roleString = "ROLE_" + rol.name();
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals(roleString));
+    }
+
+    /**
+     * Verifica si el usuario es ADMIN o SUPERVISOR
+     */
+    private boolean isAdminOrSupervisor() {
+        return hasRole(RolUsuario.ADMIN) || hasRole(RolUsuario.SUPERVISOR);
+    }
+    
+    /**
      * Obtiene todos los registros de combustible
+     * Todos los roles pueden ver registros
      */
     @GetMapping
     public ResponseEntity<List<FuelConsumptionResponse>> getAllFuelConsumptions() {
@@ -76,10 +102,16 @@ public class FuelRestController {
     
     /**
      * Crea un nuevo registro de combustible
+     * Solo ADMIN y SUPERVISOR pueden crear registros
      */
     @PostMapping
     public ResponseEntity<?> createFuelConsumption(@Valid @RequestBody FuelConsumptionCreateRequest request) {
         try {
+            if (!isAdminOrSupervisor()) {
+                logger.warn("Intento de crear registro de combustible por usuario sin permisos");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "No tiene permisos para crear registros de combustible", "status", 403));
+            }
             logger.info("REST: Creando nuevo registro de combustible: {} litros para vehículo {}",
                     request.getCantidadLitros(), request.getVehiculoId());
             FuelConsumptionResponse consumption = fuelConsumptionService.crearRegistro(request);
@@ -97,11 +129,17 @@ public class FuelRestController {
     
     /**
      * Actualiza un registro de combustible
+     * Solo ADMIN y SUPERVISOR pueden actualizar registros
      */
     @PutMapping("/{id}")
     public ResponseEntity<?> updateFuelConsumption(@PathVariable("id") String id,
             @Valid @RequestBody FuelConsumptionUpdateRequest request) {
         try {
+            if (!isAdminOrSupervisor()) {
+                logger.warn("Intento de actualizar registro de combustible por usuario sin permisos");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "No tiene permisos para actualizar registros", "status", 403));
+            }
             logger.info("REST: Actualizando registro de combustible con ID: {}", id);
             FuelConsumptionResponse consumption = fuelConsumptionService.actualizarRegistro(id, request);
             return ResponseEntity.ok(consumption);
@@ -121,10 +159,16 @@ public class FuelRestController {
     
     /**
      * Elimina un registro de combustible (soft delete)
+     * Solo ADMIN puede eliminar registros
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteFuelConsumption(@PathVariable("id") String id) {
         try {
+            if (!hasRole(RolUsuario.ADMIN)) {
+                logger.warn("Intento de eliminar registro de combustible por usuario sin permisos");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "No tiene permisos para eliminar registros", "status", 403));
+            }
             logger.info("REST: Eliminando registro de combustible con ID: {}", id);
             fuelConsumptionService.eliminarRegistro(id);
             return ResponseEntity.noContent().build();
@@ -252,6 +296,7 @@ public class FuelRestController {
     
     /**
      * Obtiene estadísticas de consumo
+     * Solo ADMIN y SUPERVISOR pueden ver estadísticas
      */
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getFuelConsumptionStats(
@@ -259,6 +304,11 @@ public class FuelRestController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin) {
         try {
+            if (!isAdminOrSupervisor()) {
+                logger.warn("Intento de ver estadísticas por usuario sin permisos");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "No tiene permisos para ver estadísticas"));
+            }
             logger.info("REST: Obteniendo estadísticas de consumo");
             FuelConsumptionService.FuelConsumptionStatsDTO stats = 
                     fuelConsumptionService.obtenerEstadisticas(tipoMaquinaria, fechaInicio, fechaFin);

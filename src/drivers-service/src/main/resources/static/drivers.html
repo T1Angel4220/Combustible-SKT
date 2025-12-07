@@ -25,7 +25,7 @@
         </a>
         <a href="drivers.html" class="nav-item active">
           <i class="fas fa-users"></i>
-          <span>Choferes</span>
+          <span>Conductores</span>
         </a>
         <a href="http://localhost:8082/vehicles.html" class="nav-item">
           <i class="fas fa-truck"></i>
@@ -42,10 +42,6 @@
       </nav>
       
       <div class="sidebar-footer">
-        <a href="#" class="nav-item">
-          <i class="fas fa-cog"></i>
-          <span>Configuración</span>
-        </a>
         <a href="#" class="nav-item" onclick="logout()">
           <i class="fas fa-sign-out-alt"></i>
           <span>Cerrar Sesión</span>
@@ -64,9 +60,13 @@
           </div>
         </div>
         <div class="header-right">
-          <button class="add-driver-btn" onclick="showAddDriverModal()">
+          <button class="add-driver-btn" onclick="showAddDriverModal()" style="margin-right: 10px;">
             <i class="fas fa-plus"></i>
             Agregar Chofer
+          </button>
+          <button class="add-driver-btn" onclick="showCreateUserModal()" style="background-color: #28a745;">
+            <i class="fas fa-user-plus"></i>
+            Crear Usuario
           </button>
         </div>
       </header>
@@ -185,12 +185,18 @@
         </div>
         <div class="form-row">
           <div class="form-group">
+            <label>Fecha de Contratación</label>
+            <input type="date" id="driverFechaContratacion">
+          </div>
+          <div class="form-group">
             <label>Tipo de Maquinaria</label>
             <select id="driverTipoMaquinaria">
               <option value="">Sin asignar</option>
               <!-- Las opciones se cargarán dinámicamente -->
             </select>
           </div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label>Estado</label>
             <select id="driverEstado" required>
@@ -230,6 +236,49 @@
         <button class="notification-btn btn-secondary" onclick="closeConfirmationModal(false)">Cancelar</button>
         <button class="notification-btn btn-primary" onclick="closeConfirmationModal(true)">Confirmar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Create User Modal -->
+  <div id="createUserModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Crear Usuario para Chofer</h2>
+        <button class="close-btn" onclick="closeCreateUserModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="createUserForm" class="modal-form">
+        <div class="form-group">
+          <label>Seleccionar Chofer</label>
+          <select id="selectedDriverId" required>
+            <option value="">-- Seleccione un chofer --</option>
+            <!-- Se cargarán los choferes dinámicamente -->
+          </select>
+        </div>
+        <div id="driverInfo" style="display: none; padding: 15px; background-color: #f5f5f5; border-radius: 5px; margin: 15px 0;">
+          <h4>Información del Chofer</h4>
+          <p><strong>Nombre:</strong> <span id="selectedDriverNombre"></span></p>
+          <p><strong>Apellido:</strong> <span id="selectedDriverApellido"></span></p>
+          <p><strong>Email:</strong> <span id="selectedDriverEmail"></span></p>
+          <p><strong>DNI:</strong> <span id="selectedDriverDni"></span></p>
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="userPassword" required placeholder="Ingrese la contraseña para el usuario">
+        </div>
+        <div class="form-group">
+          <label>Rol del Usuario</label>
+          <select id="userRol" required>
+            <option value="CONDUCTOR">Conductor</option>
+            <option value="SUPERVISOR">Supervisor</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeCreateUserModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Crear Usuario</button>
+        </div>
+      </form>
     </div>
   </div>
 

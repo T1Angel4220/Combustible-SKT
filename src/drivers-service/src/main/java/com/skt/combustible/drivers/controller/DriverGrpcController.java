@@ -51,9 +51,12 @@ public class DriverGrpcController extends DriverServiceGrpc.DriverServiceImplBas
             domainRequest.setEstado(mapEstadoFromGrpc(request.getEstado()));
             domainRequest.setTipoMaquinariaAsignada(mapTipoMaquinariaFromGrpc(request.getTipoMaquinariaAsignada()));
 
+            // Obtener el token del contexto gRPC
+            String token = com.skt.combustible.drivers.infrastructure.interceptor.JwtServerInterceptor.USER_TOKEN_CONTEXT_KEY.get();
+
             // Llamar al servicio de dominio
             com.skt.combustible.drivers.domain.dto.DriverResponse domainResponse = driverService
-                    .createDriver(domainRequest);
+                    .createDriver(domainRequest, token);
 
             // Convertir de dominio a gRPC
             com.skt.combustible.drivers.grpc.DriverResponse grpcResponse = com.skt.combustible.drivers.grpc.DriverResponse

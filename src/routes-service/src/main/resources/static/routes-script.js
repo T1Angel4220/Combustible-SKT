@@ -8,6 +8,7 @@ let vehicles = [];
 let drivers = [];
 let editingRouteId = null;
 let confirmationCallback = null;
+let currentUserRole = null; // Rol del usuario actual
 
 // Variables para Leaflet (mapa gratuito)
 let map = null;
@@ -15,15 +16,15 @@ let mapMarker = null;
 let currentLocationField = null; // 'origen' o 'destino'
 let selectedVehicle = null; // Para calcular consumo estimado
 
-document.addEventListener('DOMContentLoaded', function() {
-    checkAuth();
+document.addEventListener('DOMContentLoaded', async function() {
+    await checkAuth();
     loadRoutes();
     loadVehicles();
     loadDrivers();
     setupEventListeners();
 });
 
-function checkAuth() {
+async function checkAuth() {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('token');
     const userFromUrl = urlParams.get('user');
@@ -47,6 +48,41 @@ function checkAuth() {
         if (sessionStorage.getItem('currentUser')) {
             localStorage.setItem('currentUser', sessionStorage.getItem('currentUser'));
         }
+    }
+    
+    // Obtener el rol del usuario desde el token
+    try {
+        const response = await fetch('http://localhost:8085/api/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const userData = await response.json();
+            currentUserRole = userData.rol || userData.role || null;
+            // Aplicar restricciones de UI según el rol
+            applyRoleBasedUI();
+        }
+    } catch (error) {
+        console.error('Error obteniendo información del usuario:', error);
+    }
+}
+
+function applyRoleBasedUI() {
+    // Ocultar botones según el rol
+    const addRouteBtn = document.querySelector('.btn-primary');
+    
+    // Solo ADMIN y SUPERVISOR pueden crear rutas
+    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'SUPERVISOR') {
+        if (addRouteBtn && addRouteBtn.textContent.includes('Nueva Ruta')) {
+            addRouteBtn.style.display = 'none';
+        }
+    }
+    
+    // Re-renderizar la tabla para ocultar botones de acciones
+    if (routes.length > 0) {
+        renderRoutes();
     }
 }
 

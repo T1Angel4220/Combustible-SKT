@@ -16,7 +16,7 @@ IF NOT EXISTS (
         pg_type
     WHERE
         typname = 'rol_usuario_enum'
-) THEN CREATE TYPE common_schema.rol_usuario_enum AS ENUM ('ADMIN', 'OPERADOR', 'SUPERVISOR', 'CONDUCTOR');
+) THEN CREATE TYPE common_schema.rol_usuario_enum AS1
 
 END IF;
 
