@@ -226,6 +226,8 @@ async function loadDrivers() {
             const data = await response.json();
             drivers = Array.isArray(data) ? data : (data.drivers || []);
             updateMetrics();
+            // Renderizar choferes inmediatamente con todos los datos
+            renderDrivers();
             // Cargar asignaciones después de cargar drivers
             await loadDriverAssignments();
         } else {
@@ -249,29 +251,77 @@ function updateMetrics() {
 }
 
 function filterDrivers() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const statusFilter = document.getElementById('statusFilter').value;
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    
+    if (!searchInput || !statusFilter) return;
+    
+    const searchTerm = searchInput.value.toLowerCase();
+    const statusFilterValue = statusFilter.value;
     
     let filtered = drivers;
     
+    // Aplicar filtro de búsqueda si hay término
     if (searchTerm) {
         filtered = filtered.filter(d => 
             d.nombre?.toLowerCase().includes(searchTerm) ||
             d.apellido?.toLowerCase().includes(searchTerm) ||
-            d.email?.toLowerCase().includes(searchTerm)
+            d.email?.toLowerCase().includes(searchTerm) ||
+            d.dni?.toLowerCase().includes(searchTerm) ||
+            d.licencia?.toLowerCase().includes(searchTerm)
         );
     }
     
-    if (statusFilter) {
-        filtered = filtered.filter(d => d.estado === statusFilter);
+    // Aplicar filtro de estado solo si hay un valor seleccionado (no "Todos los estados")
+    if (statusFilterValue) {
+        filtered = filtered.filter(d => d.estado === statusFilterValue);
     }
     
     renderDrivers(filtered);
 }
 
-function renderDrivers(driversToRender = drivers) {
+function renderDrivers(driversToRender = null) {
     const tbody = document.getElementById('driversTableBody');
     if (!tbody) return;
+    
+    // Si no se proporciona una lista específica, usar todos los choferes
+    // y aplicar el filtro actual
+    if (driversToRender === null) {
+        const searchInput = document.getElementById('searchInput');
+        const statusFilter = document.getElementById('statusFilter');
+        
+        let filtered = drivers;
+        
+        if (searchInput && searchInput.value) {
+            const searchTerm = searchInput.value.toLowerCase();
+            filtered = filtered.filter(d => 
+                d.nombre?.toLowerCase().includes(searchTerm) ||
+                d.apellido?.toLowerCase().includes(searchTerm) ||
+                d.email?.toLowerCase().includes(searchTerm) ||
+                d.dni?.toLowerCase().includes(searchTerm) ||
+                d.licencia?.toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        if (statusFilter && statusFilter.value) {
+            filtered = filtered.filter(d => d.estado === statusFilter.value);
+        }
+        
+        driversToRender = filtered;
+    }
+    
+    // Si no hay choferes para mostrar, mostrar mensaje
+    if (!driversToRender || driversToRender.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
+                    <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                    <p>No se encontraron choferes con los filtros seleccionados</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
     
     tbody.innerHTML = driversToRender.map(driver => {
         const initials = `${driver.nombre?.[0] || ''}${driver.apellido?.[0] || ''}`.toUpperCase();

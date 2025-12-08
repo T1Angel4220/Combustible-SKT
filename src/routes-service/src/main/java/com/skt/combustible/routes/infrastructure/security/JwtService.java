@@ -50,10 +50,23 @@ public class JwtService {
 
     /**
      * Extrae el rol del usuario del token JWT
+     * 
+     * @param token el token JWT
+     * @return el rol del usuario extraído del token
+     * @throws IllegalArgumentException si el rol no existe o no es válido
      */
     public RolUsuario getRolFromToken(String token) {
         String rolString = getClaimFromToken(token, claims -> claims.get("rol", String.class));
-        return RolUsuario.valueOf(rolString);
+        if (rolString == null || rolString.trim().isEmpty()) {
+            logger.error("El claim 'rol' no existe o está vacío en el token JWT");
+            throw new IllegalArgumentException("El claim 'rol' no existe o está vacío en el token JWT");
+        }
+        try {
+            return RolUsuario.valueOf(rolString);
+        } catch (IllegalArgumentException e) {
+            logger.error("Rol '{}' no es un valor válido del enum RolUsuario", rolString);
+            throw new IllegalArgumentException("Rol '" + rolString + "' no es válido", e);
+        }
     }
 
     /**
