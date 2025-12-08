@@ -1,233 +1,64 @@
 @echo off
-echo ============================================
-echo Sistema Combustible SKT - Inicio Completo
-echo ============================================
-echo.
-echo Este script iniciara:
-echo 1. MongoDB (sin autenticacion)
-echo 2. Auth Service (puerto 8085)
-echo 3. Drivers Service (puerto 8081)
-echo 4. Vehicles Service (puerto 8082)
-echo 5. Routes Service (puerto 8083)
-echo 6. Fuel Service (puerto 8084)
-echo 7. Gateway Service (puerto 8090)
-echo.
-echo Cada servicio se abrira en una nueva ventana.
-echo.
-pause
+setlocal enabledelayedexpansion
 
-REM ==========================================
-REM PASO 1: Levantar MongoDB
-REM ==========================================
-echo.
-echo [1/9] Iniciando MongoDB...
-echo.
+title Sistema Combustible SKT - Inicio con MongoDB Atlas
 
-REM Detener MongoDB previo
-docker stop mongodb-local 2>nul
-docker rm mongodb-local 2>nul
+REM Cambiar al directorio del script
+cd /d "%~dp0"
 
-REM Iniciar MongoDB
-docker run -d --name mongodb-local -p 27017:27017 -v mongodb_data:/data/db mongo:7.0
-if %errorlevel% neq 0 (
-    echo ERROR: No se pudo iniciar MongoDB
+REM Verificar que estamos en el directorio correcto
+if not exist "src\auth-service\pom.xml" (
+    echo ERROR: No se encontro el proyecto en el directorio actual.
+    echo.
+    echo Asegurate de ejecutar este script desde el directorio raiz del proyecto.
+    echo Directorio actual: %CD%
+    echo.
     pause
     exit /b 1
 )
 
-REM Esperar a que MongoDB este listo
-echo Esperando que MongoDB este listo...
-set /a counter=0
-:wait_mongo
-set /a counter+=1
-docker exec mongodb-local mongosh --quiet --eval "db.adminCommand('ping')" >nul 2>&1
-if %errorlevel% equ 0 goto mongo_ready
-if %counter% geq 30 goto mongo_timeout
-ping 127.0.0.1 -n 2 >nul
-goto wait_mongo
+echo ============================================
+echo Sistema Combustible SKT - Inicio
+echo Con MongoDB Atlas
+echo ============================================
+echo.
+echo Directorio: %CD%
+echo.
 
-:mongo_timeout
-echo ERROR: MongoDB no respondio
+REM Verificar conexion a MongoDB Atlas (opcional)
+where mongosh >nul 2>&1
+if not errorlevel 1 (
+    echo Verificando conexion a MongoDB Atlas...
+    set "ATLAS_URI=mongodb+srv://907johan_db_user:piIe4vWfuADsnRM6@combustibleskt.4n4nf9z.mongodb.net/?retryWrites=true&w=majority&readPreference=secondaryPreferred&maxPoolSize=50&minPoolSize=10&appName=combustibleskt"
+    mongosh "!ATLAS_URI!" --quiet --eval "db.adminCommand('ping')" >nul 2>&1
+    if errorlevel 1 (
+        echo ADVERTENCIA: No se pudo conectar a MongoDB Atlas
+        echo Los servicios intentaran conectarse de todas formas.
+        echo.
+    ) else (
+        echo OK - Conexion a MongoDB Atlas verificada
+        echo.
+    )
+)
+
+echo Se iniciaran los siguientes servicios:
+echo 1. Auth Service (puerto 8085) - MongoDB Atlas
+echo 2. Drivers Service (puerto 8081) - MongoDB Atlas
+echo 3. Vehicles Service (puerto 8082) - MongoDB Atlas
+echo 4. Routes Service (puerto 8083) - MongoDB Atlas
+echo 5. Fuel Service (puerto 8084) - MongoDB Atlas
+echo 6. Gateway Service (puerto 8090)
+echo.
+echo IMPORTANTE: Las ventanas de los servicios permaneceran abiertas.
+echo Si ves errores, revisa los logs en cada ventana.
+echo.
 pause
-exit /b 1
-
-:mongo_ready
-echo OK - MongoDB iniciado en puerto 27017
-echo.
 
 REM ==========================================
-REM PASO 2: Verificar y cargar datos de prueba
+REM Paso 1: Compilar proyecto (opcional)
 REM ==========================================
-echo [2/9] Verificando datos de prueba...
-echo.
-
-REM Verificar si ya existen datos
-echo Verificando datos existentes...
-docker exec mongodb-local mongosh auth_db --quiet --eval "print('Usuarios:', db.users.countDocuments())" > temp_auth.txt 2>&1
-docker exec mongodb-local mongosh drivers_db --quiet --eval "print('Choferes:', db.drivers.countDocuments())" > temp_drivers.txt 2>&1
-docker exec mongodb-local mongosh vehicles_db --quiet --eval "print('Vehiculos:', db.vehicles.countDocuments())" > temp_vehicles.txt 2>&1
-docker exec mongodb-local mongosh routes_db --quiet --eval "print('Rutas:', db.routes.countDocuments())" > temp_routes.txt 2>&1
-docker exec mongodb-local mongosh fuel_db --quiet --eval "print('Registros:', db.fuel_consumptions.countDocuments())" > temp_fuel.txt 2>&1
-
-REM Leer los resultados
-set /a auth_count=0
-set /a drivers_count=0
-set /a vehicles_count=0
-set /a routes_count=0
-set /a fuel_count=0
-
-for /f %%i in (temp_auth.txt) do set auth_count=%%i
-for /f %%i in (temp_drivers.txt) do set drivers_count=%%i
-for /f %%i in (temp_vehicles.txt) do set vehicles_count=%%i
-for /f %%i in (temp_routes.txt) do set routes_count=%%i
-for /f %%i in (temp_fuel.txt) do set fuel_count=%%i
-
-REM Limpiar archivos temporales
-del temp_auth.txt 2>nul
-del temp_drivers.txt 2>nul
-del temp_vehicles.txt 2>nul
-del temp_routes.txt 2>nul
-del temp_fuel.txt 2>nul
-
-echo Estado actual de la base de datos:
-echo   - Usuarios (auth_db): %auth_count%
-echo   - Choferes (drivers_db): %drivers_count%
-echo   - Vehiculos (vehicles_db): %vehicles_count%
-echo   - Rutas (routes_db): %routes_count%
-echo   - Registros Combustible (fuel_db): %fuel_count%
-echo.
-
-REM Verificar si hay datos existentes
-set /a total_data=%auth_count%+%drivers_count%+%vehicles_count%+%routes_count%+%fuel_count%
-
-if %total_data% gtr 0 (
-    echo ============================================
-    echo   DATOS EXISTENTES DETECTADOS
-    echo ============================================
-    echo.
-    echo Se encontraron datos en la base de datos.
-    echo.
-    echo Opciones disponibles:
-    echo [1] Mantener datos existentes (recomendado)
-    echo [2] Recargar todos los datos (eliminar y recrear)
-    echo [3] Agregar datos faltantes (solo si faltan)
-    echo.
-    choice /c 123 /n /m "Selecciona una opcion [1-3]: "
-    
-    if errorlevel 3 goto add_missing_data
-    if errorlevel 2 goto reload_all_data
-    if errorlevel 1 goto keep_existing_data
-) else (
-    echo ============================================
-    echo   BASE DE DATOS VACIA
-    echo ============================================
-    echo.
-    echo No se encontraron datos. Se cargaran datos de prueba.
-    goto load_initial_data
-)
-
-:keep_existing_data
-echo Manteniendo datos existentes...
-goto after_data_decision
-
-:reload_all_data
-echo ============================================
-echo   RECARGANDO TODOS LOS DATOS
-echo ============================================
-echo.
-echo ADVERTENCIA: Esto eliminara todos los datos existentes!
-choice /c SN /n /m "¿Estas seguro? [S/N]: "
-if errorlevel 2 goto keep_existing_data
-
-echo Eliminando datos existentes...
-docker exec mongodb-local mongosh auth_db --eval "db.users.deleteMany({})"
-docker exec mongodb-local mongosh drivers_db --eval "db.drivers.deleteMany({})"
-docker exec mongodb-local mongosh vehicles_db --eval "db.vehicles.deleteMany({})"
-docker exec mongodb-local mongosh vehicles_db --eval "db.asignaciones_vehiculos.deleteMany({})"
-docker exec mongodb-local mongosh routes_db --eval "db.routes.deleteMany({})"
-docker exec mongodb-local mongosh fuel_db --eval "db.fuel_consumptions.deleteMany({})"
-echo Datos existentes eliminados.
-goto load_initial_data
-
-:add_missing_data
-echo ============================================
-echo   AGREGANDO DATOS FALTANTES
-echo ============================================
-echo.
-if %auth_count% equ 0 (
-    echo Cargando datos de autenticacion...
-    call add-auth-data.bat >nul 2>&1
-)
-if %drivers_count% equ 0 (
-    echo Cargando datos de choferes...
-    call add-drivers-data.bat >nul 2>&1
-)
-if %vehicles_count% equ 0 (
-    echo Cargando datos de vehiculos...
-    call add-simple-data.bat >nul 2>&1
-)
-if %routes_count% equ 0 (
-    echo Cargando asignaciones de vehiculos a choferes...
-    call add-assignments-data.bat >nul 2>&1
-    echo Cargando datos de rutas...
-    call add-routes-data.bat >nul 2>&1
-)
-if %fuel_count% equ 0 (
-    echo Cargando datos de combustible...
-    call add-fuel-data.bat >nul 2>&1
-)
-echo Datos faltantes agregados.
-goto after_data_decision
-
-:load_initial_data
-echo ============================================
-echo   CARGANDO DATOS INICIALES
-echo ============================================
-echo.
-echo [1/6] Cargando datos de autenticacion...
-call add-auth-data.bat >nul 2>&1
-echo OK - Usuarios de prueba creados
-
-echo [2/6] Cargando datos de choferes...
-call add-drivers-data.bat >nul 2>&1
-echo OK - Choferes de prueba creados
-
-echo [3/6] Cargando datos de vehiculos...
-call add-simple-data.bat >nul 2>&1
-echo OK - Vehiculos de prueba creados
-
-echo [4/6] Cargando asignaciones de vehiculos a choferes...
-call add-assignments-data.bat >nul 2>&1
-echo OK - Asignaciones de prueba creadas
-
-echo [5/6] Cargando datos de rutas...
-call add-routes-data.bat >nul 2>&1
-echo OK - Rutas de prueba creadas
-
-echo [6/6] Cargando datos de combustible...
-call add-fuel-data.bat >nul 2>&1
-echo OK - Registros de combustible de prueba creados
-
-echo.
-echo ============================================
-echo   DATOS DE PRUEBA CARGADOS EXITOSAMENTE
-echo ============================================
-echo.
-echo Credenciales de acceso:
-echo   Usuario: admin
-echo   Password: admin123
-echo.
-
-:after_data_decision
-echo.
-
-REM ==========================================
-REM PASO 3: Compilar el proyecto (opcional)
-REM ==========================================
-echo [3/9] Compilando proyecto...
-echo.
-echo Deseas compilar el proyecto? (Recomendado si hay cambios)
-echo [S] Si   [N] No (usar compilacion anterior)
+echo Deseas compilar el proyecto?
+echo [S] Si   [N] No
 choice /c SN /n /m "Selecciona una opcion: "
 
 if errorlevel 2 goto skip_compile
@@ -235,14 +66,18 @@ if errorlevel 1 goto do_compile
 
 :do_compile
 echo.
-echo Compilando con Maven (esto puede tomar 1-2 minutos)...
+echo Compilando proyecto con Maven (esto puede tomar 1-2 minutos)...
 call mvn clean install -DskipTests
 if %errorlevel% neq 0 (
-    echo ERROR: Fallo la compilacion
+    echo.
+    echo ERROR: Fallo la compilacion.
+    echo Revisa los mensajes de error arriba.
+    echo.
     pause
     exit /b 1
 )
-echo OK - Compilacion exitosa
+echo.
+echo Compilacion exitosa.
 goto after_compile
 
 :skip_compile
@@ -252,209 +87,181 @@ echo Saltando compilacion...
 echo.
 
 REM ==========================================
-REM PASO 4: Iniciar Auth Service
+REM Paso 2: Iniciar Auth Service
 REM ==========================================
-echo [4/9] Iniciando Auth Service (puerto 8085)...
-start "Auth Service - SKT" cmd /k "cd src\auth-service && echo Iniciando Auth Service... && mvn spring-boot:run"
-echo OK - Auth Service iniciado en nueva ventana
+echo [1/6] Iniciando Auth Service (puerto 8085)...
+echo   - Directorio: %~dp0src\auth-service
+echo   - Perfil: atlas
+echo   - MongoDB Atlas: combustibleskt.4n4nf9z.mongodb.net
+echo.
+start "Auth Service - SKT (Atlas)" cmd /k "cd /d %~dp0src\auth-service && echo ============================================ && echo Auth Service - MongoDB Atlas && echo ============================================ && echo Directorio: %CD% && echo Perfil: atlas && echo Puerto: 8085 && echo. && echo Iniciando servicio... && echo. && mvn spring-boot:run -Dspring-boot.run.profiles=atlas"
+if %errorlevel% neq 0 (
+    echo ERROR: No se pudo iniciar la ventana del Auth Service
+) else (
+    echo OK - Ventana de Auth Service abierta
+    echo   Espera a que el servicio inicie completamente...
+    echo   El frontend estara disponible en: http://localhost:8085/
+)
 ping 127.0.0.1 -n 5 >nul
 echo.
 
 REM ==========================================
-REM PASO 5: Iniciar Drivers Service
+REM Paso 3: Iniciar Drivers Service
 REM ==========================================
-echo [5/9] Iniciando Drivers Service (puerto 8081)...
-start "Drivers Service - SKT" cmd /k "cd src\drivers-service && echo Iniciando Drivers Service... && mvn spring-boot:run"
-echo OK - Drivers Service iniciado en nueva ventana
+echo [2/6] Iniciando Drivers Service (puerto 8081)...
+start "Drivers Service - SKT (Atlas)" cmd /k "cd /d %~dp0src\drivers-service && echo ============================================ && echo Drivers Service - MongoDB Atlas && echo ============================================ && echo. && echo Iniciando con perfil 'atlas'... && echo. && mvn spring-boot:run -Dspring-boot.run.profiles=atlas || (echo. && echo ERROR: Fallo al iniciar Drivers Service && echo Revisa los logs arriba para mas detalles && pause)"
+echo OK - Drivers Service iniciado
 ping 127.0.0.1 -n 5 >nul
 echo.
 
 REM ==========================================
-REM PASO 6: Iniciar Vehicles Service
+REM Paso 4: Iniciar Vehicles Service
 REM ==========================================
-echo [6/9] Iniciando Vehicles Service (puerto 8082)...
-start "Vehicles Service - SKT" cmd /k "cd src\vehicles-service && echo Iniciando Vehicles Service... && mvn spring-boot:run"
-echo OK - Vehicles Service iniciado en nueva ventana
+echo [3/6] Iniciando Vehicles Service (puerto 8082)...
+start "Vehicles Service - SKT (Atlas)" cmd /k "cd /d %~dp0src\vehicles-service && echo ============================================ && echo Vehicles Service - MongoDB Atlas && echo ============================================ && echo. && echo Iniciando con perfil 'atlas'... && echo. && mvn spring-boot:run -Dspring-boot.run.profiles=atlas || (echo. && echo ERROR: Fallo al iniciar Vehicles Service && echo Revisa los logs arriba para mas detalles && pause)"
+echo OK - Vehicles Service iniciado
 ping 127.0.0.1 -n 5 >nul
 echo.
 
 REM ==========================================
-REM PASO 7: Iniciar Routes Service
+REM Paso 5: Iniciar Routes Service
 REM ==========================================
-echo [7/9] Iniciando Routes Service (puerto 8083)...
-start "Routes Service - SKT" cmd /k "cd src\routes-service && echo Iniciando Routes Service... && mvn spring-boot:run"
-echo OK - Routes Service iniciado en nueva ventana
+echo [4/6] Iniciando Routes Service (puerto 8083)...
+start "Routes Service - SKT (Atlas)" cmd /k "cd /d %~dp0src\routes-service && echo ============================================ && echo Routes Service - MongoDB Atlas && echo ============================================ && echo. && echo Iniciando con perfil 'atlas'... && echo. && mvn spring-boot:run -Dspring-boot.run.profiles=atlas || (echo. && echo ERROR: Fallo al iniciar Routes Service && echo Revisa los logs arriba para mas detalles && pause)"
+echo OK - Routes Service iniciado
 ping 127.0.0.1 -n 5 >nul
 echo.
 
 REM ==========================================
-REM PASO 8: Iniciar Fuel Service
+REM Paso 6: Iniciar Fuel Service
 REM ==========================================
-echo [8/9] Iniciando Fuel Service (puerto 8084)...
-start "Fuel Service - SKT" cmd /k "cd src\fuel-service && echo Iniciando Fuel Service... && mvn spring-boot:run"
-echo OK - Fuel Service iniciado en nueva ventana
+echo [5/6] Iniciando Fuel Service (puerto 8084)...
+start "Fuel Service - SKT (Atlas)" cmd /k "cd /d %~dp0src\fuel-service && echo ============================================ && echo Fuel Service - MongoDB Atlas && echo ============================================ && echo. && echo Iniciando con perfil 'atlas'... && echo. && mvn spring-boot:run -Dspring-boot.run.profiles=atlas || (echo. && echo ERROR: Fallo al iniciar Fuel Service && echo Revisa los logs arriba para mas detalles && pause)"
+echo OK - Fuel Service iniciado
 ping 127.0.0.1 -n 5 >nul
 echo.
 
 REM ==========================================
-REM PASO 9: Iniciar Gateway Service
+REM Paso 7: Iniciar Gateway Service
 REM ==========================================
-echo [9/9] Iniciando Gateway Service (puerto 8090)...
-start "Gateway Service - SKT" cmd /k "cd src\gateway-service && echo Iniciando Gateway Service... && mvn spring-boot:run"
-echo OK - Gateway Service iniciado en nueva ventana
+echo [6/6] Iniciando Gateway Service (puerto 8090)...
+start "Gateway Service - SKT" cmd /k "cd /d %~dp0src\gateway-service && echo ============================================ && echo Gateway Service && echo ============================================ && echo. && echo Iniciando Gateway Service... && echo. && mvn spring-boot:run || (echo. && echo ERROR: Fallo al iniciar Gateway Service && echo Revisa los logs arriba para mas detalles && pause)"
+echo OK - Gateway Service iniciado
+ping 127.0.0.1 -n 5 >nul
 echo.
 
-REM ==========================================
-REM Esperar a que los servicios esten listos
-REM ==========================================
+echo.
 echo ============================================
-echo Esperando que los servicios esten listos...
+echo Ventanas de Servicios Abiertas
 echo ============================================
 echo.
-echo Esto puede tomar 30-60 segundos...
+echo IMPORTANTE: Revisa las ventanas de cada servicio.
 echo.
-
-REM Esperar 30 segundos para que Spring Boot inicie
-echo Esperando inicializacion de Spring Boot...
-for /l %%i in (30,-1,1) do (
-    echo Tiempo restante: %%i segundos...
+echo Si ves errores de conexion a MongoDB:
+echo   1. Verifica que tu IP este permitida en Network Access de MongoDB Atlas
+echo   2. Verifica que tengas conexion a Internet
+echo   3. Revisa las credenciales en application-atlas.yml
+echo.
+echo Esperando que los servicios inicien (45 segundos)...
+echo Esto puede tardar mas si es la primera vez...
+echo.
+for /l %%i in (45,-1,1) do (
+    set /a minutos=%%i/60
+    set /a segundos=%%i%%60
+    echo Tiempo restante: !minutos!m !segundos!s...
     ping 127.0.0.1 -n 2 >nul
 )
 echo.
-
-REM ==========================================
-REM Verificar servicios
-REM ==========================================
-echo Verificando estado de servicios...
+echo Verificando estado de los servicios...
 echo.
-
-echo [Auth Service - Puerto 8085]
+REM Verificar estado de Auth Service
+echo Verificando Auth Service...
 curl -s http://localhost:8085/actuator/health >nul 2>&1
 if %errorlevel% equ 0 (
-    echo   Estado: OK
+    echo   [OK] Auth Service esta respondiendo
+    set AUTH_OK=1
 ) else (
-    echo   Estado: Iniciando... (puede tardar mas)
+    echo   [ESPERANDO] Auth Service aun no responde
+    echo   Esto es normal si acaba de iniciar. Espera unos segundos mas.
+    set AUTH_OK=0
 )
-
 echo.
-echo [Drivers Service - Puerto 8081]
-curl -s http://localhost:8081/actuator/health >nul 2>&1
-if %errorlevel% equ 0 (
-    echo   Estado: OK
-) else (
-    echo   Estado: Iniciando... (puede tardar mas)
-)
 
-echo.
-echo [Vehicles Service - Puerto 8082]
-curl -s http://localhost:8082/actuator/health >nul 2>&1
-if %errorlevel% equ 0 (
-    echo   Estado: OK
-) else (
-    echo   Estado: Iniciando... (puede tardar mas)
-)
-
-echo.
-echo [Routes Service - Puerto 8083]
-curl -s http://localhost:8083/actuator/health >nul 2>&1
-if %errorlevel% equ 0 (
-    echo   Estado: OK
-) else (
-    echo   Estado: Iniciando... (puede tardar mas)
-)
-
-echo.
-echo [Fuel Service - Puerto 8084]
-curl -s http://localhost:8084/actuator/health >nul 2>&1
-if %errorlevel% equ 0 (
-    echo   Estado: OK
-) else (
-    echo   Estado: Iniciando... (puede tardar mas)
-)
-
-echo.
-echo [Gateway Service - Puerto 8090]
-curl -s http://localhost:8090/api/v1/gateway/health >nul 2>&1
-if %errorlevel% equ 0 (
-    echo   Estado: OK
-) else (
-    echo   Estado: Iniciando... (puede tardar mas)
-)
-
-echo.
 echo ============================================
-echo Sistema Iniciado Exitosamente!
-echo ============================================
-echo.
 echo Servicios disponibles:
+echo ============================================
 echo.
-echo  MongoDB:
-echo    - Puerto: 27017
-echo    - Conexion: mongodb://localhost:27017
-echo    - Bases de datos: auth_db, drivers_db, vehicles_db, routes_db, fuel_db
+echo  MongoDB Atlas:
+echo    - Cluster: combustibleskt.4n4nf9z.mongodb.net
+echo    - Usuario: 907johan_db_user
 echo.
-echo  Auth Service:
+echo  Auth Service (Puerto 8085):
+if defined AUTH_OK if !AUTH_OK! equ 1 (
+    echo    - Estado: [OK] Funcionando
+) else (
+    echo    - Estado: [INICIANDO] Espera unos segundos...
+)
 echo    - Frontend: http://localhost:8085/
+echo    - Login: http://localhost:8085/index.html
+echo    - Dashboard: http://localhost:8085/dashboard.html
 echo    - API: http://localhost:8085/api/auth
 echo    - Health: http://localhost:8085/actuator/health
 echo.
-echo  Drivers Service:
+echo  Drivers Service (Puerto 8081):
 echo    - Frontend: http://localhost:8081/drivers.html
 echo    - API: http://localhost:8081/api/v1/drivers
-echo    - gRPC: localhost:9091
-echo    - Health: http://localhost:8081/actuator/health
 echo.
-echo  Vehicles Service:
+echo  Vehicles Service (Puerto 8082):
 echo    - Frontend: http://localhost:8082/vehicles.html
 echo    - API: http://localhost:8082/api/v1/vehicles
-echo    - gRPC: localhost:9092
-echo    - Health: http://localhost:8082/actuator/health
 echo.
-echo  Routes Service:
+echo  Routes Service (Puerto 8083):
 echo    - Frontend: http://localhost:8083/routes.html
 echo    - API: http://localhost:8083/api/v1/routes
-echo    - gRPC: localhost:9093
-echo    - Health: http://localhost:8083/actuator/health
 echo.
-echo  Fuel Service:
+echo  Fuel Service (Puerto 8084):
 echo    - Frontend: http://localhost:8084/fuel.html
 echo    - API: http://localhost:8084/api/v1/fuel
-echo    - gRPC: localhost:9094
-echo    - Health: http://localhost:8084/actuator/health
 echo.
-echo  Gateway Service:
-echo    - Drivers via Gateway: http://localhost:8090/api/v1/drivers
-echo    - Auth via Gateway: http://localhost:8090/api/v1/auth
-echo    - Health: http://localhost:8090/actuator/health
+echo  Gateway Service (Puerto 8090):
+echo    - API: http://localhost:8090/api/v1/
 echo.
 echo ============================================
 echo.
-echo Credenciales de prueba:
-echo   Usuario: admin
-echo   Password: admin123
+echo TROUBLESHOOTING:
 echo.
-echo Datos de prueba incluidos:
-echo   - 2 usuarios (admin, user)
-echo   - 6 choferes con diferentes tipos de maquinaria
-echo   - 6 vehiculos (CAMION, EXCAVADORA, VOLQUETE, CARGADOR, GRUA)
-echo   - 5 asignaciones de vehiculos a choferes
-echo   - 5 rutas de prueba (PENDIENTE, EN_CURSO, COMPLETADA)
-echo   - 7 registros de consumo de combustible
+echo Si el frontend no carga:
+echo   1. Espera 30-60 segundos mas (Spring Boot tarda en iniciar)
+echo   2. Revisa la ventana "Auth Service - SKT (Atlas)" para ver errores
+echo   3. Verifica que no haya errores de conexion a MongoDB Atlas
+echo   4. Ejecuta: verificar-servicios.bat para diagnosticar
 echo.
-echo ============================================
+echo Si ves errores de MongoDB:
+echo   1. Verifica tu IP en Network Access de MongoDB Atlas
+echo   2. Asegurate de tener conexion a Internet
+echo   3. Revisa las credenciales en application-atlas.yml
 echo.
 echo Deseas abrir el navegador en el Auth Service?
 choice /c SN /n /m "[S] Si   [N] No: "
 if errorlevel 2 goto skip_browser
-if errorlevel 1 start http://localhost:8085/
+if errorlevel 1 (
+    echo.
+    echo Abriendo navegador en http://localhost:8085/...
+    echo Si no carga, espera unos segundos y recarga la pagina.
+    start http://localhost:8085/
+)
 
 :skip_browser
 echo.
-echo Para detener todos los servicios:
-echo 1. Cierra las ventanas de cada servicio (Ctrl+C)
-echo 2. Ejecuta: docker stop mongodb-local
+echo ============================================
+echo   SERVICIOS EN EJECUCION
+echo ============================================
 echo.
-echo O usa el script: stop-all-services.bat
+echo Los servicios estan ejecutandose en ventanas separadas.
+echo Revisa cada ventana para ver los logs y posibles errores.
 echo.
-pause
-
+echo Para verificar el estado, ejecuta: verificar-servicios.bat
+echo.
+echo Presiona cualquier tecla para cerrar esta ventana...
+echo (Los servicios seguiran ejecutandose en sus propias ventanas)
+pause >nul

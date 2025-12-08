@@ -1,0 +1,60 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: drivers-service
+
+  data:
+    mongodb:
+      uri: ${MONGODB_ATLAS_URI:mongodb+srv://907johan_db_user:piIe4vWfuADsnRM6@combustibleskt.4n4nf9z.mongodb.net/drivers_db?retryWrites=true&w=majority&readPreference=secondaryPreferred&maxPoolSize=50&minPoolSize=10&appName=combustibleskt}
+      database: drivers_db
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging configurations
+logging:
+  level:
+    com.skt.combustible.drivers: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.data.mongodb.core.MongoTemplate: DEBUG
+    net.devh.boot.grpc: DEBUG
+    io.grpc: DEBUG
+
+# gRPC Configuration
+grpc:
+  server:
+    port: 9091
+    address: 0.0.0.0
+    security:
+      enabled: false
+    reflection-service-enabled: true
+    health-service-enabled: true
+    max-inbound-message-size: 4194304
+    max-inbound-metadata-size: 8192
+  client:
+    auth-service:
+      host: ${GRPC_AUTH_HOST:localhost}
+      port: ${GRPC_AUTH_PORT:9095}
+
+# Service Discovery (para comunicación entre microservicios)
+service:
+  urls:
+    vehicles-service: http://localhost:8082
+    routes-service: http://localhost:8083
+    fuel-service: http://localhost:8084
+    auth-service: http://localhost:8085
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKey1234567890123456789012345}
+  expiration: 86400000 # 24 horas en milisegundos
+

@@ -7,12 +7,8 @@ spring:
   
   data:
     mongodb:
-      # MongoDB Atlas (gratuito) - Reemplaza con tu URL
-      uri: mongodb+srv://usuario:password@cluster0.mongodb.net/auth_db?retryWrites=true&w=majority
+      uri: ${MONGODB_ATLAS_URI:mongodb+srv://907johan_db_user:piIe4vWfuADsnRM6@combustibleskt.4n4nf9z.mongodb.net/auth_db?retryWrites=true&w=majority&readPreference=secondaryPreferred&maxPoolSize=50&minPoolSize=10&appName=combustibleskt}
       database: auth_db
-      
-  profiles:
-    active: dev
 
 # Security JWT Configuration
 jwt:
