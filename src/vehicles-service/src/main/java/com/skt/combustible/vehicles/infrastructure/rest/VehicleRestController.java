@@ -63,13 +63,23 @@ public class VehicleRestController {
      * Solo ADMIN puede crear vehículos
      */
     @PostMapping
-    public ResponseEntity<VehicleResponse> crearVehiculo(@Valid @RequestBody VehicleCreateRequest request) {
-        if (!hasRole(RolUsuario.ADMIN)) {
-            logger.warn("Intento de crear vehículo por usuario sin permisos");
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    public ResponseEntity<?> crearVehiculo(@Valid @RequestBody VehicleCreateRequest request) {
+        try {
+            if (!hasRole(RolUsuario.ADMIN)) {
+                logger.warn("Intento de crear vehículo por usuario sin permisos");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            logger.debug("Creando vehículo con placa: {}", request.getPlaca());
+            VehicleResponse response = vehicleService.crearVehiculo(request);
+            logger.info("Vehículo creado exitosamente con placa: {}", response.getPlaca());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Error de validación al crear vehículo: {}", e.getMessage());
+            throw e; // Dejar que el ExceptionHandler lo maneje
+        } catch (Exception e) {
+            logger.error("Error inesperado al crear vehículo: {}", e.getMessage(), e);
+            throw e; // Dejar que el ExceptionHandler lo maneje
         }
-        VehicleResponse response = vehicleService.crearVehiculo(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
     /**
@@ -96,9 +106,16 @@ public class VehicleRestController {
      * Obtiene todos los vehículos
      */
     @GetMapping
-    public ResponseEntity<List<VehicleResponse>> obtenerTodosLosVehiculos() {
-        List<VehicleResponse> responses = vehicleService.obtenerTodosLosVehiculos();
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<?> obtenerTodosLosVehiculos() {
+        try {
+            logger.debug("Obteniendo todos los vehículos");
+            List<VehicleResponse> responses = vehicleService.obtenerTodosLosVehiculos();
+            logger.debug("Vehículos obtenidos: {}", responses.size());
+            return ResponseEntity.ok(responses);
+        } catch (Exception e) {
+            logger.error("Error al obtener todos los vehículos: {}", e.getMessage(), e);
+            throw e; // Dejar que el ExceptionHandler lo maneje
+        }
     }
     
     /**

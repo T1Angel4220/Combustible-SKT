@@ -1,7 +1,8 @@
 spring:
   data:
     mongodb:
-      uri: mongodb://vehicles_user:vehicles_pass@localhost:27017/vehicles_db?authSource=admin
+      uri: mongodb://localhost:27017/vehicles_db
+      database: vehicles_db
 
 logging:
   level:
