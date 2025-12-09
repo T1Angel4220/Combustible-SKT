@@ -34,23 +34,14 @@ RUN mvn clean install -DskipTests
 WORKDIR /app/src/auth-service
 RUN mvn clean package -DskipTests
 
-# Imagen de runtime
-FROM openjdk:17-jdk-slim
-
-# Crear usuario no-root
-RUN addgroup --system spring && adduser --system spring --ingroup spring
+# Imagen de runtime - Usando Eclipse Temurin (OpenJDK oficial)
+FROM eclipse-temurin:17-jre-alpine
 
 # Crear directorio de trabajo
 WORKDIR /app
 
 # Copiar JAR compilado
 COPY --from=build /app/src/auth-service/target/auth-service-1.0.0.jar app.jar
-
-# Cambiar propietario del archivo
-RUN chown spring:spring app.jar
-
-# Cambiar a usuario no-root
-USER spring:spring
 
 # Exponer puerto
 EXPOSE 8085

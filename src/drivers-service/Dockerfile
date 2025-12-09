@@ -34,8 +34,8 @@ RUN mvn clean install -DskipTests
 WORKDIR /app/src/drivers-service
 RUN mvn clean package -DskipTests
 
-# Imagen de runtime
-FROM openjdk:17-jdk-slim
+# Imagen de runtime - Usando Eclipse Temurin (OpenJDK oficial)
+FROM eclipse-temurin:17-jdk-alpine
 
 # Crear usuario no-root
 RUN addgroup --system spring && adduser --system spring --ingroup spring
@@ -57,5 +57,8 @@ EXPOSE 8081 9091
 
 
 
+# Variables de entorno
+ENV SPRING_PROFILES_ACTIVE=render
+
 # Comando para ejecutar la aplicación
-CMD ["java", "-jar", "app.jar"]
+CMD ["java", "-jar", "app.jar", "--spring.profiles.active=render"]

@@ -1,4 +1,5 @@
-FROM openjdk:17-jdk-slim
+# Usando Maven para compilar
+FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
@@ -8,11 +9,16 @@ COPY pom.xml .
 # Copiar el código fuente
 COPY src ./src
 
-# Instalar Maven
-RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
-
 # Compilar la aplicación
 RUN mvn clean package -DskipTests
+
+# Imagen de runtime
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+
+# Copiar JAR compilado
+COPY --from=build /app/src/gateway-service/target/gateway-service-1.0.0.jar app.jar
 
 # Exponer el puerto
 EXPOSE 8090
@@ -21,4 +27,4 @@ EXPOSE 8090
 ENV SPRING_PROFILES_ACTIVE=render
 
 # Comando para ejecutar la aplicación
-CMD ["java", "-jar", "target/gateway-service-1.0.0.jar", "--spring.profiles.active=render"]
+CMD ["java", "-jar", "app.jar", "--spring.profiles.active=render"]
