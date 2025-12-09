@@ -1,0 +1,61 @@
+server:
+  port: ${PORT:8090}
+
+spring:
+  application:
+    name: gateway-service
+  devtools:
+    restart:
+      enabled: false
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# gRPC Configuration - URLs internas de Render
+# NOTA: En Render, los servicios privados tienen URLs del tipo: servicio.onrender.com
+# Para gRPC, usamos el dominio interno de Render
+grpc:
+  client:
+    drivers-service:
+      address: "static://${GRPC_DRIVERS_HOST:drivers-service.onrender.com}:9091"
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+    vehicles-service:
+      address: "static://${GRPC_VEHICLES_HOST:vehicles-service.onrender.com}:9092"
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+    routes-service:
+      address: "static://${GRPC_ROUTES_HOST:routes-service.onrender.com}:9093"
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+    fuel-service:
+      address: "static://${GRPC_FUEL_HOST:fuel-service.onrender.com}:9094"
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+    auth-service:
+      address: "static://${GRPC_AUTH_HOST:auth-service.onrender.com}:9095"
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+
+# Service Discovery (para comunicación HTTP REST como backup)
+service:
+  urls:
+    drivers-service: https://${DRIVERS_SERVICE_URL:drivers-service.onrender.com}
+    vehicles-service: https://${VEHICLES_SERVICE_URL:vehicles-service.onrender.com}
+    routes-service: https://${ROUTES_SERVICE_URL:routes-service.onrender.com}
+    fuel-service: https://${FUEL_SERVICE_URL:fuel-service.onrender.com}
+    auth-service: https://${AUTH_SERVICE_URL:auth-service.onrender.com}
+
+# Logging configurations
+logging:
+  level:
+    com.skt.combustible.gateway: INFO
+    org.springframework.web: INFO
+

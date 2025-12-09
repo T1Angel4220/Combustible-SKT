@@ -1,0 +1,174 @@
+# Configuración de Render para Sistema de Combustible SKT
+# Este archivo define todos los servicios necesarios para el despliegue
+# NOTA: Render Blueprint (render.yaml) está en beta, verifica soporte actual
+
+services:
+  # Gateway Service - PÚBLICO (Web Service)
+  - type: web
+    name: combustible-gateway
+    env: docker
+    dockerfilePath: ./src/gateway-service/Dockerfile
+    dockerContext: .
+    plan: starter # O free para testing
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: DRIVERS_SERVICE_URL
+        sync: false # Configurar manualmente después del despliegue
+      - key: VEHICLES_SERVICE_URL
+        sync: false
+      - key: ROUTES_SERVICE_URL
+        sync: false
+      - key: FUEL_SERVICE_URL
+        sync: false
+      - key: AUTH_SERVICE_URL
+        sync: false
+      - key: GRPC_DRIVERS_HOST
+        sync: false
+      - key: GRPC_VEHICLES_HOST
+        sync: false
+      - key: GRPC_ROUTES_HOST
+        sync: false
+      - key: GRPC_FUEL_HOST
+        sync: false
+      - key: GRPC_AUTH_HOST
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MONGODB_ATLAS_URI
+        sync: false # Configurar con tu URI de MongoDB Atlas
+    healthCheckPath: /actuator/health
+
+  # Auth Service - PRIVADO (Private Service)
+  - type: pserv # Private Service
+    name: auth-service
+    env: docker
+    dockerfilePath: ./src/auth-service/Dockerfile
+    dockerContext: .
+    plan: free # Puede ser free para servicios privados
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: MONGODB_ATLAS_URI
+        sync: false
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: combustible-gateway
+          property: JWT_SECRET
+      - key: JWT_EXPIRATION
+        value: 86400000
+    healthCheckPath: /actuator/health
+
+  # Drivers Service - PRIVADO
+  - type: pserv
+    name: drivers-service
+    env: docker
+    dockerfilePath: ./src/drivers-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: MONGODB_ATLAS_URI
+        sync: false
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: combustible-gateway
+          property: JWT_SECRET
+      - key: GRPC_AUTH_HOST
+        value: auth-service.onrender.com
+      - key: GRPC_AUTH_PORT
+        value: 9095
+      - key: AUTH_SERVICE_URL
+        value: https://auth-service.onrender.com
+    healthCheckPath: /actuator/health
+
+  # Vehicles Service - PRIVADO
+  - type: pserv
+    name: vehicles-service
+    env: docker
+    dockerfilePath: ./src/vehicles-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: MONGODB_ATLAS_URI
+        sync: false
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: combustible-gateway
+          property: JWT_SECRET
+      - key: GRPC_DRIVERS_HOST
+        value: drivers-service.onrender.com
+      - key: GRPC_DRIVERS_PORT
+        value: 9091
+      - key: DRIVERS_SERVICE_URL
+        value: https://drivers-service.onrender.com
+    healthCheckPath: /actuator/health
+
+  # Routes Service - PRIVADO
+  - type: pserv
+    name: routes-service
+    env: docker
+    dockerfilePath: ./src/routes-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: MONGODB_ATLAS_URI
+        sync: false
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: combustible-gateway
+          property: JWT_SECRET
+      - key: GRPC_DRIVERS_HOST
+        value: drivers-service.onrender.com
+      - key: GRPC_DRIVERS_PORT
+        value: 9091
+      - key: GRPC_VEHICLES_HOST
+        value: vehicles-service.onrender.com
+      - key: GRPC_VEHICLES_PORT
+        value: 9092
+      - key: DRIVERS_SERVICE_URL
+        value: https://drivers-service.onrender.com
+      - key: VEHICLES_SERVICE_URL
+        value: https://vehicles-service.onrender.com
+    healthCheckPath: /actuator/health
+
+  # Fuel Service - PRIVADO
+  - type: pserv
+    name: fuel-service
+    env: docker
+    dockerfilePath: ./src/fuel-service/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: MONGODB_ATLAS_URI
+        sync: false
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: combustible-gateway
+          property: JWT_SECRET
+      - key: GRPC_ROUTES_HOST
+        value: routes-service.onrender.com
+      - key: GRPC_ROUTES_PORT
+        value: 9093
+      - key: GRPC_VEHICLES_HOST
+        value: vehicles-service.onrender.com
+      - key: GRPC_VEHICLES_PORT
+        value: 9092
+      - key: ROUTES_SERVICE_URL
+        value: https://routes-service.onrender.com
+      - key: VEHICLES_SERVICE_URL
+        value: https://vehicles-service.onrender.com
+    healthCheckPath: /actuator/health
+

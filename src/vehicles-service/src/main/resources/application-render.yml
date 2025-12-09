@@ -1,0 +1,56 @@
+server:
+  port: ${PORT:8082}
+
+spring:
+  application:
+    name: vehicles-service
+  data:
+    mongodb:
+      uri: ${MONGODB_ATLAS_URI}
+      database: vehicles_db
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging configurations
+logging:
+  level:
+    com.skt.combustible.vehicles: INFO
+    org.springframework.web: INFO
+
+# gRPC Configuration
+grpc:
+  server:
+    port: 9092
+    address: 0.0.0.0
+    security:
+      enabled: false
+    reflection-service-enabled: true
+    health-service-enabled: true
+    max-inbound-message-size: 4194304
+    max-inbound-metadata-size: 8192
+  client:
+    drivers-service:
+      host: ${GRPC_DRIVERS_HOST:drivers-service.onrender.com}
+      port: ${GRPC_DRIVERS_PORT:9091}
+
+# Service Discovery (para comunicación HTTP REST si es necesario)
+service:
+  urls:
+    drivers-service: https://${DRIVERS_SERVICE_URL:drivers-service.onrender.com}
+    routes-service: https://${ROUTES_SERVICE_URL:routes-service.onrender.com}
+    fuel-service: https://${FUEL_SERVICE_URL:fuel-service.onrender.com}
+    auth-service: https://${AUTH_SERVICE_URL:auth-service.onrender.com}
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
+

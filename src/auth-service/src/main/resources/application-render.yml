@@ -1,0 +1,55 @@
+server:
+  port: ${PORT:8085}
+  # NOTA: NO definir PORT en Render para permitir gRPC en múltiples puertos
+  # Render asignará un puerto dinámico, pero gRPC usará 9095
+
+spring:
+  application:
+    name: auth-service
+  data:
+    mongodb:
+      uri: ${MONGODB_ATLAS_URI}
+      database: auth_db
+
+# Security JWT Configuration
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days in milliseconds
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging configurations
+logging:
+  level:
+    com.skt.combustible.auth: INFO
+    org.springframework.web: INFO
+
+# gRPC Configuration
+grpc:
+  server:
+    port: 9095
+    address: 0.0.0.0
+    security:
+      enabled: false
+    reflection-service-enabled: true
+    health-service-enabled: true
+    max-inbound-message-size: 4194304
+    max-inbound-metadata-size: 8192
+
+# Service Discovery (para comunicación HTTP REST si es necesario)
+service:
+  urls:
+    drivers-service: https://${DRIVERS_SERVICE_URL:drivers-service.onrender.com}
+    vehicles-service: https://${VEHICLES_SERVICE_URL:vehicles-service.onrender.com}
+    routes-service: https://${ROUTES_SERVICE_URL:routes-service.onrender.com}
+    fuel-service: https://${FUEL_SERVICE_URL:fuel-service.onrender.com}
+
