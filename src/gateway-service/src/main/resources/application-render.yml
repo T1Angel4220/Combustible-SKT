@@ -18,9 +18,8 @@ management:
     health:
       show-details: always
 
-# gRPC Configuration - URLs internas de Render
-# NOTA: En Render, los servicios privados tienen URLs del tipo: servicio.onrender.com
-# Para gRPC, usamos el dominio interno de Render
+# gRPC Configuration - Para servicios públicos usamos HTTP REST principalmente
+# gRPC puede no funcionar bien sobre HTTPS en servicios públicos
 grpc:
   client:
     drivers-service:
@@ -44,14 +43,15 @@ grpc:
       enableKeepAlive: true
       keepAliveWithoutCalls: true
 
-# Service Discovery (para comunicación HTTP REST como backup)
+# Service Discovery - URLs HTTPS de los servicios públicos
+# El Gateway usa principalmente HTTP REST para comunicarse
 service:
   urls:
-    drivers-service: https://${DRIVERS_SERVICE_URL:drivers-service.onrender.com}
-    vehicles-service: https://${VEHICLES_SERVICE_URL:vehicles-service.onrender.com}
-    routes-service: https://${ROUTES_SERVICE_URL:routes-service.onrender.com}
-    fuel-service: https://${FUEL_SERVICE_URL:fuel-service.onrender.com}
-    auth-service: https://${AUTH_SERVICE_URL:auth-service.onrender.com}
+    drivers-service: https://${DRIVERS_SERVICE_URL}
+    vehicles-service: https://${VEHICLES_SERVICE_URL}
+    routes-service: https://${ROUTES_SERVICE_URL}
+    fuel-service: https://${FUEL_SERVICE_URL}
+    auth-service: https://${AUTH_SERVICE_URL}
 
 # Logging configurations
 logging:

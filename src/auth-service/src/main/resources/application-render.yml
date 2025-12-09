@@ -1,7 +1,6 @@
 server:
   port: ${PORT:8085}
-  # NOTA: NO definir PORT en Render para permitir gRPC en múltiples puertos
-  # Render asignará un puerto dinámico, pero gRPC usará 9095
+  # Render asigna PORT automáticamente para Web Services
 
 spring:
   application:

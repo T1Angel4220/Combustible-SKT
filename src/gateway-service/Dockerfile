@@ -17,5 +17,8 @@ RUN mvn clean package -DskipTests
 # Exponer el puerto
 EXPOSE 8090
 
+# Variables de entorno
+ENV SPRING_PROFILES_ACTIVE=render
+
 # Comando para ejecutar la aplicación
-CMD ["java", "-jar", "target/gateway-service-1.0.0.jar"]
+CMD ["java", "-jar", "target/gateway-service-1.0.0.jar", "--spring.profiles.active=render"]
