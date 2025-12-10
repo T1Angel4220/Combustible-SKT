@@ -22,7 +22,7 @@ RUN mvn clean install -DskipTests
 WORKDIR /app/src/protos
 RUN mvn clean install -DskipTests
 
-# Compilar vehicles-service
+# Compilar vehicles-service - Usar package como auth-service
 WORKDIR /app/src/vehicles-service
 RUN mvn clean package -DskipTests
 
