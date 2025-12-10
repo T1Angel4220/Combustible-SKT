@@ -111,14 +111,28 @@ public class AuthGatewayController {
     public ResponseEntity<Object> login(@RequestBody Map<String, String> loginRequest, HttpServletRequest request) {
         logger.info("Gateway REST: Login de usuario via proxy a auth-service");
         logger.info("Gateway REST: authServiceUrl configurado: {}", authServiceUrl);
+        logger.info("Gateway REST: loginRequest recibido: {}", loginRequest);
+
+        // Validar que la URL del servicio esté configurada
+        if (authServiceUrl == null || authServiceUrl.trim().isEmpty() || authServiceUrl.equals("https://")) {
+            logger.error("Gateway REST: authServiceUrl no está configurado correctamente: {}", authServiceUrl);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error de configuración: authServiceUrl no está configurado");
+            errorResponse.put("error", "AUTH_SERVICE_URL environment variable is not set");
+            errorResponse.put("type", "CONFIGURATION_ERROR");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
 
         try {
-            String url = authServiceUrl + "/api/auth/login";
-            logger.info("Gateway REST: Intentando conectar a: {}", url);
+            // Asegurar que la URL no tenga doble slash y termine correctamente
+            String baseUrl = authServiceUrl.endsWith("/") ? authServiceUrl.substring(0, authServiceUrl.length() - 1) : authServiceUrl;
+            String url = baseUrl + "/api/auth/login";
+            logger.info("Gateway REST: URL construida: {}", url);
             
             HttpHeaders headers = getHeaders(request);
             HttpEntity<Map<String, String>> entity = new HttpEntity<>(loginRequest, headers);
 
+            logger.info("Gateway REST: Enviando request POST a: {}", url);
             ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
             logger.info("Gateway REST: Login exitoso via auth-service, status: {}", response.getStatusCode());
             
@@ -130,17 +144,44 @@ public class AuthGatewayController {
             errorResponse.put("message", "Error de conexión con auth-service. URL: " + authServiceUrl);
             errorResponse.put("error", e.getMessage());
             errorResponse.put("type", "CONNECTION_ERROR");
+            errorResponse.put("details", "No se pudo establecer conexión con el servicio");
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
         } catch (org.springframework.web.client.HttpClientErrorException e) {
-            logger.error("Gateway REST: Error HTTP del cliente en auth-service: {}", e.getMessage());
-            // Retornar el error del servicio directamente
-            return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAs(Map.class));
-        } catch (Exception e) {
-            logger.error("Gateway REST: Error en login via auth-service: {}", e.getMessage(), e);
+            logger.error("Gateway REST: Error HTTP del cliente en auth-service: {} - Status: {}", e.getMessage(), e.getStatusCode());
+            logger.error("Gateway REST: Response body: {}", e.getResponseBodyAsString());
+            
+            // Retornar el error directamente con el status code del servicio
+            String responseBody = e.getResponseBodyAsString();
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Error de conexión con auth-service");
+            if (responseBody != null && !responseBody.trim().isEmpty()) {
+                errorResponse.put("message", responseBody);
+            } else {
+                errorResponse.put("message", e.getMessage());
+            }
+            errorResponse.put("status", e.getStatusCode().value());
+            return ResponseEntity.status(e.getStatusCode()).body(errorResponse);
+        } catch (org.springframework.web.client.HttpServerErrorException e) {
+            logger.error("Gateway REST: Error HTTP del servidor en auth-service: {} - Status: {}", e.getMessage(), e.getStatusCode());
+            logger.error("Gateway REST: Response body: {}", e.getResponseBodyAsString());
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error interno en auth-service");
+            errorResponse.put("error", e.getResponseBodyAsString());
+            errorResponse.put("status", e.getStatusCode().value());
+            errorResponse.put("type", "SERVER_ERROR");
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+        } catch (Exception e) {
+            logger.error("Gateway REST: Error inesperado en login via auth-service: {}", e.getMessage(), e);
+            logger.error("Gateway REST: Exception class: {}", e.getClass().getName());
+            if (e.getCause() != null) {
+                logger.error("Gateway REST: Caused by: {}", e.getCause().getMessage());
+            }
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error inesperado al procesar la solicitud");
             errorResponse.put("error", e.getMessage());
             errorResponse.put("type", "UNKNOWN_ERROR");
+            errorResponse.put("exception", e.getClass().getSimpleName());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
