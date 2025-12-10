@@ -131,9 +131,33 @@ public class AuthGatewayController {
             ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
             logger.info("Gateway REST: Login exitoso via auth-service, status: {}", response.getStatusCode());
             
-            // Los filtros CORS ya deberían agregar los headers, pero los agregamos explícitamente para estar seguros
-            // No necesitamos crear nuevos headers ya que los filtros los manejan
-            return response;
+            // Crear una nueva respuesta con headers CORS explícitos
+            // Esto asegura que los headers CORS estén presentes incluso si el filtro no los agrega
+            HttpHeaders responseHeaders = new HttpHeaders();
+            String origin = request.getHeader("Origin");
+            if (origin != null && !origin.isEmpty()) {
+                responseHeaders.add("Access-Control-Allow-Origin", origin);
+                responseHeaders.add("Access-Control-Allow-Credentials", "true");
+            } else {
+                responseHeaders.add("Access-Control-Allow-Origin", "*");
+            }
+            responseHeaders.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD");
+            responseHeaders.add("Access-Control-Allow-Headers", "*");
+            responseHeaders.add("Access-Control-Expose-Headers", "*");
+            
+            // Copiar todos los headers de la respuesta original
+            response.getHeaders().forEach((key, values) -> {
+                if (!key.equals("Access-Control-Allow-Origin") && 
+                    !key.equals("Access-Control-Allow-Credentials") &&
+                    !key.equals("Access-Control-Allow-Methods") &&
+                    !key.equals("Access-Control-Allow-Headers")) {
+                    values.forEach(value -> responseHeaders.add(key, value));
+                }
+            });
+            
+            return ResponseEntity.status(response.getStatusCode())
+                    .headers(responseHeaders)
+                    .body(response.getBody());
 
         } catch (org.springframework.web.client.ResourceAccessException e) {
             logger.error("Gateway REST: Error de conexión con auth-service (no se pudo conectar): {}", e.getMessage(), e);

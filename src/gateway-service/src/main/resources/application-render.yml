@@ -58,4 +58,5 @@ logging:
   level:
     com.skt.combustible.gateway: INFO
     org.springframework.web: INFO
+    com.skt.combustible.gateway.config.CorsFilter: DEBUG
 
