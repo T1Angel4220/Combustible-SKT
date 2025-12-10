@@ -53,7 +53,19 @@ public class CorsFilter implements Filter {
             return; // No continuar con la cadena de filtros para OPTIONS
         }
 
+        // Para requests que no son OPTIONS, continuar con la cadena
         chain.doFilter(req, res);
+        
+        // Asegurar que los headers CORS estén presentes DESPUÉS del procesamiento
+        // (por si algún filtro posterior los eliminó)
+        if (origin != null) {
+            response.setHeader("Access-Control-Allow-Origin", origin);
+            response.setHeader("Access-Control-Allow-Credentials", "true");
+        } else {
+            if (response.getHeader("Access-Control-Allow-Origin") == null) {
+                response.setHeader("Access-Control-Allow-Origin", "*");
+            }
+        }
     }
 
     @Override

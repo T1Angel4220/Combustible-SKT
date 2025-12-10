@@ -39,9 +39,16 @@ public class AuthController {
      * @return ResponseEntity con AuthResponse o error
      */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest, 
+                                    jakarta.servlet.http.HttpServletRequest request) {
         try {
+            logger.info("========================================");
             logger.info("Solicitud de login recibida para: {}", loginRequest.getUsernameOrEmail());
+            logger.info("Remote Address: {}", request.getRemoteAddr());
+            logger.info("Request URL: {}", request.getRequestURL());
+            logger.info("Request Method: {}", request.getMethod());
+            logger.info("Origin Header: {}", request.getHeader("Origin"));
+            logger.info("========================================");
             
             AuthResponse response = authService.login(loginRequest);
             
