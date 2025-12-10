@@ -25,17 +25,13 @@ logging:
     com.skt.combustible.routes: INFO
     org.springframework.web: INFO
 
-# gRPC Configuration
+# gRPC Configuration - DESHABILITADO en Render
+# Render hace health checks HTTP/1.x que no son compatibles con gRPC
+# Usamos HTTP REST para comunicación entre servicios públicos
 grpc:
   server:
-    port: 9093
-    address: 0.0.0.0
-    security:
-      enabled: false
-    reflection-service-enabled: true
-    health-service-enabled: true
-    max-inbound-message-size: 4194304
-    max-inbound-metadata-size: 8192
+    port: -1  # Deshabilitar servidor gRPC (-1 desactiva el servidor)
+    enabled: false  # Deshabilitar completamente el servidor gRPC
   client:
     drivers-service:
       host: ${GRPC_DRIVERS_HOST:drivers-service.onrender.com}
