@@ -35,7 +35,25 @@ public class CorsFilter implements Filter {
         String method = request.getMethod();
         String requestURI = request.getRequestURI();
         
-        logger.debug("CORS Filter: {} {} from origin: {}", method, requestURI, origin);
+        // Si no hay Origin pero hay Referer, extraer el origen del Referer
+        String referer = request.getHeader("Referer");
+        if ((origin == null || origin.isEmpty()) && referer != null) {
+            try {
+                java.net.URL url = new java.net.URL(referer);
+                origin = url.getProtocol() + "://" + url.getAuthority();
+                logger.debug("CORS Filter: Extracted origin from Referer: {}", origin);
+            } catch (Exception e) {
+                logger.debug("CORS Filter: Could not extract origin from Referer: {}", referer);
+            }
+        }
+        
+        // En Render, los headers de proxy pueden afectar cómo se ve el origen
+        // Loggear información adicional para debugging
+        String forwardedProto = request.getHeader("X-Forwarded-Proto");
+        String forwardedHost = request.getHeader("X-Forwarded-Host");
+        
+        logger.info("CORS Filter: {} {} from origin: {} | X-Forwarded-Proto: {} | X-Forwarded-Host: {} | Referer: {}", 
+                method, requestURI, origin, forwardedProto, forwardedHost, referer);
         
         // Usar wrapper para asegurar que los headers se agreguen correctamente
         CorsResponseWrapper wrappedResponse = new CorsResponseWrapper(response, origin);
@@ -45,12 +63,12 @@ public class CorsFilter implements Filter {
 
         // Manejar preflight OPTIONS requests ANTES de pasar a otros filtros
         if ("OPTIONS".equalsIgnoreCase(method)) {
-            logger.debug("CORS Filter: Handling OPTIONS preflight request");
+            logger.info("CORS Filter: Handling OPTIONS preflight request from origin: {}", origin);
             // Asegurar que todos los headers CORS estén presentes
             wrappedResponse.setStatus(HttpServletResponse.SC_OK);
             wrappedResponse.setContentLength(0);
             wrappedResponse.flushBuffer();
-            logger.debug("CORS Filter: OPTIONS request handled successfully");
+            logger.info("CORS Filter: OPTIONS request handled successfully for origin: {}", origin);
             return; // No continuar con la cadena de filtros para OPTIONS
         }
 
@@ -61,18 +79,21 @@ public class CorsFilter implements Filter {
             // Asegurar que los headers CORS estén presentes DESPUÉS del procesamiento
             // incluso si hubo una excepción
             addCorsHeaders(wrappedResponse, origin);
-            logger.debug("CORS Filter: Headers added after request processing. Origin: {}", origin);
+            logger.info("CORS Filter: Headers added after request processing. Origin: {}", origin);
         }
     }
     
     private void addCorsHeaders(HttpServletResponse response, String origin) {
+        // Permitir cualquier origen válido
         if (origin != null && !origin.isEmpty()) {
             response.setHeader("Access-Control-Allow-Origin", origin);
             response.setHeader("Access-Control-Allow-Credentials", "true");
+            logger.debug("CORS Filter: Added Allow-Origin: {} with credentials", origin);
         } else {
             // Si no hay origen, usar * pero sin credentials
             if (response.getHeader("Access-Control-Allow-Origin") == null) {
                 response.setHeader("Access-Control-Allow-Origin", "*");
+                logger.debug("CORS Filter: Added Allow-Origin: * (no credentials)");
             }
         }
         
@@ -81,6 +102,9 @@ public class CorsFilter implements Filter {
         response.setHeader("Access-Control-Max-Age", "3600");
         response.setHeader("Access-Control-Allow-Headers", "*");
         response.setHeader("Access-Control-Expose-Headers", "*");
+        
+        // Log final para debugging
+        logger.debug("CORS Filter: Final Allow-Origin header: {}", response.getHeader("Access-Control-Allow-Origin"));
     }
 
     @Override

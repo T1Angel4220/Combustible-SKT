@@ -1,5 +1,14 @@
 server:
   port: ${PORT:8090}
+  # Configuración para Render (detrás de proxy/load balancer)
+  forward-headers-strategy: native
+  use-forward-headers: true
+  # Confiar en los headers de proxy para obtener el protocolo y host correcto
+  tomcat:
+    remoteip:
+      protocol-header: X-Forwarded-Proto
+      remote-ip-header: X-Forwarded-For
+      host-header: X-Forwarded-Host
 
 spring:
   application:
@@ -58,5 +67,6 @@ logging:
   level:
     com.skt.combustible.gateway: INFO
     org.springframework.web: INFO
-    com.skt.combustible.gateway.config.CorsFilter: DEBUG
+    com.skt.combustible.gateway.config.CorsFilter: INFO  # Cambiar a INFO para ver logs en producción
+    com.skt.combustible.gateway.config.CorsResponseBodyAdvice: INFO
 
