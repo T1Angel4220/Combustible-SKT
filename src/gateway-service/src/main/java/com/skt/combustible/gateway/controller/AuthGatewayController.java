@@ -133,10 +133,29 @@ public class AuthGatewayController {
             HttpEntity<Map<String, String>> entity = new HttpEntity<>(loginRequest, headers);
 
             logger.info("Gateway REST: Enviando request POST a: {}", url);
-            ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
-            logger.info("Gateway REST: Login exitoso via auth-service, status: {}", response.getStatusCode());
             
-            return response;
+            try {
+                ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
+                logger.info("Gateway REST: Login exitoso via auth-service, status: {}", response.getStatusCode());
+                
+                // Agregar headers CORS explícitamente a la respuesta exitosa
+                HttpHeaders responseHeaders = new HttpHeaders();
+                String origin = request.getHeader("Origin");
+                if (origin != null && !origin.isEmpty()) {
+                    responseHeaders.add("Access-Control-Allow-Origin", origin);
+                    responseHeaders.add("Access-Control-Allow-Credentials", "true");
+                } else {
+                    responseHeaders.add("Access-Control-Allow-Origin", "*");
+                }
+                responseHeaders.addAll(response.getHeaders());
+                
+                return ResponseEntity.status(response.getStatusCode())
+                        .headers(responseHeaders)
+                        .body(response.getBody());
+            } catch (Exception e) {
+                logger.error("Gateway REST: Excepción al llamar a auth-service: {}", e.getClass().getSimpleName(), e);
+                throw e; // Re-lanzar para que el catch externo lo maneje
+            }
 
         } catch (org.springframework.web.client.ResourceAccessException e) {
             logger.error("Gateway REST: Error de conexión con auth-service (no se pudo conectar): {}", e.getMessage(), e);
