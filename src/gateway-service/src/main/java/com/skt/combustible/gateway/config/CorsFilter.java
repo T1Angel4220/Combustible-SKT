@@ -37,28 +37,31 @@ public class CorsFilter implements Filter {
         
         logger.debug("CORS Filter: {} {} from origin: {}", method, requestURI, origin);
         
-        // Agregar headers CORS a todas las respuestas
-        addCorsHeaders(response, origin);
+        // Usar wrapper para asegurar que los headers se agreguen correctamente
+        CorsResponseWrapper wrappedResponse = new CorsResponseWrapper(response, origin);
+        
+        // Agregar headers CORS ANTES del procesamiento
+        addCorsHeaders(wrappedResponse, origin);
 
         // Manejar preflight OPTIONS requests ANTES de pasar a otros filtros
         if ("OPTIONS".equalsIgnoreCase(method)) {
             logger.debug("CORS Filter: Handling OPTIONS preflight request");
             // Asegurar que todos los headers CORS estén presentes
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.setContentLength(0);
-            response.flushBuffer();
+            wrappedResponse.setStatus(HttpServletResponse.SC_OK);
+            wrappedResponse.setContentLength(0);
+            wrappedResponse.flushBuffer();
             logger.debug("CORS Filter: OPTIONS request handled successfully");
             return; // No continuar con la cadena de filtros para OPTIONS
         }
 
-        // Para requests que no son OPTIONS, continuar con la cadena
+        // Para requests que no son OPTIONS, continuar con la cadena usando el wrapper
         try {
-            chain.doFilter(req, res);
+            chain.doFilter(req, wrappedResponse);
         } finally {
             // Asegurar que los headers CORS estén presentes DESPUÉS del procesamiento
             // incluso si hubo una excepción
-            addCorsHeaders(response, origin);
-            logger.debug("CORS Filter: Headers added after request processing");
+            addCorsHeaders(wrappedResponse, origin);
+            logger.debug("CORS Filter: Headers added after request processing. Origin: {}", origin);
         }
     }
     
