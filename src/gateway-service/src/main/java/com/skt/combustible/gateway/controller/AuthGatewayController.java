@@ -20,7 +20,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/auth")
-@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS, RequestMethod.PATCH, RequestMethod.HEAD})
+// @CrossOrigin removido - el CorsFilter maneja CORS globalmente
 public class AuthGatewayController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthGatewayController.class);
