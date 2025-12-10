@@ -20,6 +20,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/auth")
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS, RequestMethod.PATCH})
 public class AuthGatewayController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthGatewayController.class);
@@ -41,6 +42,14 @@ public class AuthGatewayController {
             headers.set("Authorization", authorizationHeader);
         }
         return headers;
+    }
+
+    /**
+     * Maneja preflight OPTIONS requests para CORS
+     */
+    @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
+    public ResponseEntity<Void> handleOptions() {
+        return ResponseEntity.ok().build();
     }
 
     /**
@@ -101,21 +110,37 @@ public class AuthGatewayController {
     @PostMapping("/login")
     public ResponseEntity<Object> login(@RequestBody Map<String, String> loginRequest, HttpServletRequest request) {
         logger.info("Gateway REST: Login de usuario via proxy a auth-service");
+        logger.info("Gateway REST: authServiceUrl configurado: {}", authServiceUrl);
 
         try {
             String url = authServiceUrl + "/api/auth/login";
+            logger.info("Gateway REST: Intentando conectar a: {}", url);
+            
             HttpHeaders headers = getHeaders(request);
             HttpEntity<Map<String, String>> entity = new HttpEntity<>(loginRequest, headers);
 
             ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
-            logger.info("Gateway REST: Login exitoso via auth-service");
+            logger.info("Gateway REST: Login exitoso via auth-service, status: {}", response.getStatusCode());
+            
             return response;
 
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            logger.error("Gateway REST: Error de conexión con auth-service (no se pudo conectar): {}", e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error de conexión con auth-service. URL: " + authServiceUrl);
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("type", "CONNECTION_ERROR");
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            logger.error("Gateway REST: Error HTTP del cliente en auth-service: {}", e.getMessage());
+            // Retornar el error del servicio directamente
+            return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAs(Map.class));
         } catch (Exception e) {
-            logger.error("Gateway REST: Error en login via auth-service: {}", e.getMessage());
+            logger.error("Gateway REST: Error en login via auth-service: {}", e.getMessage(), e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Error de conexión con auth-service");
             errorResponse.put("error", e.getMessage());
+            errorResponse.put("type", "UNKNOWN_ERROR");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
