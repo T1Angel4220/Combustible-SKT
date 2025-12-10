@@ -20,7 +20,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/auth")
-@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS, RequestMethod.PATCH})
+// CORS manejado por los filtros globales - no necesitamos @CrossOrigin aquí
 public class AuthGatewayController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthGatewayController.class);
@@ -44,13 +44,7 @@ public class AuthGatewayController {
         return headers;
     }
 
-    /**
-     * Maneja preflight OPTIONS requests para CORS
-     */
-    @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
-    public ResponseEntity<Void> handleOptions() {
-        return ResponseEntity.ok().build();
-    }
+    // OPTIONS requests son manejados por CorsFilter - no necesitamos este método
 
     /**
      * Endpoint raíz del servicio de auth

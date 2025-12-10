@@ -44,10 +44,13 @@ public class CorsFilter implements Filter {
         response.setHeader("Access-Control-Allow-Headers", "*");
         response.setHeader("Access-Control-Expose-Headers", "*");
 
-        // Manejar preflight OPTIONS requests
+        // Manejar preflight OPTIONS requests ANTES de pasar a otros filtros
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            // Asegurar que todos los headers CORS estén presentes
             response.setStatus(HttpServletResponse.SC_OK);
-            return;
+            response.setContentLength(0);
+            response.flushBuffer();
+            return; // No continuar con la cadena de filtros para OPTIONS
         }
 
         chain.doFilter(req, res);
