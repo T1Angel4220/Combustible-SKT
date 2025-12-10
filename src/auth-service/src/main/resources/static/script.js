@@ -1,6 +1,17 @@
-// Configuración de la API
-const API_BASE_URL = 'http://localhost:8085/api/auth';
-const GATEWAY_URL = 'http://localhost:8090/api/v1/auth';
+// Configuración de la API - Detectar automáticamente si está en producción o desarrollo
+function getGatewayUrl() {
+    // Si estamos en Render o producción, usar el gateway
+    if (window.location.hostname.includes('onrender.com')) {
+        // El gateway está en combustible-gateway.onrender.com
+        return 'https://combustible-gateway.onrender.com';
+    }
+    // Desarrollo local - usar gateway local
+    return 'http://localhost:8090';
+}
+
+const GATEWAY_URL = getGatewayUrl();
+// Para login, siempre usar el gateway
+const API_BASE_URL = `${GATEWAY_URL}/api/v1/auth`;
 
 // Variables globales
 let currentUser = null;
@@ -32,8 +43,8 @@ function checkAuthStatus() {
         try {
             authToken = savedToken;
             currentUser = JSON.parse(savedUser);
-            // Redirigir al dashboard principal
-            window.location.href = 'http://localhost:8085/dashboard.html';
+            // Redirigir al dashboard principal (usar gateway)
+            window.location.href = `${GATEWAY_URL}/dashboard.html`;
         } catch (error) {
             console.error('Error parsing saved user data:', error);
             clearAuthData();
@@ -86,7 +97,7 @@ async function handleLogin(usernameOrEmail, password) {
         
         console.log('Enviando datos de login:', { usernameOrEmail: usernameOrEmail, password: '***' });
         
-        const response = await fetch(`${API_BASE_URL}/login`, {
+        const response = await fetch(`${GATEWAY_URL}/api/v1/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -112,7 +123,7 @@ async function handleLogin(usernameOrEmail, password) {
             
             // Redirigir después de un breve delay
             setTimeout(() => {
-                window.location.href = 'http://localhost:8085/dashboard.html';
+                window.location.href = `${GATEWAY_URL}/dashboard.html`;
             }, 1000);
         } else {
             throw new Error(data.message || 'Error al iniciar sesión');

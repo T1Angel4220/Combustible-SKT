@@ -1,7 +1,16 @@
 // Routes Management Script
-const API_BASE_URL = 'http://localhost:8083/api/v1/routes';
-const VEHICLES_API_URL = 'http://localhost:8082/api/v1/vehicles';
-const DRIVERS_API_URL = 'http://localhost:8081/api/v1/drivers';
+// Detectar Gateway URL automáticamente
+function getGatewayUrl() {
+    if (window.location.hostname.includes('onrender.com')) {
+        return 'https://combustible-gateway.onrender.com';
+    }
+    return 'http://localhost:8090';
+}
+
+const GATEWAY_URL = getGatewayUrl();
+const API_BASE_URL = `${GATEWAY_URL}/api/v1/routes`;
+const VEHICLES_API_URL = `${GATEWAY_URL}/api/v1/vehicles`;
+const DRIVERS_API_URL = `${GATEWAY_URL}/api/v1/drivers`;
 
 let routes = [];
 let vehicles = [];
@@ -48,7 +57,7 @@ async function checkAuth() {
     
     const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
     if (!token) {
-        window.location.href = 'http://localhost:8085/';
+        window.location.href = `${GATEWAY_URL}/`;
         return;
     }
     
@@ -61,7 +70,7 @@ async function checkAuth() {
     
     // Obtener el rol del usuario desde el token
     try {
-        const response = await fetch('http://localhost:8085/api/auth/me', {
+        const response = await fetch(`${GATEWAY_URL}/api/v1/auth/me`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -129,7 +138,7 @@ async function loadCurrentDriverId() {
         
         // Primero intentar obtener userId desde auth-service usando el endpoint /me
         try {
-            const authResponse = await fetch('http://localhost:8085/api/auth/me', {
+            const authResponse = await fetch(`${GATEWAY_URL}/api/v1/auth/me`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -188,7 +197,7 @@ async function loadCurrentDriverId() {
             console.warn('No se encontró conductor por usuarioId. Intentando buscar por email...');
             
             // Si no se encontró por usuarioId, intentar buscar por email
-            const userData = await fetch('http://localhost:8085/api/auth/me', {
+            const userData = await fetch(`${GATEWAY_URL}/api/v1/auth/me`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -229,7 +238,22 @@ function setupEventListeners() {
     const routeChoferSelect = document.getElementById('routeChofer');
     
     // Interceptar clics en enlaces externos para compartir token
-    document.querySelectorAll('a[href^="http://localhost:8081"], a[href^="http://localhost:8082"], a[href^="http://localhost:8085"]').forEach(link => {
+    // Actualizar enlaces para usar gateway
+    document.querySelectorAll('a[data-gateway-link]').forEach(link => {
+        const service = link.getAttribute('data-gateway-link');
+        link.href = `${GATEWAY_URL}/${service}.html`;
+    });
+    
+    // También actualizar cualquier enlace con localhost
+    document.querySelectorAll('a[href*="localhost"]').forEach(link => {
+        const href = link.getAttribute('href');
+        if (href.includes('drivers.html')) link.href = `${GATEWAY_URL}/drivers.html`;
+        else if (href.includes('vehicles.html')) link.href = `${GATEWAY_URL}/vehicles.html`;
+        else if (href.includes('routes.html')) link.href = `${GATEWAY_URL}/routes.html`;
+        else if (href.includes('fuel.html')) link.href = `${GATEWAY_URL}/fuel.html`;
+        else if (href.includes('dashboard.html')) link.href = `${GATEWAY_URL}/dashboard.html`;
+        else if (href.includes('index.html')) link.href = `${GATEWAY_URL}/index.html`;
+    });
         link.addEventListener('click', function(e) {
             const url = new URL(this.href);
             const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
@@ -1482,7 +1506,7 @@ function logout() {
             sessionStorage.removeItem('authToken');
             sessionStorage.removeItem('currentUser');
             // Redirigir con parámetro de logout para evitar redirección automática
-            window.location.href = 'http://localhost:8085/index.html?logout=true';
+            window.location.href = `${GATEWAY_URL}/index.html?logout=true`;
         }
     );
 }

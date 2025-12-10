@@ -2,6 +2,16 @@
 let fuelChart, fleetChart;
 let confirmationCallback = null;
 
+// Detectar Gateway URL automáticamente
+function getGatewayUrl() {
+    if (window.location.hostname.includes('onrender.com')) {
+        return 'https://combustible-gateway.onrender.com';
+    }
+    return 'http://localhost:8090';
+}
+
+const GATEWAY_URL = getGatewayUrl();
+
 // Función para compartir el token con otros servicios
 function shareTokenWithServices() {
     const token = localStorage.getItem('authToken');
@@ -23,8 +33,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadDashboardData();
     await loadRecentActivity();
     
-    // Interceptar clics en enlaces externos para compartir token
-    document.querySelectorAll('a[href^="http://localhost:8081"], a[href^="http://localhost:8082"], a[href^="http://localhost:8083"], a[href^="http://localhost:8084"]').forEach(link => {
+    // Actualizar enlaces para usar el gateway
+    document.querySelectorAll('a[data-service]').forEach(link => {
+        const service = link.getAttribute('data-service');
+        link.href = `${GATEWAY_URL}/${service}.html`;
+        
         link.addEventListener('click', function(e) {
             shareTokenWithServices();
             // Agregar token a la URL como parámetro
@@ -140,7 +153,7 @@ async function loadFuelConsumptionChartData() {
         };
 
         // Cargar todos los registros de combustible
-        const fuelRes = await fetch('http://localhost:8084/api/v1/fuel', { headers });
+        const fuelRes = await fetch(`${GATEWAY_URL}/api/v1/fuel`, { headers });
         if (!fuelRes.ok) {
             console.error('Error cargando datos de combustible para gráfico');
             return;
@@ -223,7 +236,7 @@ async function loadDashboardData() {
 
         // Cargar vehículos
         try {
-            const vehiclesRes = await fetch('http://localhost:8082/api/v1/vehicles', { headers });
+            const vehiclesRes = await fetch(`${GATEWAY_URL}/api/v1/vehicles`, { headers });
             if (vehiclesRes.ok) {
                 const vehicles = await vehiclesRes.json();
                 const totalVehicles = Array.isArray(vehicles) ? vehicles.length : 0;
@@ -258,7 +271,7 @@ async function loadDashboardData() {
 
         // Cargar conductores activos
         try {
-            const driversRes = await fetch('http://localhost:8081/api/v1/drivers', { headers });
+            const driversRes = await fetch(`${GATEWAY_URL}/api/v1/drivers`, { headers });
             if (driversRes.ok) {
                 const drivers = await driversRes.json();
                 const activeDrivers = Array.isArray(drivers) ? drivers.filter(d => d.activo !== false).length : 0;
@@ -270,7 +283,7 @@ async function loadDashboardData() {
 
         // Cargar rutas
         try {
-            const routesRes = await fetch('http://localhost:8083/api/v1/routes?all=true', { headers });
+            const routesRes = await fetch(`${GATEWAY_URL}/api/v1/routes?all=true`, { headers });
             if (routesRes.ok) {
                 const routes = await routesRes.json();
                 const allRoutes = Array.isArray(routes) ? routes : [];
@@ -293,7 +306,7 @@ async function loadDashboardData() {
 
         // Cargar estadísticas de combustible
         try {
-            const fuelStatsRes = await fetch('http://localhost:8084/api/v1/fuel/stats', { headers });
+            const fuelStatsRes = await fetch(`${GATEWAY_URL}/api/v1/fuel/stats`, { headers });
             if (fuelStatsRes.ok) {
                 const fuelStats = await fuelStatsRes.json();
                 const totalLitros = fuelStats.totalLitros || 0;
@@ -354,7 +367,7 @@ async function loadRecentActivity() {
         // Cargar rutas recientes
         let routes = [];
         try {
-            const routesRes = await fetch('http://localhost:8083/api/v1/routes?all=true', { headers });
+            const routesRes = await fetch(`${GATEWAY_URL}/api/v1/routes?all=true`, { headers });
             if (routesRes.ok) {
                 const routesData = await routesRes.json();
                 routes = Array.isArray(routesData) ? routesData : [];

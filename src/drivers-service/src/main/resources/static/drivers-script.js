@@ -1,6 +1,15 @@
 // Drivers Management Script
-const API_BASE_URL = 'http://localhost:8081/api/v1/drivers';
-const ASSIGNMENTS_API_URL = 'http://localhost:8082/api/v1/assignments';
+// Detectar Gateway URL automáticamente
+function getGatewayUrl() {
+    if (window.location.hostname.includes('onrender.com')) {
+        return 'https://combustible-gateway.onrender.com';
+    }
+    return 'http://localhost:8090';
+}
+
+const GATEWAY_URL = getGatewayUrl();
+const API_BASE_URL = `${GATEWAY_URL}/api/v1/drivers`;
+const ASSIGNMENTS_API_URL = `${GATEWAY_URL}/api/v1/assignments`;
 
 let drivers = [];
 let editingDriverId = null;
@@ -131,7 +140,7 @@ async function checkAuth() {
     // Verificar token en localStorage o sessionStorage
     const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
     if (!token) {
-            window.location.href = 'http://localhost:8085/';
+            window.location.href = `${GATEWAY_URL}/`;
         return;
     }
     
@@ -145,7 +154,7 @@ async function checkAuth() {
     
     // Obtener el rol del usuario desde el token
     try {
-        const response = await fetch('http://localhost:8085/api/auth/me', {
+        const response = await fetch(`${GATEWAY_URL}/api/v1/auth/me`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -197,11 +206,29 @@ function setupEventListeners() {
     }
     
     // Interceptar clics en enlaces externos para compartir token
-    document.querySelectorAll('a[href^="http://localhost:8083"], a[href^="http://localhost:8082"], a[href^="http://localhost:8085"]').forEach(link => {
+    // Actualizar enlaces para usar gateway
+    document.querySelectorAll('a[data-gateway-link]').forEach(link => {
+        const service = link.getAttribute('data-gateway-link');
+        link.href = `${GATEWAY_URL}/${service}.html`;
+    });
+    
+    // También actualizar cualquier enlace con localhost
+    document.querySelectorAll('a[href*="localhost"]').forEach(link => {
+        const href = link.getAttribute('href');
+        if (href.includes('drivers.html')) link.href = `${GATEWAY_URL}/drivers.html`;
+        else if (href.includes('vehicles.html')) link.href = `${GATEWAY_URL}/vehicles.html`;
+        else if (href.includes('routes.html')) link.href = `${GATEWAY_URL}/routes.html`;
+        else if (href.includes('fuel.html')) link.href = `${GATEWAY_URL}/fuel.html`;
+        else if (href.includes('dashboard.html')) link.href = `${GATEWAY_URL}/dashboard.html`;
+        else if (href.includes('index.html')) link.href = `${GATEWAY_URL}/index.html`;
+    });
+    
+    // Agregar listener para compartir token al hacer click
+    document.querySelectorAll('a[data-gateway-link]').forEach(link => {
         link.addEventListener('click', function(e) {
-            const url = new URL(this.href);
             const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
             if (token) {
+                const url = new URL(this.href);
                 url.searchParams.set('token', token);
                 const user = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser');
                 if (user) {
@@ -844,7 +871,7 @@ function logout() {
             sessionStorage.removeItem('authToken');
             sessionStorage.removeItem('currentUser');
             // Redirigir con parámetro de logout para evitar redirección automática
-            window.location.href = 'http://localhost:8085/index.html?logout=true';
+            window.location.href = `${GATEWAY_URL}/index.html?logout=true`;
         }
     );
 }
@@ -955,7 +982,7 @@ async function handleCreateUserSubmit(e) {
             rol: rol
         };
         
-        const response = await fetch('http://localhost:8085/api/users', {
+        const response = await fetch(`${GATEWAY_URL}/api/v1/auth/users`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
