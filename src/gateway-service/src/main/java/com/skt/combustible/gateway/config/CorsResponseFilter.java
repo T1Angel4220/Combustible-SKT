@@ -30,29 +30,35 @@ public class CorsResponseFilter implements Filter {
         // Obtener el origen de la petición
         String origin = request.getHeader("Origin");
         
-        // Agregar headers CORS a todas las respuestas
+        // Agregar headers CORS ANTES del procesamiento
+        addCorsHeaders(response, origin);
+
+        // Continuar con la cadena de filtros
+        try {
+            chain.doFilter(req, res);
+        } finally {
+            // Asegurar que los headers CORS estén presentes DESPUÉS del procesamiento
+            // incluso si hubo una excepción
+            addCorsHeaders(response, origin);
+        }
+    }
+    
+    private void addCorsHeaders(HttpServletResponse response, String origin) {
         if (origin != null && !origin.isEmpty()) {
             response.setHeader("Access-Control-Allow-Origin", origin);
             response.setHeader("Access-Control-Allow-Credentials", "true");
         } else {
-            response.setHeader("Access-Control-Allow-Origin", "*");
+            // Si no hay origen, usar * pero sin credentials
+            if (response.getHeader("Access-Control-Allow-Origin") == null) {
+                response.setHeader("Access-Control-Allow-Origin", "*");
+            }
         }
         
+        // Siempre agregar estos headers
         response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD");
         response.setHeader("Access-Control-Max-Age", "3600");
         response.setHeader("Access-Control-Allow-Headers", "*");
         response.setHeader("Access-Control-Expose-Headers", "*");
-
-        // Continuar con la cadena de filtros
-        chain.doFilter(req, res);
-        
-        // Asegurar que los headers CORS estén presentes después del procesamiento
-        // (por si algún filtro anterior los eliminó)
-        if (origin != null && !origin.isEmpty()) {
-            response.setHeader("Access-Control-Allow-Origin", origin);
-        } else if (response.getHeader("Access-Control-Allow-Origin") == null) {
-            response.setHeader("Access-Control-Allow-Origin", "*");
-        }
     }
 }
 

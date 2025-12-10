@@ -93,8 +93,24 @@ public class StaticResourceController {
     /**
      * Maneja archivos CSS, JS y otros recursos estáticos
      * Detecta automáticamente de qué servicio viene según la extensión y contexto
+     * Usa múltiples endpoints específicos en lugar de regex con grupos de captura
      */
-    @GetMapping("/{filename:.+\\.(html|css|js|json|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)}")
+    @GetMapping(value = {
+        "/{filename:.+\\.html}",
+        "/{filename:.+\\.css}",
+        "/{filename:.+\\.js}",
+        "/{filename:.+\\.json}",
+        "/{filename:.+\\.png}",
+        "/{filename:.+\\.jpg}",
+        "/{filename:.+\\.jpeg}",
+        "/{filename:.+\\.gif}",
+        "/{filename:.+\\.svg}",
+        "/{filename:.+\\.ico}",
+        "/{filename:.+\\.woff}",
+        "/{filename:.+\\.woff2}",
+        "/{filename:.+\\.ttf}",
+        "/{filename:.+\\.eot}"
+    })
     public ResponseEntity<Object> getStaticResource(
             @PathVariable String filename,
             HttpServletRequest request) {
